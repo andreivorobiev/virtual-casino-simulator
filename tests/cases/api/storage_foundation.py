@@ -13,6 +13,8 @@ from tests import enrollment_policy_tests
 from tests import mysql_migration_tests
 # Import the bounded MySQL connection-pool suite.
 from tests import mysql_pool_tests
+# Import PostgreSQL configuration and lazy-selector coverage without importing psycopg. (TEST-252)
+from tests import postgres_registration_tests
 # Import the authenticated recovery-policy suite.
 from tests import recovery_tests
 # Import provider-neutral player-state atomicity coverage.
@@ -127,6 +129,17 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
         if not result.wasSuccessful():
             raise AssertionError("MySQL connection pool lifecycle suite failed")
 
+    # Define one listener-free runner for PostgreSQL configuration and lazy registration.
+    def run_postgres_registration_tests():
+        # Load only the STORAGE-020 and TEST-252 registration test class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(postgres_registration_tests.PostgresRegistrationTests)
+        # Execute without a connector, listener, provider implementation, or external target.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the named central case when configuration or import isolation drifts.
+        if not result.wasSuccessful():
+            # Preserve one fixed provider-neutral diagnostic.
+            raise AssertionError("PostgreSQL registration suite failed")
+
     # Define one focused unittest runner for authenticated recovery and clean-target policy.
     def run_recovery_policy_tests():
         # Load only the #205 synthetic recovery test case.
@@ -164,6 +177,8 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
     run_case("STORAGE-SESSIONS-001", ["SESSION-014", "STORAGE-019", "MYSQL-010", "TEST-250"], run_session_storage_tests)
     # Map the listener-free recovery suite to the permanent recovery requirements.
     run_case("RECOVERY-POLICY-001", ["MYSQL-006", "MYSQL-008", "MYSQL-009", "TOOL-004", "TEST-049", "TEST-174"], run_recovery_policy_tests)
+    # Prove deterministic configuration and an explicit lazy selector with JSON/MySQL import isolation.
+    run_case("POSTGRES-CONFIG-001", ["STORAGE-001", "STORAGE-003", "STORAGE-004", "STORAGE-020", "TEST-252"], run_postgres_registration_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "STORAGE-016", "TEST-030", "TEST-243"], run_storage_base_and_json_parity)
     # Execute one identical paid settlement, replay, resolve, and conflict schedule on JSON and MySQL.

@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.72.1
-- core: 10.13.1
+- application: 9.73.0
+- core: 10.14.0
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.4
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.5
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.7
-- tests: 1.116.10
-- docs: 1.114.0
+- tests: 1.117.0
+- docs: 1.114.1
 - contracts: 1.63.1
 - tooling: 1.46.0
 - commenting_policy: 2.1.0
@@ -753,10 +753,12 @@ Historical source baseline: 9.1.0
 - **TEST-249** (Tests) - PASS: The standalone Deuces Wild diagnostic issues a distinct browser-readable CSRF cookie only after a valid session-bound bootstrap, accepts exact cookie/header pairs for real English and Russian deal, hold, and draw actions, and rejects anonymous bootstrap plus missing, mismatched, or cross-session proofs before game dispatch. Both focused and browser paths close their ephemeral non-production listener on success or failure.
 - **SESSION-014** (Core) - PASS: Authentication sessions are provider-owned first-class rows rather than one shared document. Creation, bearer lookup, activity touch, bearer-and-CSRF rotation, targeted and account-wide revocation, and expiry preserve the existing opaque session id, deterministic cap, generation, absolute lifetime, idle-timeout, guest, provider, and Admin-control semantics while plaintext bearer material exists only in request-local results and cookies.
 - **STORAGE-019** (Storage) - PASS: StorageProvider exposes one session lifecycle whose JSON implementation stores one strict atomically published file per bearer digest and whose MySQL implementation stores one independently keyed compatibility document on clean schemas two through four or one indexed native row on clean schema five. Compound cap, rotation, account revocation, replacement, and expiry operations serialize their complete selection and writes, while direct bearer lookup reads only the digest-selected row and every durable representation omits plaintext tokens.
+- **STORAGE-020** (Storage) - PASS: Provider-neutral storage configuration exposes immutable PostgreSQL host, TCP port, role, password, and database settings under the dedicated CASINO_POSTGRES namespace, retains JSON as the default and MySQL unchanged, and resolves the PostgreSQL provider only after explicit selection through a lazy optional-driver seam. Malformed configuration and an absent or incomplete PostgreSQL provider fail before connector access through fixed value-free diagnostics.
 - **MYSQL-010** (MySQL) - PASS: Schema five adds casino_sessions with one binary opaque primary key, one unique lowercase token digest, user-activity and expiry indexes, finite lifecycle and generation checks, and a canonical JSON payload bound to duplicated indexed columns. The migration backfills only keyed schema-two-through-four session bridge rows, never persists plaintext bearer tokens, and removes those bridge rows after insertion; runtime session DML is table-scoped while catalog application remains held.
 - **MYSQL-011** (MySQL) - PASS: The process-local MySQL pool defaults to sixteen physical sessions, accepts an explicit capacity from one through sixty-four, and publishes only authenticated Admin Operations telemetry for configured capacity, in-use, idle, waiting, cumulative saturation encounters, and checkout timeouts. Readiness remains shape-compatible, JSON reports pool telemetry unavailable, and malformed snapshots fail closed without connector, target, credential, query, request, user, or exception detail.
 - **TEST-250** (Tests) - PASS: Provider-neutral JSON and transaction-faithful MySQL-model evidence proves deterministic per-user and global caps, direct bearer lookup, secret-free durable rows, atomic bearer-and-CSRF generation rotation, idempotent targeted and account revocation, expiry sweeps, one-shot legacy import, and parallel same-user plus different-user login/logout with zero lost sessions, cross-wired CSRF proofs, or hidden worker failures. Disposable MySQL evidence verifies native indexes, schema-four bridge backfill, least-privilege DML, restart compatibility, and the same concurrent lifecycle on real connectors.
 - **TEST-251** (Tests) - PASS: Exact-clean-source load evidence starts the supported loopback-only Gunicorn WSGI command over caller-external temporary state, provisions reserved-domain synthetic players through the Admin API, authenticates every independent session, synchronizes one public Boule round per session, validates provider-specific Admin pool telemetry, closes the exact process and listener, and emits one atomic aggregate report. Ordinary CI requires 32 sessions on JSON and disposable MySQL; the opt-in formal profile requires exactly 100 sessions on disposable MySQL with zero failed sessions, rounds, checkout timeouts, or listener residue.
+- **TEST-252** (Tests) - PASS: Listener-free PostgreSQL registration evidence binds canonical defaults, deterministic environment overrides, complete TCP-port and blank-identifier rejection, fixed secret-free diagnostics, public configuration identity, psycopg keyword translation, explicit lazy future-provider resolution, absent-driver and incomplete-provider failure, JSON/MySQL import isolation, and unchanged unknown-selector behavior.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

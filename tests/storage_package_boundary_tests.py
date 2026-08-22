@@ -57,6 +57,7 @@ TRANSITIONAL_SOURCES = tuple((ROOT / "casino" / "core" / name) for name in ("sto
 MOVED_NAMES = (
     "ECONOMICS_EXCLUDED_TRANSACTION_FRAGMENTS",
     "MySQLConfig",
+    "PostgresConfig",
     "StorageProvider",
     "_action_details",
     "_action_fingerprint",
@@ -320,8 +321,8 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         tree = ast.parse(source)
         # Collect top-level concrete classes and functions declared by the base owner.
         declared = {node.name for node in tree.body if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))}
-        # Require both reviewed public contract objects in their new owner.
-        self.assertTrue({"MySQLConfig", "StorageProvider"}.issubset(declared))
+        # Require every reviewed public contract object in its provider-neutral owner.
+        self.assertTrue({"MySQLConfig", "PostgresConfig", "StorageProvider"}.issubset(declared))
         # Reject concrete provider ownership from the provider-neutral base.
         self.assertTrue({"JsonStorageProvider", "MySQLStorageProvider", "_BorrowedMySQLConnection"}.isdisjoint(declared))
         # Reject cache, reset-recovery, and game-action implementation seams from this first slice.
@@ -351,10 +352,12 @@ class StoragePackageBoundaryTests(unittest.TestCase):
             # Require one exact object to serve both import paths.
             self.assertIs(public_object, owned_object, name)
 
-    # Require the provider contract and MySQL configuration signatures to remain source-compatible.
+    # Require the provider contract and relational configuration signatures to remain source-compatible.
     def test_public_contract_signatures_remain_compatible(self):
         # Bind the established MySQL constructor field order used by tests and operators.
         self.assertEqual(tuple(inspect.signature(storage.MySQLConfig).parameters), ("host", "port", "user", "password", "database"))
+        # Bind the matching PostgreSQL constructor field order without importing psycopg. (STORAGE-020)
+        self.assertEqual(tuple(inspect.signature(storage.PostgresConfig).parameters), ("host", "port", "user", "password", "database"))
         # Bind every provider method name and parameter order before concrete-provider extraction.
         expected = {
             "ensure_ready": ("self",),
@@ -396,7 +399,7 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         # Collect only declarations still owned by the concrete-provider source.
         declared = {node.name for node in tree.body if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))}
         # Reject duplicate public contract classes after the move.
-        self.assertTrue({"MySQLConfig", "StorageProvider"}.isdisjoint(declared))
+        self.assertTrue({"MySQLConfig", "PostgresConfig", "StorageProvider"}.isdisjoint(declared))
         # Reject duplicate helper function implementations after the move.
         self.assertTrue(set(MOVED_NAMES[2:]).isdisjoint(declared))
         # Require one explicit provider-neutral import owner.

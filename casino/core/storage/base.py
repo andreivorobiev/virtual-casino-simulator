@@ -27,8 +27,8 @@ from pathlib import Path
 # Import required dependency so provider methods retain their existing callable contracts.
 from typing import Any, Callable
 
-# Import runtime paths and MySQL defaults used only by the provider-neutral contract/configuration.
-from casino.config import DATA_DIR, DEFAULT_MYSQL_DATABASE, DEFAULT_MYSQL_HOST, DEFAULT_MYSQL_PORT, DEFAULT_MYSQL_USER
+# Import runtime paths and relational-provider defaults used only by provider-neutral configuration.
+from casino.config import DATA_DIR, DEFAULT_MYSQL_DATABASE, DEFAULT_MYSQL_HOST, DEFAULT_MYSQL_PORT, DEFAULT_MYSQL_USER, DEFAULT_POSTGRES_DATABASE, DEFAULT_POSTGRES_HOST, DEFAULT_POSTGRES_PORT, DEFAULT_POSTGRES_USER
 # Import the canonical timestamp helper used by provider-neutral ledger events.
 from casino.core.clock import utc_now
 # Import the canonical identifier helper used by provider-neutral ledger events.
@@ -169,6 +169,64 @@ class MySQLConfig:  # Group environment-derived MySQL connection settings.
     def kwargs(self) -> dict:
         # Return a plain dict because mysql.connector accepts keyword parameters.
         return {"host": self.host, "port": self.port, "user": self.user, "password": self.password, "database": self.database}
+
+
+# Group environment-derived PostgreSQL connection settings without importing its optional driver. (STORAGE-020)
+@dataclass(frozen=True)
+class PostgresConfig:
+    # Store the PostgreSQL host selected by configuration.
+    host: str
+    # Store the PostgreSQL TCP port selected by configuration.
+    port: int
+    # Store the PostgreSQL username selected by configuration.
+    user: str
+    # Store the PostgreSQL password selected by configuration.
+    password: str
+    # Store the PostgreSQL database selected by configuration.
+    database: str
+
+    # Reject malformed direct construction through one fixed value-free boundary.
+    def __post_init__(self) -> None:
+        # Require non-empty string identifiers and one string password without exposing a value.
+        valid_strings = all(type(value) is str and value.strip() for value in (self.host, self.user, self.database)) and type(self.password) is str
+        # Require a real integer inside the complete TCP port range.
+        valid_port = type(self.port) is int and 1 <= self.port <= 65535
+        # Fail before any connector import or access when one field is malformed.
+        if not valid_strings or not valid_port:
+            # Publish only the provider-owned configuration category. (TEST-252)
+            raise ValidationError("PostgreSQL configuration is invalid")
+
+    # Build a validated config object from the dedicated PostgreSQL environment namespace.
+    @classmethod
+    def from_env(cls) -> PostgresConfig:
+        # Read the port as text before one fixed conversion boundary.
+        raw_port = os.getenv("CASINO_POSTGRES_PORT", str(DEFAULT_POSTGRES_PORT))
+        # Convert only the configured port without connector access.
+        try:
+            # Parse the complete base-ten port representation.
+            port = int(raw_port)
+        # Collapse malformed text into the same value-free configuration error.
+        except (TypeError, ValueError):
+            # Prevent the rejected text from entering logs or public diagnostics.
+            raise ValidationError("PostgreSQL configuration is invalid") from None
+        # Return the immutable configuration after its constructor validates every field.
+        return cls(
+            # Normalize harmless surrounding whitespace on the configured host.
+            host=os.getenv("CASINO_POSTGRES_HOST", DEFAULT_POSTGRES_HOST).strip(),
+            # Supply the already parsed standard-range port.
+            port=port,
+            # Normalize harmless surrounding whitespace on the configured role name.
+            user=os.getenv("CASINO_POSTGRES_USER", DEFAULT_POSTGRES_USER).strip(),
+            # Preserve password bytes as text without trimming or reporting them.
+            password=os.getenv("CASINO_POSTGRES_PASSWORD", ""),
+            # Normalize harmless surrounding whitespace on the configured database name.
+            database=os.getenv("CASINO_POSTGRES_DATABASE", DEFAULT_POSTGRES_DATABASE).strip(),
+        )
+
+    # Convert config fields to psycopg/libpq keyword arguments without importing psycopg.
+    def kwargs(self) -> dict:
+        # Use libpq's canonical dbname keyword while retaining the public database field.
+        return {"host": self.host, "port": self.port, "user": self.user, "password": self.password, "dbname": self.database}
 
 
 # Apply one caller-owned strict document-shape predicate with a fixed recovery boundary.
