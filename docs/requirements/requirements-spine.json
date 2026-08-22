@@ -1921,12 +1921,13 @@
         "contracts/compatibility/app-0.9.5.82.json",
         "contracts/compatibility/app-0.9.5.83.json",
         "contracts/compatibility/app-0.9.5.84.json",
+        "contracts/compatibility/app-0.9.5.85.json",
         "scripts/resolve_release_predecessor.py",
         "tests/release_predecessor_tests.py"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "0.9.5.84",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.84 publication derives exact retained terminal-green v0.9.5.83 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Its Git-archive API copy receives a complete disposable index before repository gates run, preserving tracked-only inventory without a filesystem fallback, source-byte mutation, user Git templates, or remote contact. The release declares rollback at unchanged MySQL schema 2 inside both runtime windows while the candidate catalog remains minimum 2, expected 5, and apply held; rollback is application-only and never reverses the MySQL schema. v0.9.6.0 remains reserved for a separately accepted product wave."
+      "changed_in": "0.9.5.85",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.85 publication derives exact immutable v0.9.5.84 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Its Git-archive API copy imports the exact local source commit and tree into a complete disposable index before repository gates run, preserving tracked-only inventory and source-bound diagnostics without a filesystem fallback, source-byte mutation, user Git templates, or network contact. The release declares rollback at unchanged MySQL schema 2 inside both runtime windows while the candidate catalog remains minimum 2, expected 5, and apply held; rollback is application-only and never reverses the MySQL schema. v0.9.6.0 remains reserved for a separately accepted product wave."
     },
     {
       "id": "BOT-001",
@@ -5238,22 +5239,25 @@
     {
       "id": "TEST-053",
       "module": "Tests",
-      "description": "Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry. Playwright readiness boundaries consume one bounded environment-scalable WAIT_MS policy rather than duplicated five- and ten-second literals.",
+      "description": "Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry. Playwright readiness boundaries consume one bounded environment-scalable WAIT_MS policy rather than duplicated five- and ten-second literals. Slots route restoration observes pre-document shared-application ready or error state within that same budget, then independently requires its module root and retains at most one bounded sanitized first-failure bundle.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-ROU-HITMAP-001"
+        "BR-ROU-HITMAP-001",
+        "BR-SLOT-ECONOMICS-001"
       ],
       "implementation_files": [
         ".github/workflows/browser-tests.yml",
+        "tests/browser_readiness.py",
         "tests/browser_timing.py",
         "tests/browser_wait_governance_tests.py",
+        "tests/cases/browser/roulette_slots_keno.py",
         "tests/run_tests.py",
         "web/games/roulette.js"
       ],
       "introduced_in": "issue-222-roulette-hit-target",
-      "changed_in": "issue-721-test-harness-knobs",
-      "notes": "Issue #348 removes dispatch_event from acceptance, audits every zero split, trio, first-four, and top-line target in both modes, and rejects stacked pointer rectangles. Issue #750 requires each audit wager response to complete before the refund so late UI adoption cannot overtake clear. Issue #721 keeps the historical five-second default, derives longer waits from the same knob, permits one bounded decimal CI/local override, and fails closed on unsafe values."
+      "changed_in": "issue-1053-formal-worker-budget",
+      "notes": "Issue #348 removes dispatch_event from acceptance, audits every zero split, trio, first-four, and top-line target in both modes, and rejects stacked pointer rectangles. Issue #750 requires each audit wager response to complete before the refund so late UI adoption cannot overtake clear. Issue #721 keeps the historical five-second default, derives longer waits from the same knob, permits one bounded decimal CI/local override, and fails closed on unsafe values. Issue #1053 makes the Slots route-restored reload observe the shared bootstrap signal without changing WAIT_MS, retrying, falling back, or replacing its independent module-readiness assertion; its best-effort diagnostic stores only allowlisted bounded classifications and never raw event, cache, service-worker URL, exception, secret, or personal data."
     },
     {
       "id": "DOC-017",
@@ -7039,21 +7043,39 @@
     {
       "id": "TEST-092",
       "module": "Tests",
-      "description": "An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns each game at least its deterministic floor of 50,000 divided by the current catalog count, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.",
-      "status": "PASS",
+      "description": "An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns each game at least its deterministic floor of 50,000 divided by the current catalog count, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, completes every attempt-one worker job through terminal evidence upload within 20 minutes, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, budget overruns, or cleanup residue.",
+      "status": "PLANNED",
       "api_tests": [
         "UI-50000-HARNESS-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-AUTH-LOGIN-001",
+        "BR-SIC-BO-001",
+        "BR-ROU-FORMAL-SETTINGS-001",
+        "BR-BINGO-FORMAL-REPLAY-001",
+        "BR-AD-FORMAL-REPLAY-001"
+      ],
       "implementation_files": [
         "tests/ui_50000.py",
+        "tests/ui_50000_control_schedule.py",
+        "tests/ui_50000_transitions.py",
+        "tests/formal_ui_profile.py",
+        "tests/formal_ui_duration_profile.json",
         "tests/unit/ui_50000_tests.py",
+        "tests/unit/ui_50000_control_schedule_tests.py",
+        "tests/unit/ui_50000_transition_tests.py",
+        "tests/browser_case_inventory.json",
+        "tests/browser_sharding.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/cases/api/harness_foundation.py",
+        "tests/cases/browser/roulette_slots_keno.py",
+        "tests/cases/browser/bingo_admin.py",
         "tests/run_tests.py",
         ".github/workflows/browser-tests.yml"
       ],
       "introduced_in": "issue-227-ui-50000-ci-replacement",
-      "changed_in": "issue-1050-formal-ui-strategies",
-      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited. Its exact-source planner emits one contiguous matrix index for every allocation derived from the current catalog and four Roulette replicas, workers consume that generated matrix, and the aggregate still rejects any missing, extra, duplicate, malformed, or foreign-source shard. Every registered catalog game maps to one implemented rendered-control strategy family; an unregistered game or unknown family fails before action dispatch, and the formerly hidden Color Wheel through Teen Patti range now exercises explicit choices, replay, staged decisions, and terminal readiness rather than the unknown-game fallback. Stable semantic signatures distinguish their board cells, numbers, ranks, runners, hand-setting cards, wager inputs, decision controls, deals, and repeats. Bingo reset coverage recognizes an active called session through rendered controls, accepts exactly its one native abandonment confirmation, and requires fresh-card readiness without leaking confirmation authority into safe or completed-history resets. Geometry inspection restores every ancestor and window scroll position so one viewport cannot mutate later evidence, route-owned essential-stage contracts cover non-control theater such as Crown and Anchor dice and result panels, Roulette wager/refund rerenders commit before the strict spinning-state observation while the primary shard retries real reachable Rebet states until the literal activation floor is met, and draw-poker workers wait for the complete five-position decision state, balance the hold-control deficit, and observe the persisted held rerender before Draw."
+      "changed_in": "issue-1052-formal-control-floor-repair",
+      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; focused local Chromium regression paths remain permitted while the exact 50,000-cycle load stays hosted. Issue #1053 adds a checked-in exact-run duration profile that must match every catalog game and implemented strategy before planning; stale catalog, family, timing, provenance, or matrix metadata fails before worker creation. The current profile produces 140 contiguous allocations for exactly 50,000 unique IDs, targets ordinary ranges at 15 minutes, cancels stale in-harness execution at 17 minutes so cleanup and evidence can finish below the 18-minute UI-step target, and hard-stops the complete job at 20 minutes. The required worker and aggregate context names, maximum parallelism of 20, attempt-one/no-resume evidence, source isolation, listener cleanup, diagnostics, four governed viewports, aggregate control floor, and fail-closed shard inventory remain unchanged. Issue #1052 assigns exactly 100 real Repeat activations across isolated-user replicas after per-user seed cycles, keeps Keno and Sic Bo board schedules continuous after Repeat-only cycles, admits shell navigation only for exact registered game IDs, and source-binds time-balanced Roulette mode inventories so every number and special target reaches exactly 100 while Rebet remains ranks 1 through 100 and autoplay moves to ranks 101 through 200. BR-AUTH-LOGIN-001 proves current- and delayed-locale gate replacement before credential entry and exactly one login POST; BR-SIC-BO-001 proves real Repeat, five-position selection, Clear, replacement, and Shake ordering. BR-ROU-FORMAL-SETTINGS-001 proves the Rebet-open generic boundary emits no server settings request and every deliberate setting selection completes its response, old-node detachment, and fresh accepted render without 409 before a later selection. BR-BINGO-FORMAL-REPLAY-001 proves a completed-session seed supports one real same-mount Repeat, Call, confirmed Reset, stale-Buy detachment, and fresh enabled Buy generation; the exact formal plan keeps replica-local Repeat shares consecutive without route teardown and assigns the 987 fresh ranks to exactly 100 nav-button and 887 lobby-card entries. BR-AD-FORMAL-REPLAY-001 proves a real Pass cannot bootstrap Repeat, bounded public Deal/Pass traversal reaches a legal wagered Play within the source-bound retained-history window, and the next real Repeat plus terminal decision stays on the same mount; the exact formal Acey-Deucey plan preserves local cycles 1 through 100 without teardown and assigns its 987 fresh ranks to exactly 100 nav-button and 887 lobby-card entries. Roulette reserves a 101-cycle primary affinity range for one seed plus 100 Rebet activations and assigns it exactly one number plus fourteen special wagers per cycle; the remaining double-zero workers consume the continuous residual streams so the dedicated schedules give every raw position 100 floor activations, while terminal seed wagers add honest number coverage, without exceeding the unchanged worker ceiling. Draw-poker replica quotas retain at least 100 aggregate complete five-position hold schedules. With the repository cap of 20 simultaneous formal jobs, the 140-entry profile requires at most seven bounded execution waves when runners are immediately available; external runner queue delay is measured separately from job runtime. The status remains PLANNED until one fresh exact-head hosted run proves every worker and terminal aggregate green on workflow attempt one."
     },
     {
       "id": "MOTION-004",
@@ -7634,7 +7656,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.84 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.85 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -7671,7 +7693,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.84 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.85 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -9419,7 +9441,7 @@
       ],
       "introduced_in": "issue-430-mysql-schema-rollback-bridge",
       "changed_in": "issue-1039-first-class-session-storage",
-      "notes": "The bridge rejects an exact-schema-three, exact-schema-four, or exact-schema-five candidate mapped to an exact-schema-two-only predecessor, accepts schema-two rollback through compatible bridge windows, and accepts a future schema-three, schema-four, or schema-five release rollback only to a bridge that accepts that exact schema. The separately governed v0.9.5.39 through v0.9.5.84 compatibility records declare unchanged schema-two application rollback and authorize no migration, database rollback, credential, provider, server-global, schema-three, schema-four, or schema-five production activation, or issue closure."
+      "notes": "The bridge rejects an exact-schema-three, exact-schema-four, or exact-schema-five candidate mapped to an exact-schema-two-only predecessor, accepts schema-two rollback through compatible bridge windows, and accepts a future schema-three, schema-four, or schema-five release rollback only to a bridge that accepts that exact schema. The separately governed v0.9.5.39 through v0.9.5.85 compatibility records declare unchanged schema-two application rollback and authorize no migration, database rollback, credential, provider, server-global, schema-three, schema-four, or schema-five production activation, or issue closure."
     },
     {
       "id": "UX-023",

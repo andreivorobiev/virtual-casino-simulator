@@ -5,10 +5,10 @@
 - Issue: https://github.com/andreivorobiev/virtual-casino-simulator/issues/1057
 - Priority: P2
 - Assigned author: PostgreSQL migrations worker
-- Authoring system (`Claude`, `Codex`, `human`, or approved other): Claude
+- Authoring system (`Claude`, `Codex`, `human`, or approved other): Codex
 - Coordinator: Codex
 - Merge executor: Codex
-- Branch: `claude/1057-postgres-migrations`
+- Branch: `codex/1057-postgres-migrations`
 - Base branch and commit: exact merged head of #1055 after Phase-A packet integration
 - Dependency PRs and exact heads: eventual merged PR for #1055; record before mutation
 - PR title: `feat: add PostgreSQL migration catalog and runner`
@@ -80,6 +80,6 @@
 
 - PR author may merge: No
 - PR author may enable auto-merge: No
-- Claude handback target: Codex review and merge when eligible
+- Claude handback target: not applicable; this Codex-authored head requires independent exact-head review before merge
 - Codex merge preconditions: dependencies, exact catalog/dialect audit, cleanup, ownership, requirements/versions, checks and review.
 - Post-merge verification and issue disposition: verify main and add `Rolled out with #NNN` to #1057.

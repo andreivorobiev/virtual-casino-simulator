@@ -5,10 +5,10 @@
 - Issue: https://github.com/andreivorobiev/virtual-casino-simulator/issues/1058
 - Priority: P2
 - Assigned author: PostgreSQL provider-core worker
-- Authoring system (`Claude`, `Codex`, `human`, or approved other): Claude
+- Authoring system (`Claude`, `Codex`, `human`, or approved other): Codex
 - Coordinator: Codex
 - Merge executor: Codex
-- Branch: `claude/1058-postgres-provider-core`
+- Branch: `codex/1058-postgres-provider-core`
 - Base branch and commit: exact accepted main containing #1055, #1056, and #1057
 - Dependency PRs and exact heads: eventual merged PRs for #1055/#1056/#1057
 - PR title: `feat: implement PostgreSQL storage provider core`
@@ -78,6 +78,6 @@
 
 - PR author may merge: No
 - PR author may enable auto-merge: No
-- Claude handback target: Codex review and merge when eligible
+- Claude handback target: not applicable; this Codex-authored head requires independent exact-head review before merge
 - Codex merge preconditions: dependencies, complete method inventory, data-integrity review, exact evidence, versions/requirements/checks/review.
 - Post-merge verification and issue disposition: verify main and add `Rolled out with #NNN` to #1058.

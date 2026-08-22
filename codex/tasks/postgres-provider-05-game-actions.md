@@ -5,10 +5,10 @@
 - Issue: https://github.com/andreivorobiev/virtual-casino-simulator/issues/1059
 - Priority: P2
 - Assigned author: PostgreSQL exactly-once worker
-- Authoring system (`Claude`, `Codex`, `human`, or approved other): Claude
+- Authoring system (`Claude`, `Codex`, `human`, or approved other): Codex
 - Coordinator: Codex
 - Merge executor: Codex
-- Branch: `claude/1059-postgres-game-actions`
+- Branch: `codex/1059-postgres-game-actions`
 - Base branch and commit: exact accepted merge containing #1058
 - Dependency PRs and exact heads: eventual merged PRs for #1057 and #1058
 - PR title: `feat: add PostgreSQL exactly-once game actions`
@@ -74,6 +74,6 @@
 
 - PR author may merge: No
 - PR author may enable auto-merge: No
-- Claude handback target: Codex review and merge when eligible
+- Claude handback target: not applicable; this Codex-authored head requires independent exact-head review before merge
 - Codex merge preconditions: exact dependencies, money/retry audit, requirements/versions, checks/review, cleanup.
 - Post-merge verification and issue disposition: verify main and add `Rolled out with #NNN` to #1059.

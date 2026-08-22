@@ -5,12 +5,12 @@
 - Issue: https://github.com/andreivorobiev/virtual-casino-simulator/issues/1055
 - Priority: P2
 - Assigned author: PostgreSQL registration worker
-- Authoring system (`Claude`, `Codex`, `human`, or approved other): Claude
+- Authoring system (`Claude`, `Codex`, `human`, or approved other): Codex
 - Coordinator: Codex
 - Merge executor: Codex
-- Branch: `claude/1055-postgres-registration`
-- Base branch and commit: accepted protected-main descendant after PR #1051 and this Phase-A packet PR; intake baseline `667bdf2b4a0b3d997d5bf18f9bf158fa49749c01`
-- Dependency PRs and exact heads: PR #1051 exact proposed head `db0f4d08caa0e49199f7ab530d364709eea22ab2`; then concurrently opened shared-docs PR #1063, currently `e298863324f9e69a7d7f91cf8257f8ff5c90bedf`; then this packet PR after both are accepted and its versions/catalog are regenerated
+- Branch: `codex/1055-postgres-registration`
+- Base branch and commit: exact protected-main merge of this Phase-A packet PR; record the protected merge SHA before mutation
+- Dependency PRs and exact heads: #1051, #1063, and #1066 are accepted on protected main `c5c96e502d727a8c3a48eea600f1f225c957858c`; implementation begins only after this Phase-A packet PR merges
 - PR title: `feat: register PostgreSQL storage configuration`
 - Required owner approval or external gate: none beyond ordinary review; selecting PostgreSQL remains disabled/incomplete until provider core lands
 - Coordinator task: record the accepted base and release shared metadata ownership after packet integration
@@ -32,7 +32,7 @@
 
 - Impacted modules: core, application, tests, docs requirement mapping.
 - Packaged application release impact: none.
-- Independent module revision bumps planned: core 10.14.0 and application 9.73.0 from intake baseline; tests/docs next unused revisions; recalculate after dependencies.
+- Independent module revision bumps planned: next compatible-addition revisions for core/application/tests and the next docs requirement-mapping revision, recalculated from the exact merged Phase-A base.
 - Owned files: `casino/core/storage/base.py`, `casino/config.py`, `casino/core/storage/__init__.py`, `pyproject.toml`, focused configuration/selection tests.
 - Files not to touch: Postgres pool/migrations/provider/action files, MySQL/JSON implementations, contracts, games, README, CHANGELOG, deployment, provider, and secret files.
 - Allowed adjacent files: requirement sources/generated docs and affected manifests under exclusive Codex integration lease.
@@ -52,7 +52,6 @@
 
 - `CODEX_START_HERE.md`
 - `AGENTS.md`
-- `CLAUDE.md` when Claude authors the PR
 - `ENGINEERING_PRACTICES.md`
 - `docs/engineering_skills.md`
 - `docs/claude_codex_work_division.md`
@@ -89,6 +88,6 @@
 
 - PR author may merge: No
 - PR author may enable auto-merge: No
-- Claude handback target: Codex review and merge when eligible
+- Claude handback target: not applicable; this Codex-authored head requires independent exact-head review before merge
 - Codex merge preconditions: exact base, disjoint ownership, requirements/versions, checks, independent review, no provider mutation.
 - Post-merge verification and issue disposition: verify protected main, release #1056/#1057 bases, and add `Rolled out with #NNN` to #1055.

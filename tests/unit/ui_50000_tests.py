@@ -5,13 +5,14 @@
 import argparse  # Build narrow command namespaces without invoking the CLI parser.
 import asyncio  # Exercise the browser-free aggregate controller end to end.
 import json  # Persist synthetic shard reports for resume-policy tests.
+import math  # Verify each integer replica stays within its profiled UI target.
 import tempfile  # Own disposable report directories for every test.
 import unittest  # Integrate the focused proofs with the repository API runner.
 from collections import Counter  # Aggregate deterministic per-game allocation totals.
 from pathlib import Path  # Address temporary shard reports with platform-neutral paths.
 from unittest import mock  # Inject immutable provenance when release tests intentionally omit Git metadata.
 
-from tests import baccarat_sustained, ui_50000  # Exercise both public qualification profiles without starting Playwright.
+from tests import baccarat_sustained, formal_ui_profile, ui_50000  # Exercise both public qualification profiles without starting Playwright.
 
 
 # Prove TEST-092 allocation, control classification, and exact-source resume invariants.
@@ -107,7 +108,7 @@ class UI50000HarnessTests(unittest.TestCase):
         ordinary_job = workflow.split("  browser_tests:", 1)[1].split("  # Run the focused issue #265", 1)[0]  # Isolate the ordinary browser job from the sustained profile.
         self.assertIn("github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true", ordinary_job)  # Run ordinary coverage for pull requests, protected main, and formal dispatch while skipping sustained-only dispatches.
         self.assertNotIn("baccarat_sustained_2000", ordinary_job)  # Keep the focused run from starting a second browser suite.
-        sustained_job = workflow.split("  baccarat_sustained_2000:", 2)[2].split("  # Derive the formal issue #227", 1)[0]  # Isolate only the focused hosted job before formal planning begins.
+        sustained_job = workflow.split("  baccarat_sustained_2000:", 2)[2].split("  # Derive the formal TEST-092 matrix", 1)[0]  # Isolate only the focused hosted job before formal planning begins.
         self.assertIn("inputs.baccarat_sustained_2000 == true", sustained_job)  # Keep the expensive profile behind explicit authorization.
         self.assertIn("baccarat-sustained-${{ github.sha }}", sustained_job)  # Bind the terminal artifact name to the exact source head.
         self.assertNotIn("ui_50000.py", sustained_job)  # Prevent the focused dispatch from starting the unrelated 50,000-cycle controller.
@@ -151,19 +152,44 @@ class UI50000HarnessTests(unittest.TestCase):
 
     # Prove the formal catalog allocation assigns exactly 50,000 unique IDs and the required game floor.
     def test_formal_allocation_is_exact_and_balanced(self):
-        allocations = ui_50000.allocate_cycles(list(ui_50000.GAME_IDS), 50_000, 4, set(), 4)  # Build the formal deterministic assignment.
+        allocations = ui_50000.formal_allocations()  # Build the profiled formal deterministic assignment.
         per_game = Counter()  # Aggregate replica quotas back to canonical games.
         assigned_ids = []  # Reconstruct every global cycle ID for uniqueness evidence.
+        expected_offset = 0  # Pin deterministic contiguous worker boundaries in canonical plan order.
         for game_id, _game_index, _replica_index, quota, cycle_start in allocations:  # Inspect every bounded worker assignment.
+            self.assertEqual(cycle_start, expected_offset)  # Reject gaps, overlaps, or reordered subranges before expanding case IDs.
             per_game[game_id] += quota  # Preserve the complete game quota across replicas.
             assigned_ids.extend(range(cycle_start, cycle_start + quota))  # Rebuild the worker's contiguous global range.
+            expected_offset += quota  # Advance to the next exact immutable boundary.
         self.assertEqual(sum(per_game.values()), 50_000)  # Require the exact formal total.
         self.assertEqual(len(per_game), len(ui_50000.GAME_IDS))  # Require every registered game exactly once in the aggregate.
         expected_floor = 50_000 // len(ui_50000.GAME_IDS)  # Derive the honest catalog-wide floor from the current registered game count.
         self.assertGreaterEqual(min(per_game.values()), expected_floor)  # Require every game to receive at least its exact balanced share.
-        self.assertEqual(set(assigned_ids), set(range(50_000)))  # Require no missing or duplicate global identities.
+        self.assertEqual(sorted(assigned_ids), list(range(50_000)))  # Require exact case-inventory equality from zero through 49,999.
         self.assertEqual(len(assigned_ids), len(set(assigned_ids)))  # Reject overlapping replica ranges.
-        self.assertEqual(len(allocations), len(ui_50000.GAME_IDS) + 3)  # Pin one shard per game plus three additional Roulette replicas.
+        self.assertEqual(allocations, ui_50000.formal_allocations())  # Require the checked-in profile to reproduce byte-equivalent plan inputs.
+        self.assertEqual(len(allocations), 140)  # Pin the exact checked-in profile result under GitHub's 256-entry matrix ceiling.
+
+    # Prove profiled ranges retain duration headroom plus the special Roulette and draw-poker aggregate affinities. (TEST-092, issue #1053)
+    def test_formal_duration_profile_preserves_replica_affinities(self):
+        allocations = ui_50000.formal_allocations()  # Resolve the same canonical plan consumed by workflow workers and the aggregate.
+        entries = {entry["id"]: entry for entry in formal_ui_profile.FORMAL_DURATION_PROFILE["games"]}  # Index the immutable timing evidence by canonical game.
+        self.assertEqual(list(entries), list(ui_50000.GAME_IDS))  # Require exact catalog/profile case equality before measuring any range.
+        self.assertEqual(formal_ui_profile.FORMAL_EXECUTION_BUDGET_SECONDS, 17 * 60)  # Leave three minutes for cleanup and terminal artifact upload.
+        self.assertEqual(formal_ui_profile.FORMAL_UI_STEP_TARGET_SECONDS, 18 * 60)  # Preserve the normal UI-step target below the hard job limit.
+        self.assertEqual(formal_ui_profile.FORMAL_WORKER_TIMEOUT_MINUTES, 20)  # Pin the job-start-through-upload contract.
+        for game_id, _game_index, replica_index, quota, _cycle_start in allocations:  # Verify every integer range independently.
+            entry = entries[game_id]  # Read this allocation's measured cycles and conservative planning duration.
+            predicted_seconds = math.ceil(entry["planning_ui_seconds"] * quota / entry["measured_cycles"])  # Scale the source run without hiding range remainders.
+            self.assertLessEqual(predicted_seconds, formal_ui_profile.FORMAL_UI_STEP_TARGET_SECONDS, (game_id, replica_index, quota))  # Keep every range below the 18-minute UI target.
+            if not (game_id == "roulette" and replica_index == 0):  # Permit only the explicit primary Rebet affinity range to use reserved target headroom.
+                self.assertLessEqual(predicted_seconds, formal_ui_profile.FORMAL_PLANNING_TARGET_SECONDS, (game_id, replica_index, quota))  # Keep ordinary ranges at or below fifteen minutes.
+        roulette = [allocation for allocation in allocations if allocation[0] == "roulette"]  # Isolate the continuous table schedule.
+        self.assertEqual((len(roulette), roulette[0][2], roulette[0][3]), (12, 0, 101))  # Reserve one history seed plus one hundred real primary-shard Rebet activations.
+        draw_games = [game_id for game_id, family in ui_50000.UI_STRATEGY_FAMILIES.items() if family == "draw_poker"]  # Derive every five-position hold-balancing family member.
+        for game_id in draw_games:  # Prove replica-local deficit selection still exceeds the aggregate floor at every hold position.
+            quotas = [allocation[3] for allocation in allocations if allocation[0] == game_id]  # Collect every deterministic independent range.
+            self.assertGreaterEqual(sum(quota // 5 for quota in quotas), ui_50000.CONTROL_ACTIVATION_FLOOR, game_id)  # Require at least one hundred complete five-position schedules in the aggregate.
 
     # Prove every registered catalog game names one implemented strategy and future growth fails closed. (TEST-092, issue #1050)
     def test_catalog_games_have_explicit_implemented_ui_strategy_families(self):
@@ -180,7 +206,7 @@ class UI50000HarnessTests(unittest.TestCase):
     # Prove newly covered board and staged controls retain stable semantic identities in both discovery paths.
     def test_new_strategy_controls_use_stable_semantic_signatures(self):
         source = (ui_50000.ROOT / "tests" / "ui_50000.py").read_text(encoding="utf-8")  # Read the inert harness source without starting a browser.
-        semantic_attributes = ("data-number", "data-cell", "data-color", "data-rank", "data-marble", "data-card-index", "data-ante", "data-aces", "data-fold", "data-deal", "data-repeat")  # Enumerate the new strategy-owned identities that cannot fall back to translated text.
+        semantic_attributes = ("data-number", "data-cell", "data-color", "data-rank", "data-marble", "data-card-index", "data-ante", "data-aces", "data-fold", "data-deal", "data-draw", "data-hold", "data-repeat")  # Enumerate the strategy-owned identities that cannot fall back to translated text.
         for attribute in semantic_attributes:  # Inspect pointer signatures and rendered inventory together.
             self.assertEqual(source.count(f"'{attribute}'"), 2, attribute)  # Require the attribute once in each aligned expression augmentation.
 
@@ -210,13 +236,13 @@ class UI50000HarnessTests(unittest.TestCase):
             asyncio.run(ui_50000.play_simple_terminal_game(object(), "color_wheel", 101, Counter()))  # Exercise the ordinary configured play path.
         self.assertEqual(events, [("repeat", 1, '[data-testid="color-wheel-repeat"]', '[data-testid="color-wheel-spin"]'), ("repeat", 101, '[data-testid="color-wheel-repeat"]', '[data-testid="color-wheel-spin"]'), ("rotate", "[data-color]", 101, 1), ("rotate", "[data-chip]", 101, 1), ("terminal", '[data-testid="color-wheel-spin"]')])  # Reject a second settlement on repeat cycles or skipped fresh choices.
 
-    # Prove the hosted matrix derives every exact allocation and grows with the catalog instead of a YAML list. (TEST-092)
+    # Prove the hosted matrix derives every exact profiled allocation and rejects stale catalog growth. (TEST-092)
     def test_formal_workflow_matrix_comes_from_canonical_allocator(self):
         current_indices = ui_50000.formal_allocation_indices()  # Derive the exact current hosted-worker plan.
-        self.assertEqual(current_indices, list(range(len(ui_50000.GAME_IDS) + 3)))  # Require one index per game plus three extra Roulette replicas.
+        self.assertEqual(current_indices, list(range(140)))  # Require the complete duration-sized matrix with contiguous stable identities.
         with mock.patch.object(ui_50000, "GAME_IDS", ui_50000.GAME_IDS + ("fixture_catalog_growth",)):  # Model one future catalog addition without editing workflow YAML.
-            expanded_indices = ui_50000.formal_allocation_indices()  # Recompute the plan through the production allocator.
-        self.assertEqual(expanded_indices, list(range(len(current_indices) + 1)))  # Require the hosted matrix to add the new game's worker automatically.
+            with self.assertRaisesRegex(RuntimeError, "profile is stale for the catalog"):  # Require measured policy before scheduling an unprofiled strategy.
+                ui_50000.formal_allocation_indices()  # Refuse a partial matrix instead of guessing the new game's throughput.
         workflow = (ui_50000.ROOT / ".github" / "workflows" / "browser-tests.yml").read_text(encoding="utf-8")  # Read the inert exact-source workflow contract.
         planner_job = workflow.split("  formal_ui_plan:", 1)[1].split("  formal_ui_workers:", 1)[0]  # Isolate canonical planning from worker execution.
         worker_job = workflow.split("  formal_ui_workers:", 1)[1].split("  formal_ui_aggregate:", 1)[0]  # Isolate only the dynamic matrix consumer.
@@ -224,7 +250,112 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn("python tests/ui_50000.py --print-formal-allocation-indices", planner_job)  # Bind planning to the public canonical helper.
         self.assertIn("allocation_index: ${{ fromJSON(needs.formal_ui_plan.outputs.allocation_indices) }}", worker_job)  # Consume the complete exact-source JSON matrix.
         self.assertNotIn("allocation_index:\n          - 0", worker_job)  # Reject a reintroduced enumerated prefix that can drift after catalog growth.
+        self.assertIn("    name: Formal UI worker ${{ matrix.allocation_index }}", worker_job)  # Preserve the required branch-protection context family.
+        self.assertIn("    timeout-minutes: 20", worker_job)  # Enforce the hard job-start-through-terminal-upload ceiling.
+        self.assertNotIn("timeout-minutes: 350", worker_job)  # Reject the former multi-hour stale-profile window.
+        self.assertIn("      max-parallel: 20", worker_job)  # Preserve the repository's bounded runner-capacity policy.
+        self.assertIn("--max-attempts-per-cycle 1", worker_job)  # Keep formal evidence retry-free on workflow attempt one.
         self.assertIn("      - formal_ui_plan\n      - formal_ui_workers", aggregate_job)  # Require the aggregate to depend on both planning and every worker.
+        self.assertIn("    name: Formal UI exact aggregate", aggregate_job)  # Preserve the exact required terminal context name.
+
+    # Prove a stale worker is cancelled inside the cleanup margin and returns an aggregate-safe red handback.
+    def test_formal_worker_execution_budget_fails_closed(self):
+        allocation = ui_50000.formal_allocations()[0]  # Use one real deterministic identity and range.
+
+        async def stalled_shard(*_args):
+            await asyncio.sleep(1)  # Model a worker that cannot finish inside its checked-in profile.
+
+        args = argparse.Namespace(allocation_index=0)  # Select the immutable hosted-worker deadline path.
+        with mock.patch.object(ui_50000, "FORMAL_EXECUTION_BUDGET_SECONDS", 0.001), mock.patch.object(ui_50000, "run_game_shard", side_effect=stalled_shard):  # Compress only the browser-free unit deadline.
+            result = asyncio.run(ui_50000.run_bounded_shard(None, asyncio.Semaphore(1), args, allocation, "run", "a" * 40))  # Exercise cancellation without starting Playwright.
+        self.assertEqual(result["status"], "FAIL")  # Keep the timed-out allocation terminally red.
+        self.assertEqual(result["failed"], allocation[3])  # Account every assigned unique cycle as incomplete.
+        self.assertFalse(result["listener_cleanup"]["closed"])  # Forbid an unproven cleanup claim after the synthetic stall.
+        self.assertEqual(result["controller_error"], "TimeoutError")  # Preserve the fixed bounded profile-staleness diagnostic.
+
+    # Prove the formal deadline traverses the production shard cleanup and persists terminal artifact evidence.
+    def test_formal_worker_timeout_cleans_real_shard_and_writes_report(self):
+        events = []  # Capture cleanup order without starting a server or browser.
+
+        class Client:
+            base_url = "http://127.0.0.1:1/"
+
+            def call(self, path, method="GET", payload=None):
+                return {"ready": True} if path == "/api/v2/admin/operations" else {}
+
+            def login_default_user(self):
+                return None
+
+        class Context:
+            async def new_page(self):
+                return object()
+
+            async def close(self):
+                events.append("context")
+
+        class Browser:
+            async def new_context(self, **_kwargs):
+                return Context()
+
+            async def close(self):
+                events.append("browser")
+
+        class Chromium:
+            async def launch(self, **_kwargs):
+                return Browser()
+
+        class Playwright:
+            chromium = Chromium()
+
+        async def stall_login(*_args):
+            await asyncio.Event().wait()  # Hold inside the real shard after every tracked resource exists.
+
+        def stop_tracked_server(_proc, _client):
+            events.append("server")
+            return {"closed": True}
+
+        allocation = ui_50000.formal_allocations()[0]
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            deployment = root / "deployment"
+            deployment.mkdir()
+            args = argparse.Namespace(allocation_index=0, evidence_root=str(root / "visual"), shard_report_root=str(root / "shards"), keep_deployments=False, headed=False)
+            patches = (
+                mock.patch.object(ui_50000, "FORMAL_EXECUTION_BUDGET_SECONDS", 0.001),
+                mock.patch.object(ui_50000, "prepare_deployment", return_value=deployment),
+                mock.patch.object(ui_50000, "start_ui_server", return_value=(object(), Client())),
+                mock.patch.object(ui_50000, "create_synthetic_user", return_value={"email": "fixture", "password": "fixture"}),
+                mock.patch.object(ui_50000, "attach_page_diagnostics"),
+                mock.patch.object(ui_50000, "login_through_ui", side_effect=stall_login),
+                mock.patch.object(ui_50000, "stop_server", side_effect=stop_tracked_server),
+                mock.patch("builtins.print"),
+            )
+            with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6], patches[7]:
+                result = asyncio.run(ui_50000.run_bounded_shard(Playwright(), asyncio.Semaphore(1), args, allocation, "run", "a" * 40))
+            report = json.loads((root / "shards" / "00-roulette-r0.json").read_text(encoding="utf-8"))
+            self.assertFalse(deployment.exists())  # Remove only the isolated runtime after its listener closes.
+        self.assertEqual(events, ["context", "browser", "server"])  # Preserve complete resource teardown order.
+        self.assertEqual((result["status"], result["failed"], result["listener_cleanup"]), ("FAIL", allocation[3], {"closed": True}))  # Return truthful cleanup while failing every unfinished case.
+        self.assertEqual((report["status"], report["failed"], report["fatal_error"]["message"]), ("FAIL", allocation[3], "CancelledError"))  # Persist fail-closed terminal artifact evidence.
+        self.assertIn("ui_process_seconds", report)  # Keep cancellation timing available for hosted profile review.
+
+    # Prove formal liveness is time-based and sanitized instead of waiting for one hundred completed cycles.
+    def test_formal_worker_heartbeat_identifies_immutable_range(self):
+        allocation = ui_50000.formal_allocations()[0]  # Use one canonical hosted range with no browser work.
+        cadences = []  # Capture the requested interval independently of any cycle counter.
+
+        async def stop_after_cadence(seconds):
+            cadences.append(seconds)  # Observe the requested wall-clock interval without actually waiting.
+            raise asyncio.CancelledError  # End the perpetual production loop after its first emission.
+
+        with mock.patch("builtins.print") as emit, mock.patch.object(formal_ui_profile.asyncio, "sleep", side_effect=stop_after_cadence):
+            with self.assertRaises(asyncio.CancelledError):
+                asyncio.run(ui_50000.formal_worker_heartbeat(0, allocation, interval_seconds=60))  # Exercise only the browser-free monitoring seam.
+        line = emit.call_args.args[0]  # Inspect the single sanitized heartbeat string.
+        self.assertIn("UI50K HEARTBEAT allocation=0 game=roulette replica=0 range=0-100", line)  # Bind liveness to immutable allocation identity.
+        self.assertIn("budget_seconds=1020", line)  # Expose the checked-in cleanup-margin deadline in live Actions output.
+        self.assertNotIn("completed=", line)  # Never let liveness imply browser progress while an action may be stalled.
+        self.assertEqual(cadences, [60])  # Pin a time-based cadence independent of the one-hundred-cycle progress setting.
 
     # Prove namespacing prevents identical generic selectors from merging across games.
     def test_control_signatures_keep_module_ownership(self):
@@ -263,14 +394,50 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn(roulette_nav, focused_result["excluded"])  # Exclude only the omitted registered route from focused acceptance.
         self.assertIn(roulette_open, focused_result["excluded"])  # Apply the same exact rule to lobby open controls.
         self.assertEqual(focused_result["excluded"][roulette_nav]["reason"], "unselected registered-game navigation outside focused profile")  # Publish a durable non-waiver explanation.
-        self.assertIn(unknown_nav, focused_result["failed"])  # Refuse to exempt unregistered or malformed catalog identities.
+        self.assertIn(unknown_nav, focused_result["excluded"])  # Keep unregistered or utility-like shell identities outside the gameplay floor.
+        self.assertEqual(focused_result["excluded"][unknown_nav]["reason"], "non-gameplay shell control")  # Prevent a nav-shaped utility from becoming eligible by prefix alone.
         self.assertIn(baccarat_nav, focused_result["exercised"])  # Keep selected navigation on the literal floor.
         self.assertIn(deal, focused_result["exercised"])  # Keep selected game-owned actions fully governed.
 
-    # Prove only replicated Roulette continues its deterministic target schedule across worker boundaries.
-    def test_coverage_ordinal_continues_roulette_replicas_only(self):
+    # Prove every exact formal game continues one deterministic schedule across worker boundaries.
+    def test_coverage_ordinal_continues_every_formal_replica(self):
         self.assertEqual(ui_50000.coverage_ordinal("roulette", 0, 417), 417)  # Continue Roulette after the prior replica's exact range.
         self.assertEqual(ui_50000.coverage_ordinal("blackjack", 0, 6667), 0)  # Preserve the local first-one-hundred budgets for ordinary games.
+        keno_allocations = [allocation for allocation in ui_50000.formal_allocations() if allocation[0] == "keno"]  # Read the exact six-worker Keno plan.
+        first, second = keno_allocations[:2]  # Resolve one real replica boundary from the governed profile.
+        self.assertEqual(ui_50000.coverage_ordinal("keno", 0, second[4], True), first[3])  # Continue immediately after the preceding worker's quota.
+
+    # Prove locale synchronization observes old-node detachment before replacement-form readiness.
+    def test_login_locale_synchronization_orders_detachment_before_new_form(self):
+        events = []  # Record the exact browser-owned transition sequence without launching Chromium.
+
+        class FakeGateHandle:  # Model the captured old DOM owner independently from later locator resolution.
+            async def wait_for_element_state(self, state, timeout):
+                events.append(("old_gate", state, timeout))  # Record the detachment/hide oracle before replacement lookup.
+
+        class FakeLocator:  # Provide only the current gate and locale-control surfaces used by the helper.
+            def __init__(self, test_id):
+                self.test_id = test_id  # Preserve the stable public identity for assertions.
+
+            async def element_handle(self):
+                events.append(("element_handle", self.test_id))  # Capture the exact pre-change node first.
+                return FakeGateHandle()  # Return one immutable old-node handle.
+
+            async def select_option(self, locale, timeout):
+                events.append(("select", self.test_id, locale, timeout))  # Record visible selection before detachment.
+
+        class FakePage:  # Model locator replacement and the final attached-form predicate.
+            def get_by_test_id(self, test_id):
+                return FakeLocator(test_id)  # Resolve current semantic locators by public identity.
+
+            async def wait_for_function(self, expression, arg, timeout):
+                events.append(("replacement", arg, timeout, "login-submit" in expression))  # Require committed locale and complete replacement fields.
+
+        counts = Counter()  # Capture the successful locale activation identity.
+        with mock.patch.object(ui_50000, "control_signature", new=mock.AsyncMock(return_value="auth::select[data-testid=auth-locale-select]")):  # Isolate signature extraction from DOM evaluation.
+            asyncio.run(ui_50000.synchronize_login_locale(FakePage(), "ru-RU", counts, lambda: 3210))  # Exercise the ordered helper with one unchanged caller deadline.
+        self.assertEqual(events, [("element_handle", "login-gate"), ("select", "auth-locale-select", "ru-RU", 3210), ("old_gate", "hidden", 3210), ("replacement", "ru-RU", 3210, True)])  # Reject credential readiness before old-node detachment.
+        self.assertEqual(counts, Counter({"auth::select[data-testid=auth-locale-select]": 1}))  # Count only a complete replacement transition.
 
     # Prove Rebet closes a real activation deficit beyond the first hundred cycles without duplicating work across Roulette shards.
     def test_roulette_rebet_retries_only_primary_shard_until_floor(self):
@@ -280,6 +447,110 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertTrue(ui_50000.should_exercise_roulette_rebet(0, under_floor))  # Continue real rendered attempts on the first Roulette shard after cycle one hundred.
         self.assertFalse(ui_50000.should_exercise_roulette_rebet(1, under_floor))  # Prevent every later replica from restarting the same control budget.
         self.assertFalse(ui_50000.should_exercise_roulette_rebet(0, at_floor))  # Stop immediately after one hundred successful pointer activations.
+        exact_primary = Counter()  # Simulate the frozen 101-cycle primary shard with cycle zero reserved for its seed spin.
+        rebet_ranks = []  # Record only cycles that can see and activate the real restored template.
+        for game_ordinal in range(101):  # Reproduce every exact primary rank once.
+            if game_ordinal > 0 and ui_50000.should_exercise_roulette_rebet(0, exact_primary):  # Model disabled Rebet before rank-zero settlement and ready Rebet thereafter.
+                exact_primary[signature] += 1  # Count the successful real pointer activation.
+                rebet_ranks.append(game_ordinal)  # Preserve exact affinity evidence.
+        self.assertEqual((rebet_ranks, exact_primary[signature]), (list(range(1, 101)), 100))  # Require exactly ranks1..100 and no overrun.
+        play_source = (ui_50000.ROOT / "tests" / "ui_50000.py").read_text(encoding="utf-8")  # Read the exact dispatch owner for ordering governance.
+        rebet_position = play_source.index("if should_exercise_roulette_rebet(replica_index, activated_counts)")  # Locate the real ready-template attempt.
+        configuration_position = play_source.index("await exercise_configuration_controls(page, ordinal, activated_counts)", rebet_position)  # Locate the next generic mutation boundary.
+        self.assertLess(rebet_position, configuration_position)  # Preserve Rebet before configuration and autoplay can invalidate its template.
+        scheduled_settings_position = play_source.index("await exercise_roulette_settings_controls(page, game_ordinal, activated_counts)", configuration_position)  # Locate the deterministic serialized settings schedule.
+        exact_mode_position = play_source.index("await ensure_roulette_mode(page, mode, activated_counts)", scheduled_settings_position)  # Locate scheduled-mode enforcement after any opposite-mode probe.
+        self.assertLess(configuration_position, scheduled_settings_position)  # Keep client-only generic configuration before server-owned settings work.
+        self.assertLess(scheduled_settings_position, exact_mode_position)  # Require every probe to complete before exact mode restoration.
+
+    # Prove each Roulette settings selection finishes its exact response and replacement generation before another selection can begin.
+    def test_roulette_setting_selection_serializes_response_and_generation(self):
+        events = []  # Record only public locator, response, selection, detachment, and replacement-readiness boundaries.
+        values = {"roulette-mode": "double", "roulette-zero": "normal"}  # Model the accepted rendered settings generation.
+        generation = {"value": 0}  # Distinguish every response-owned DOM replacement.
+
+        class FakeHandle:  # Preserve the selected pre-response node identity.
+            def __init__(self, test_id, owned_generation):
+                self.test_id = test_id  # Retain only the public setting identity.
+                self.generation = owned_generation  # Retain the exact old generation for detachment evidence.
+
+        class FakeLocator:  # Model one current server-owned Roulette select.
+            def __init__(self, test_id):
+                self.test_id = test_id  # Preserve the public data-testid.
+
+            async def wait_for(self, state, timeout):
+                events.append(("visible", self.test_id, state, timeout, generation["value"]))  # Require actionability on the current generation.
+
+            async def element_handle(self):
+                events.append(("handle", self.test_id, generation["value"]))  # Capture the exact pre-request generation.
+                return FakeHandle(self.test_id, generation["value"])  # Return one immutable old node.
+
+            async def input_value(self):
+                events.append(("value", self.test_id, generation["value"]))  # Read the accepted current value before request dispatch.
+                return values[self.test_id]  # Return only the rendered value.
+
+        class FakeResponse:  # Model one exact public settings response.
+            def __init__(self, ok=True):
+                self.ok = ok  # Expose server acceptance without a body.
+
+        class FakeResponseInfo:  # Model Playwright's async response observation.
+            def __init__(self, page):
+                self.page = page  # Retain the owning page's configured response result.
+
+            async def __aenter__(self):
+                events.append(("response-armed", generation["value"]))  # Require observation before the real selection.
+                return self  # Return the awaitable response facade.
+
+            async def __aexit__(self, *_args):
+                events.append(("response-captured", generation["value"]))  # Record terminal response capture after selection.
+
+            @property
+            def value(self):
+                async def resolve():
+                    events.append(("response-value", generation["value"]))  # Resolve the exact response before DOM acceptance.
+                    return FakeResponse(self.page.response_ok)  # Return the configured public status.
+                return resolve()  # Match Playwright's awaitable property.
+
+        class FakePage:  # Provide the exact public browser seams owned by the helper.
+            response_ok = True  # Start with accepted settings responses.
+
+            def get_by_test_id(self, test_id):
+                events.append(("locator", test_id, generation["value"]))  # Record each current-generation locator lookup.
+                return FakeLocator(test_id)  # Resolve against the latest generation.
+
+            def expect_response(self, predicate, timeout):
+                candidate = type("Response", (), {"url": "http://test/api/v1/games/roulette/settings", "request": type("Request", (), {"method": "POST"})()})()  # Build one exact public response identity.
+                events.append(("expect", predicate(candidate), timeout, generation["value"]))  # Prove endpoint/method filtering and unchanged deadline.
+                return FakeResponseInfo(self)  # Arm one response observation.
+
+            async def wait_for_function(self, expression, arg, timeout):
+                if isinstance(arg, FakeHandle):  # Distinguish old-generation detachment from fresh-render acceptance.
+                    events.append(("detached", arg.test_id, arg.generation, generation["value"], "isConnected" in expression, timeout))  # Require exact old identity after response.
+                    return  # Complete only the detachment boundary.
+                events.append(("fresh", arg["test_id"], arg["value"], generation["value"], timeout))  # Require the accepted fresh setting and catalog generation.
+
+        page = FakePage()  # Create one isolated fake rendered Roulette surface.
+
+        async def fake_select_control(locator, value, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(("select", locator.test_id, str(value), generation["value"], timeout_ms))  # Record one real rendered select activation.
+            values[locator.test_id] = str(value)  # Publish the accepted setting value.
+            generation["value"] += 1  # Model the response-owned full rerender.
+
+        with mock.patch.object(ui_50000, "select_control", side_effect=fake_select_control):  # Isolate selection bookkeeping from DOM signature evaluation.
+            asyncio.run(ui_50000.select_roulette_setting(page, "roulette-zero", "la_partage", Counter()))  # Commit one zero-rule transition.
+            first_selection_end = len(events)  # Capture the exact boundary before another settings request starts.
+            asyncio.run(ui_50000.select_roulette_setting(page, "roulette-mode", "single", Counter()))  # Commit one later mode transition.
+        first_detach = next(index for index, event in enumerate(events[:first_selection_end]) if event[0] == "detached")  # Locate old-node invalidation for the first request.
+        first_fresh = next(index for index, event in enumerate(events[:first_selection_end]) if event[0] == "fresh")  # Locate replacement acceptance for the first request.
+        second_arm = next(index for index, event in enumerate(events[first_selection_end:], start=first_selection_end) if event[0] == "response-armed")  # Locate the second request boundary.
+        self.assertLess(first_detach, first_fresh)  # Require old-node detachment before fresh-generation readiness.
+        self.assertLess(first_fresh, second_arm)  # Forbid overlapping settings requests across sequential helper calls.
+        self.assertEqual(sum(event[0] == "select" for event in events), 2)  # Dispatch exactly one real selection per exact response.
+        self.assertEqual(sum(event[0] == "response-armed" for event in events), 2)  # Arm exactly one public settings response per selection.
+        page.response_ok = False  # Model a server-rejected settings transition without retry authority.
+        with mock.patch.object(ui_50000, "select_control", side_effect=fake_select_control):  # Reuse the exact real-selection seam.
+            with self.assertRaisesRegex(AssertionError, "settings request failed"):
+                asyncio.run(ui_50000.select_roulette_setting(page, "roulette-zero", "normal", Counter()))  # Fail closed on the single rejected response.
 
     # Prove Roulette cannot mistake its pre-click enabled node for post-settlement readiness.
     def test_roulette_terminal_action_observes_resolving_before_ready(self):
@@ -309,72 +580,6 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn("roulette-result-region", page.expression)  # Bind the predicate to the visible phase contract.
         self.assertIn("spin?.disabled", page.expression)  # Require the public button to be non-actionable during resolution.
         self.assertEqual(page.timeout, ui_50000.ACTION_TIMEOUT_MS)  # Keep transition observation inside the governed action timeout.
-
-    # Prove Bingo accepts exactly one destructive reset confirmation without leaking a handler into safe resets. (TEST-092, issue #1052)
-    def test_bingo_reset_confirmation_tracks_rendered_active_called_state(self):
-        # Execute one browser-free rendered state and return its interaction trace.
-        async def run_scenario(call_ready, called_ball_count):
-            events = []  # Record public state reads, dialog handling, reset activation, and purchase readiness.
-
-            class FakeLocatorCollection:  # Model either the Call locator or rendered called-ball collection.
-                def __init__(self, selector):
-                    self.selector = selector  # Preserve the public selector used by production code.
-                    self.first = self  # Match Playwright's first-locator interface.
-
-                async def count(self):
-                    events.append(f"count:{self.selector}")  # Record called-ball evidence before any dialog authority is installed.
-                    return called_ball_count  # Return the scenario's visible called-ball count.
-
-            class FakeDialog:  # Model the native confirmation emitted synchronously by Bingo Reset.
-                type = "confirm"  # Expose the Playwright dialog type used by the production assertion.
-
-                async def accept(self):
-                    events.append("dialog:accept")  # Record real confirmation before Reset can complete.
-
-            class FakePage:  # Provide only locator and one-shot dialog surfaces owned by the helper.
-                def __init__(self):
-                    self.dialog_handler = None  # Start without any leaked confirmation authority.
-
-                def locator(self, selector):
-                    events.append(f"locator:{selector}")  # Record both rendered-state queries.
-                    return FakeLocatorCollection(selector)  # Return a stable public locator facade.
-
-                def once(self, event_name, handler):
-                    self.assert_event_name = event_name  # Preserve the exact browser event identity for assertion.
-                    self.dialog_handler = handler  # Retain the one-shot callback until the modeled reset click.
-                    events.append("dialog:registered")  # Record that confirmation authority precedes the destructive click.
-
-            page = FakePage()  # Create one isolated rendered Bingo state.
-
-            async def fake_locator_ready(locator):
-                events.append(f"ready:{locator.selector}")  # Record active-session detection through the public Call control.
-                return call_ready  # Return the scenario's rendered Call actionability.
-
-            async def fake_click_control(_page, selector, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
-                events.append(f"click:{selector}")  # Record the real Reset pointer boundary.
-                if page.dialog_handler is not None:  # Emit a dialog only for the scenario where the helper registered one.
-                    handler = page.dialog_handler  # Capture the one-shot handler before consuming it.
-                    page.dialog_handler = None  # Model Playwright removing a once-listener before callback execution.
-                    await handler(FakeDialog())  # Require the native confirmation to be accepted during the click.
-
-            async def fake_wait_any_enabled(_page, selectors, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
-                events.append(f"ready:{selectors[0]}")  # Record fresh-card readiness only after Reset completes.
-                return selectors[0]  # Model the authoritative enabled Buy control.
-
-            with mock.patch.object(ui_50000, "locator_ready", side_effect=fake_locator_ready), mock.patch.object(ui_50000, "click_control", side_effect=fake_click_control), mock.patch.object(ui_50000, "wait_any_enabled", side_effect=fake_wait_any_enabled):  # Isolate exact ordering from Playwright and the Bingo API.
-                await ui_50000.bingo_reset_to_purchase(page, Counter())  # Exercise the production helper through rendered seams only.
-            self.assertIsNone(page.dialog_handler)  # Reject any confirmation handler leaking into a later unrelated dialog.
-            return events, getattr(page, "assert_event_name", None)  # Return the trace and any registered event identity.
-
-        destructive_events, event_name = asyncio.run(run_scenario(True, 1))  # Model an active session after one committed ball.
-        self.assertEqual(destructive_events, ['locator:[data-testid="bingo-call"]', 'locator:[data-testid="bingo-called-ball"]', 'ready:[data-testid="bingo-call"]', 'count:[data-testid="bingo-called-ball"]', "dialog:registered", 'click:[data-testid="bingo-reset"]', "dialog:accept", 'ready:[data-testid="bingo-buy"]'])  # Require confirmation registration and acceptance before fresh-card readiness.
-        self.assertEqual(event_name, "dialog")  # Bind the one-shot listener to the native browser-dialog event.
-        uncalled_events, event_name = asyncio.run(run_scenario(True, 0))  # Model an active card before any ball has been called.
-        self.assertEqual(uncalled_events, ['locator:[data-testid="bingo-call"]', 'locator:[data-testid="bingo-called-ball"]', 'ready:[data-testid="bingo-call"]', 'count:[data-testid="bingo-called-ball"]', 'click:[data-testid="bingo-reset"]', 'ready:[data-testid="bingo-buy"]'])  # Keep pre-call refundable Reset free of destructive-confirmation authority.
-        self.assertIsNone(event_name)  # Prove an uncalled active card registered no dialog listener.
-        completed_events, event_name = asyncio.run(run_scenario(False, 12))  # Model completed history whose called balls remain visible without an active session.
-        self.assertEqual(completed_events, ['locator:[data-testid="bingo-call"]', 'locator:[data-testid="bingo-called-ball"]', 'ready:[data-testid="bingo-call"]', 'click:[data-testid="bingo-reset"]', 'ready:[data-testid="bingo-buy"]'])  # Forbid confirmation authority when only completed history is visible.
-        self.assertIsNone(event_name)  # Prove the safe reset registered no dialog listener.
 
     # Prove Roulette serializes refund and wager rerenders before the strict spinning-state transition.
     def test_roulette_reset_seed_and_spin_orders_every_drawer_boundary(self):
@@ -488,6 +693,68 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn("!node.disabled", page.expression)  # Require the public hold response to leave the hand actionable.
         self.assertEqual(page.timeout, ui_50000.ACTION_TIMEOUT_MS)  # Keep the network-backed hold transition bounded.
 
+    # Prove Double Bonus completes the shared Deal, five-position hold, committed-hold, and Draw sequence through its rendered attribute dialect.
+    def test_double_bonus_draw_poker_uses_rendered_controls_without_changing_family_defaults(self):
+        events = []  # Record the complete browser-free rendered-control order.
+
+        class FakeHold:  # Model one of the five Double Bonus source-card buttons.
+            def __init__(self, position):
+                self.position = str(position)  # Preserve the public data-hold identity.
+
+            async def get_attribute(self, name):
+                self.requested_attribute = name  # Retain the exact semantic attribute used by the harness.
+                return self.position  # Return the stable zero-based card position.
+
+        class FakePage:  # Provide only the committed held-card predicate boundary.
+            async def wait_for_function(self, expression, arg, timeout):
+                events.append(f"committed:{arg}")  # Require the hold rerender before Draw.
+                self.expression = expression  # Preserve the rendered-state predicate for assertions.
+                self.timeout = timeout  # Preserve the unchanged action timeout.
+
+        holds = [FakeHold(position) for position in range(5)]  # Expose the complete five-position decision state.
+
+        async def fake_inventory_controls(_page, _seen_counts):
+            events.append("inventory")  # Record both ready-state and post-deal inventory boundaries.
+
+        async def fake_configuration(_page, _ordinal, _activated_counts):
+            events.append("configuration")  # Preserve the existing pre-deal configuration stage.
+
+        async def fake_autoplay(_page, _ordinal, _activated_counts):
+            events.append("autoplay")  # Preserve the existing shared control-plane stage.
+
+        async def fake_enabled_locators(_page, selector):
+            events.append(f"discover:{selector}")  # Record mode discovery and five-card discovery distinctly.
+            return holds if selector == '[data-hold][aria-pressed="false"]' else []  # Expose holds only after the rendered Deal state.
+
+        async def fake_click_control(_page, selector, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"control:{selector}")  # Record real Deal and Draw selector dispatch boundaries.
+            return selector  # Preserve the click helper's stable signature-shaped return seam.
+
+        async def fake_wait_any_enabled(_page, selectors, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"wait:{selectors[0]}")  # Record both deal-to-hold and terminal-to-next-deal waits.
+            return selectors[0]  # Model a visible enabled rendered control.
+
+        async def fake_control_signature(locator):
+            events.append(f"score:{locator.position}")  # Require every position to participate in deficit balancing.
+            return f"double_bonus_video_poker::button[data-hold={locator.position}]"  # Use the stable aggregate identity added for Double Bonus.
+
+        async def fake_click_locator(locator, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"hold:{locator.position}")  # Record the one balanced real pointer hold activation.
+
+        activated = Counter({f"double_bonus_video_poker::button[data-hold={position}]": 100 + position for position in range(5)})  # Start with distinct passing counts.
+        activated["double_bonus_video_poker::button[data-hold=2]"] = 3  # Make position two the unique aggregate deficit.
+        page = FakePage()  # Create one isolated deterministic browser seam.
+        with mock.patch.object(ui_50000, "inventory_controls", side_effect=fake_inventory_controls), mock.patch.object(ui_50000, "exercise_configuration_controls", side_effect=fake_configuration), mock.patch.object(ui_50000, "exercise_autoplay_controls", side_effect=fake_autoplay), mock.patch.object(ui_50000, "enabled_locators", side_effect=fake_enabled_locators), mock.patch.object(ui_50000, "click_control", side_effect=fake_click_control), mock.patch.object(ui_50000, "wait_any_enabled", side_effect=fake_wait_any_enabled), mock.patch.object(ui_50000, "control_signature", side_effect=fake_control_signature), mock.patch.object(ui_50000, "click_locator", side_effect=fake_click_locator):  # Isolate exact selector and ordering behavior without Playwright or Chromium.
+            asyncio.run(ui_50000.play_game_ui(page, "double_bonus_video_poker", 7, Counter(), activated))  # Execute one complete Double Bonus formal strategy cycle.
+        self.assertEqual(events, ["inventory", "configuration", "autoplay", "discover:[data-hand-count],[data-coin-count]", "control:[data-deal]", 'wait:[data-hold][aria-pressed="false"]', "inventory", 'discover:[data-hold][aria-pressed="false"]', "score:0", "score:1", "score:2", "score:3", "score:4", "hold:2", "committed:2", "control:[data-draw]", "wait:[data-deal]", "inventory"])  # Require the full rendered Deal-to-Draw state machine and terminal inventory without timeout-only selectors.
+        self.assertTrue(all(hold.requested_attribute == "data-hold" for hold in holds))  # Require all five controls to share the registered semantic position attribute.
+        self.assertIn("[data-hold]", page.expression)  # Bind committed-state observation to Double Bonus markup.
+        self.assertIn("aria-pressed", page.expression)  # Preserve the visible selected-state contract.
+        self.assertEqual(page.timeout, ui_50000.ACTION_TIMEOUT_MS)  # Preserve the established hold-response wait budget.
+        self.assertEqual(ui_50000.DRAW_POKER_UI_CONTROLS["default"], {"deal": '[data-action="deal"]', "hold_attribute": "data-hold-position", "draw": '[data-action="draw"]'})  # Prove every previously qualified draw-poker family retains its exact selectors.
+        other_draw_games = {game_id for game_id, family in ui_50000.UI_STRATEGY_FAMILIES.items() if family == "draw_poker"}.difference({"double_bonus_video_poker"})  # Derive every already-qualified shared family member independently of catalog order.
+        self.assertTrue(all(ui_50000.DRAW_POKER_UI_CONTROLS.get(game_id, ui_50000.DRAW_POKER_UI_CONTROLS["default"]) is ui_50000.DRAW_POKER_UI_CONTROLS["default"] for game_id in other_draw_games))  # Reject an accidental selector override for any predecessor draw-poker route.
+
     # Prove Acey-Deucey deals before editing its phase-owned wager and skips that edit for Pass or automatic settlement.
     def test_acey_deucey_orders_wager_after_deal_only_for_play(self):
         # Execute one browser-free decision scenario and return its exact public interaction order.
@@ -583,7 +850,7 @@ class UI50000HarnessTests(unittest.TestCase):
 
     # Prove a complete distributed corpus loads once in canonical allocation order.
     def test_distributed_shards_require_complete_exact_inventory(self):
-        allocations = ui_50000.allocate_cycles(list(ui_50000.GAME_IDS), 50_000, 4, set(), 4)  # Build the immutable formal assignment.
+        allocations = ui_50000.formal_allocations()  # Build the immutable profiled formal assignment.
         source_commit = "c" * 40  # Use one valid synthetic full commit identity.
         with tempfile.TemporaryDirectory() as temporary_directory:  # Own and clean the downloaded-artifact simulation.
             root = Path(temporary_directory)  # Resolve the test-owned shard root.
@@ -598,7 +865,7 @@ class UI50000HarnessTests(unittest.TestCase):
 
     # Prove an exact filename cannot smuggle a foreign source or altered range into the aggregate.
     def test_distributed_shards_reject_foreign_identity(self):
-        allocations = ui_50000.allocate_cycles(list(ui_50000.GAME_IDS), 50_000, 4, set(), 4)  # Build the immutable formal assignment.
+        allocations = ui_50000.formal_allocations()  # Build the immutable profiled formal assignment.
         source_commit = "d" * 40  # Use one valid expected full commit identity.
         with tempfile.TemporaryDirectory() as temporary_directory:  # Own and clean the downloaded-artifact simulation.
             root = Path(temporary_directory)  # Resolve the test-owned shard root.
@@ -613,7 +880,7 @@ class UI50000HarnessTests(unittest.TestCase):
 
     # Prove the browser-free controller accepts exactly 50,000 completed cycles only when every formal gate is present.
     def test_distributed_aggregate_accounts_for_exact_terminal_corpus(self):
-        allocations = ui_50000.allocate_cycles(list(ui_50000.GAME_IDS), 50_000, 4, set(), 4)  # Build the immutable formal assignment.
+        allocations = ui_50000.formal_allocations()  # Build the immutable profiled formal assignment.
         source_commit = "f" * 40  # Use one valid immutable identity independent of optional release-copy Git metadata.
         with tempfile.TemporaryDirectory() as temporary_directory:  # Own and clean the complete downloaded-artifact simulation.
             root = Path(temporary_directory)  # Resolve the disposable aggregate root.

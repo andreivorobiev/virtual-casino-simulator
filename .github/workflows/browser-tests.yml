@@ -199,7 +199,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  # Derive the formal issue #227 matrix from the exact-source catalog instead of a stale enumerated list.
+  # Derive the formal TEST-092 matrix from the exact-source catalog and checked-in duration profile.
   formal_ui_plan:
     name: Formal UI allocation plan
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.formal_ui_50000 == true }}
@@ -229,7 +229,7 @@ jobs:
     needs: formal_ui_plan
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.formal_ui_50000 == true }}
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -256,7 +256,7 @@ jobs:
           --shard-report-root "logs/test-runs/ui_50000_shards"
           --evidence-root "logs/test-runs/ui_50000_visual"
           --progress-every 100
-          --max-attempts-per-cycle 2
+          --max-attempts-per-cycle 1
       - name: Upload terminal worker evidence
         if: always()
         uses: actions/upload-artifact@v4

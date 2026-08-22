@@ -5,10 +5,10 @@
 - Issue: https://github.com/andreivorobiev/virtual-casino-simulator/issues/1060
 - Priority: P2
 - Assigned author: storage conformance worker
-- Authoring system (`Claude`, `Codex`, `human`, or approved other): Claude
+- Authoring system (`Claude`, `Codex`, `human`, or approved other): Codex
 - Coordinator: Codex
 - Merge executor: Codex
-- Branch: `claude/1060-storage-conformance`
+- Branch: `codex/1060-storage-conformance`
 - Base branch and commit: early JSON authoring from exact merged Phase-A packet PR; final rebase onto exact accepted merge containing #1059
 - Dependency PRs and exact heads: final harness acceptance depends on eventual merged PR for #1059
 - PR title: `test: add storage provider conformance kit`
@@ -74,6 +74,6 @@
 
 - PR author may merge: No
 - PR author may enable auto-merge: No
-- Claude handback target: Codex review and merge when eligible
+- Claude handback target: not applicable; this Codex-authored head requires independent exact-head review before merge
 - Codex merge preconditions: exact #1059 base, full A–J inventory, no carve-outs, timing/cleanup evidence, requirements/versions/checks/review.
 - Post-merge verification and issue disposition: verify main and add `Rolled out with #NNN` to #1060.

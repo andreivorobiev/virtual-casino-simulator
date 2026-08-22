@@ -5,10 +5,10 @@
 - Issue: https://github.com/andreivorobiev/virtual-casino-simulator/issues/1061
 - Priority: P2
 - Assigned author: PostgreSQL docs and metadata worker
-- Authoring system (`Claude`, `Codex`, `human`, or approved other): Claude
+- Authoring system (`Claude`, `Codex`, `human`, or approved other): Codex
 - Coordinator: Codex
 - Merge executor: Codex
-- Branch: `claude/1061-postgres-docs-metadata`
+- Branch: `codex/1061-postgres-docs-metadata`
 - Base branch and commit: exact accepted merge containing #1060 and every prior lane
 - Dependency PRs and exact heads: verified merged PRs/rollout links for #1055 through #1060
 - PR title: `docs: document PostgreSQL storage provider`
@@ -73,6 +73,6 @@
 
 - PR author may merge: No
 - PR author may enable auto-merge: No
-- Claude handback target: Codex review and merge when eligible
+- Claude handback target: not applicable; this Codex-authored head requires independent exact-head review before merge
 - Codex merge preconditions: all dependencies/rollout links, exact docs truth, exclusive metadata, checks/review, no release/live mutation.
 - Post-merge verification and issue disposition: verify main, add `Rolled out with #NNN` to #1061, then close #1054 only after all seven rollout links are verified.

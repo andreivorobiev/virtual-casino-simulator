@@ -4643,12 +4643,28 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.locator('[data-action="shake"]').click(); page.locator('.sb-dice-tray.is-rolling').wait_for(timeout=WAIT_MS); game_evidence('after-pass-sic-bo-rolling-en-us-desktop_primary.png','sic_bo',['rolling'],'en-US','desktop_primary')
                     # Wait for the authoritative settled dice and capture both locales and all viewports.
                     page.wait_for_function("() => document.querySelectorAll('.sb-die:not(.is-rolling)').length === 3 && document.querySelector('.sb-result-grid')",timeout=WAIT_MS * 2); localized_evidence('settled',['settled'])
+                    # Replay the exact prior wager map through the real one-click control and require a second complete settlement.
+                    page.locator('[data-action="repeat"]').click(); page.locator('.sb-dice-tray.is-rolling').wait_for(timeout=WAIT_MS); page.wait_for_function("() => document.querySelectorAll('.sb-die:not(.is-rolling)').length === 3 && document.querySelector('.sb-result-grid')",timeout=WAIT_MS * 2)
+                    # Normalize the same-mount replay selection to the empty state produced by formal route remounting.
+                    page.locator('[data-action="clear"]').click(); page.wait_for_function("() => document.querySelectorAll('[data-bet-id][aria-pressed=\"true\"]').length === 0",timeout=WAIT_MS)
+                    # Resolve the complete source-owned fifty-position board before proving the repaired ordinary-cycle action order.
+                    sic_bo_positions=page.locator('[data-bet-id]'); assert sic_bo_positions.count()==50
+                    # Activate five distinct real positions exactly as one repaired ordinary formal cycle does.
+                    for position_index in range(5): sic_bo_positions.nth(position_index).click()
+                    # Require all five pointer selections to commit before the real Clear boundary.
+                    assert page.locator('[data-bet-id][aria-pressed="true"]').count()==5
+                    # Clear the populated wager map and require the empty selection to render.
+                    page.locator('[data-action="clear"]').click(); page.wait_for_function("() => document.querySelectorAll('[data-bet-id][aria-pressed=\"true\"]').length === 0",timeout=WAIT_MS)
+                    # Restore one real wager after Clear so the terminal Shake remains public and enabled.
+                    page.locator('[data-bet-id]').nth(5).click(); assert page.locator('[data-bet-id]').nth(5).get_attribute('aria-pressed')=='true'
+                    # Settle the replacement wager through Shake and require the terminal dice state again.
+                    page.locator('[data-action="shake"]').click(); page.locator('.sb-dice-tray.is-rolling').wait_for(timeout=WAIT_MS); page.wait_for_function("() => document.querySelectorAll('.sb-die:not(.is-rolling)').length === 3 && document.querySelector('.sb-result-grid')",timeout=WAIT_MS * 2)
                     # Capture reduced-motion and canonical route restoration.
                     page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('sic-bo-table').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Sic Bo browser and visual gate.
-                run_case('BR-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-004','SIC-BO-005'],sic_bo_acceptance)
+                run_case('BR-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-004','SIC-BO-005','TEST-092'],sic_bo_acceptance)
                 # Define real-backend Chuck-a-Luck localization, wager, responsive, motion, and route acceptance.
                 def chuck_a_luck_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
