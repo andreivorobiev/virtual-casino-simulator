@@ -73,8 +73,12 @@ class _ModelMySQLSessions(MySQLSessionMixin):
         self._schema_version = schema_version
         # Store one detached durable row per token digest.
         self.rows: dict[str, dict] = {}
-        # Serialize every model transaction like the database row-lock boundary.
+        # Serialize every model transaction like the fixed importer-marker semaphore.
         self.lock = threading.RLock()
+        # Retain exact registry-semaphore statements for concurrency and ordering evidence.
+        self.registry_lock_statements: list[tuple[str, tuple]] = []
+        # Model the import-first lifecycle with one canonical completed marker by default.
+        self.marker_payload = {"schema_version": 1, "status": "complete"}
 
     # Model successful checksum-verified readiness without an external connector.
     def ensure_ready(self) -> None:
@@ -90,6 +94,20 @@ class _ModelMySQLSessions(MySQLSessionMixin):
     def connect(self):
         # Allocate a distinct lease so cleanup remains observable per call.
         return _ModelConnection(self)
+
+    # Model the fixed existing importer marker selected by production create transactions.
+    def execute(self, statement: str, parameters: tuple) -> None:
+        # Accept only the semaphore query needed by production create_session in this row model.
+        assert statement == "SELECT payload_json FROM casino_documents WHERE document_key = %s FOR UPDATE"
+        # Bind every modeled lock to the exact private importer-marker identity.
+        assert parameters == (sessions_mysql_module._MYSQL_SESSION_IMPORT_MARKER,)
+        # Record one lock acquisition attempt while the outer transaction semaphore is held.
+        self.registry_lock_statements.append((statement, parameters))
+
+    # Return the canonical completed marker for one modeled registry-lock query.
+    def fetchone(self) -> dict | None:
+        # Match the connector dictionary-row shape consumed by the production helper.
+        return None if self.marker_payload is None else {"payload_json": json.dumps(self.marker_payload, sort_keys=True)}
 
     # Execute one callback under the model's exclusive transaction boundary.
     def _mysql_session_transaction(self, operation):
@@ -247,6 +265,21 @@ class SessionStorageProviderTests(unittest.TestCase):
                 # Require only the third active session to remain.
                 self.assertEqual([row["session_id"] for row in provider.list_sessions()], ["session-3"])
 
+    # Prove direct relational mutation cannot invent or repair the import authority marker.
+    def test_mysql_create_requires_completed_import_marker(self) -> None:
+        # Exercise absent and malformed marker states independently.
+        for marker in (None, {"schema_version": 1, "status": "pending"}):
+            # Build a fresh transaction model for each fail-closed marker state.
+            provider = _ModelMySQLSessions()
+            # Replace only the modeled connector result before mutation begins.
+            provider.marker_payload = marker
+            # Require the fixed recovery boundary without publishing any session row.
+            with self.assertRaisesRegex(ConflictError, "^Session storage requires operator recovery$"):
+                # Attempt direct provider creation without a completed import lifecycle.
+                provider.create_session(_session(1, "marker-user"), 2, 4)
+            # Preserve empty authority and prove no implicit marker repair or session insert occurred.
+            self.assertEqual(provider.rows, {})
+
     # Reproduce parallel same-user and different-user login/logout without lost or cross-wired rows.
     def test_parallel_login_logout_preserves_every_session_and_csrf(self) -> None:
         # Exercise both storage providers against the same simultaneous schedule.
@@ -279,6 +312,10 @@ class SessionStorageProviderTests(unittest.TestCase):
                 self.assertEqual({result[1] for result in created_results}, {row["csrf_token"] for row in sessions})
                 # Require sixteen durable independent rows with no plaintext tokens.
                 self.assertEqual((len(provider.list_sessions()), sum("token" in row for row in provider.list_sessions())), (16, 0))
+                # Require every MySQL-model creator to traverse the fixed registry semaphore exactly once.
+                if name == "mysql":
+                    # Bind the concurrent schedule to sixteen single-pass transactions with no callback retry.
+                    self.assertEqual(len(provider.registry_lock_statements), len(sessions))
                 # Release every logout call at the same deterministic barrier.
                 logout_barrier = threading.Barrier(len(sessions))
 
@@ -343,6 +380,17 @@ class SessionStorageProviderTests(unittest.TestCase):
         self.assertIn("connection.start_transaction()", source)
         # Require successful commit and failure rollback before lease cleanup.
         self.assertTrue(all(fragment in source for fragment in ("connection.commit()", "connection.rollback()", "connection.close()")))
+        # Require create to lock the completed import marker before taking the complete-registry range lock.
+        create_source = inspect.getsource(MySQLSessionMixin.create_session)
+        self.assertLess(create_source.index("_lock_mysql_session_registry(cursor)"), create_source.index("_select_mysql_sessions(cursor, for_update=True)"))
+        # Require full replacement to use the identical marker-before-registry order without marker creation.
+        replace_source = inspect.getsource(MySQLSessionMixin.replace_sessions)
+        self.assertLess(replace_source.index("_lock_mysql_session_registry(cursor)"), replace_source.index("_select_mysql_sessions(cursor, for_update=True)"))
+        self.assertNotIn("INSERT INTO casino_documents", replace_source)
+        # Prohibit a retry loop from replaying arbitrary session transaction callbacks or create operations.
+        transaction_source = inspect.getsource(MySQLSessionMixin._mysql_session_transaction)
+        self.assertNotIn("while ", transaction_source)
+        self.assertNotIn("for attempt", transaction_source)
 
 
 # Support direct focused execution in local and CI validation.
