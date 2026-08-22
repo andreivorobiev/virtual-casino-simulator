@@ -411,10 +411,12 @@ def _exercise_game_action_provider() -> None:
             # Bind the provider to the disposable base database.
             database=os.environ["CASINO_MYSQL_DATABASE"],
         ),
-        # Guarantee two simultaneous leases for the executor-versus-resolver race.
-        pool_config=storage.MySQLPoolConfig(capacity=2, checkout_wait_ms=1000, connect_timeout_seconds=3),
+        # Match the routine production-login fan-out while retaining bounded connector ownership.
+        pool_config=storage.MySQLPoolConfig(capacity=8, checkout_wait_ms=1000, connect_timeout_seconds=3),
     )
     try:
+        # Establish the same completed import marker that every production auth access verifies.
+        provider.import_legacy_sessions("auth/sessions.json", lambda: {"schema_version": 1, "sessions": []})
         # Build twelve complete sessions spanning one shared and six distinct identities.
         session_rows = [
             # Preserve one independent bearer and CSRF proof per concurrent login.
@@ -422,9 +424,17 @@ def _exercise_game_action_provider() -> None:
             # Materialize the bounded live cohort.
             for index in range(12)
         ]
+        # Rendezvous the first complete routine-login cohort before the empty-registry transaction boundary.
+        login_barrier = threading.Barrier(8)
 
         # Create and resolve one exact native-table session.
-        def create_live_session(row):
+        def create_live_session(indexed_row):
+            # Separate the deterministic worker ordinal from its complete session input.
+            index, row = indexed_row
+            # Release exactly eight initial creators together; later queued rows need no second rendezvous.
+            if index < 8:
+                # Fail closed if the real connector cohort cannot reach the intended concurrency boundary.
+                login_barrier.wait(timeout=10)
             # Commit one independent first-class row with caps above this cohort.
             created = provider.create_session(row, 12, 24)
             # Resolve through the unique bearer digest index after commit.
@@ -433,9 +443,9 @@ def _exercise_game_action_provider() -> None:
             return resolved["session_id"], resolved["csrf_token"]
 
         # Execute the same-user and different-user login cohort concurrently.
-        with ThreadPoolExecutor(max_workers=2) as executor:
+        with ThreadPoolExecutor(max_workers=8) as executor:
             # Surface every connector or integrity failure in the parent thread.
-            created_sessions = list(executor.map(create_live_session, session_rows))
+            created_sessions = list(executor.map(create_live_session, enumerate(session_rows)))
         # Require all twelve identities and CSRF proofs without lost rows.
         assert {item[0] for item in created_sessions} == {row["session_id"] for row in session_rows} and {item[1] for item in created_sessions} == {row["csrf_token"] for row in session_rows}
         # Require durable list projections to omit every plaintext bearer.
@@ -453,7 +463,7 @@ def _exercise_game_action_provider() -> None:
             return provider.revoke_session_by_token(token, "2026-01-01T02:00:00.000Z")
 
         # Execute every logout concurrently through the same bounded pool.
-        with ThreadPoolExecutor(max_workers=2) as executor:
+        with ThreadPoolExecutor(max_workers=8) as executor:
             # Materialize every exact changed count.
             revoked_sessions = list(executor.map(revoke_live_session, session_rows))
         # Require zero lost revocations or unexpected misses.
