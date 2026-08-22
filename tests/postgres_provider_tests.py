@@ -92,12 +92,26 @@ class FakeIntegrityError(FakeDatabaseError):
     pass
 
 
+# Define the connector-owned nonblocking lock-timeout category.
+class FakeLockNotAvailable(FakeDatabaseError):
+    # Preserve one finite lock-contention result without native detail.
+    pass
+
+
+# Define the connector-owned deadlock-victim category.
+class FakeDeadlockDetected(FakeDatabaseError):
+    # Preserve one finite serialization-conflict result without native detail.
+    pass
+
+
 # Model only the psycopg attributes consumed by provider core.
 class FakeDriver:
     # Publish the native database base class.
     Error = FakeDatabaseError
     # Publish the native constraint category.
     IntegrityError = FakeIntegrityError
+    # Publish the public psycopg error namespace consumed by the game-action seam.
+    errors = SimpleNamespace(LockNotAvailable=FakeLockNotAvailable, DeadlockDetected=FakeDeadlockDetected)
     # Publish the libpq transaction-status namespace.
     pq = SimpleNamespace(TransactionStatus=FakeTransactionStatus)
 
@@ -291,7 +305,7 @@ class PostgresProviderTests(unittest.TestCase):
         created = selected._open_physical_connection(3)
         # Require one connector result and exact bounded options.
         self.assertIsNotNone(created)
-        self.assertEqual(calls, [{"host": "127.0.0.1", "port": 5432, "user": "casino", "password": "secret", "dbname": "fixture", "connect_timeout": 3, "autocommit": False, "row_factory": selected._dict_row, "options": "-c default_transaction_isolation=read committed"}])
+        self.assertEqual(calls, [{"host": "127.0.0.1", "port": 5432, "user": "casino", "password": "secret", "dbname": "fixture", "connect_timeout": 3, "autocommit": False, "row_factory": selected._dict_row, "prepare_threshold": None, "options": "-c default_transaction_isolation=read\\ committed"}])
 
     # Prove readiness calls only the migration-owned no-secret verifier once.
     def test_readiness_uses_exact_runtime_verifier_once(self) -> None:
@@ -346,6 +360,33 @@ class PostgresProviderTests(unittest.TestCase):
         # Require identity, rollback, and unconditional cleanup.
         self.assertIs(raised.exception, caller_failure)
         self.assertEqual((connection.rollback_calls, connection.close_calls, connection.commit_calls), (1, 1, 0))
+
+    # Prove the game-action seam exposes only finite lock and reset facts.
+    def test_game_action_hooks_are_connector_neutral_and_target_scoped(self) -> None:
+        # Build one provider without opening a connector or pool lease.
+        selected = provider.PostgresStorageProvider.__new__(provider.PostgresStorageProvider)
+        # Install the synthetic public psycopg error namespace.
+        selected._driver = FakeDriver
+        # Bind the process-local reset identity to a non-secret target tuple.
+        selected.config = PostgresConfig("127.0.0.1", 5432, "casino", "secret", "fixture")
+        # Accept only the two finite connector lock outcomes.
+        self.assertTrue(selected._is_game_action_lock_contention(FakeLockNotAvailable("hidden")))
+        self.assertTrue(selected._is_game_action_lock_contention(FakeDeadlockDetected("hidden")))
+        self.assertFalse(selected._is_game_action_lock_contention(FakeIntegrityError("hidden")))
+        # Require inactive state before the target is registered.
+        self.assertFalse(selected._game_action_reset_is_active())
+        # Register only the normalized target key under the production lock.
+        with provider._POSTGRES_RESET_REGISTRY_LOCK:
+            # Model one equivalent provider owning reset in this process.
+            provider._POSTGRES_RESET_TARGETS.add(selected._planner_key())
+        try:
+            # Require the hook to observe equivalent-target ownership.
+            self.assertTrue(selected._game_action_reset_is_active())
+        finally:
+            # Remove the modeled ownership even when the assertion fails.
+            with provider._POSTGRES_RESET_REGISTRY_LOCK:
+                # Restore process-global test isolation.
+                provider._POSTGRES_RESET_TARGETS.discard(selected._planner_key())
 
     # Prove one wallet action uses FOR UPDATE, JSONB, RETURNING, and atomic commit.
     def test_ledger_transaction_is_atomic_and_sequence_bound(self) -> None:

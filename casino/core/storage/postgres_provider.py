@@ -198,7 +198,7 @@ class PostgresStorageProvider(PostgresSessionMixin, StorageProvider):
     # Open one physical PostgreSQL connection with bounded timeout and reviewed defaults.
     def _open_physical_connection(self, connect_timeout_seconds: int) -> Any:
         # Add only connector policy to the immutable credential keyword mapping.
-        options = {**self.config.kwargs(), "connect_timeout": connect_timeout_seconds, "autocommit": False, "row_factory": self._dict_row, "options": "-c default_transaction_isolation=read committed"}
+        options = {**self.config.kwargs(), "connect_timeout": connect_timeout_seconds, "autocommit": False, "row_factory": self._dict_row, "prepare_threshold": None, "options": "-c default_transaction_isolation=read\\ committed"}
         # Return one new READ COMMITTED physical session to the bounded pool.
         return self._driver.connect(**options)
 
@@ -280,6 +280,11 @@ class PostgresStorageProvider(PostgresSessionMixin, StorageProvider):
     def _is_database_error(self, error: BaseException) -> bool:
         # Match only connector and pool-owned categories, never arbitrary callbacks.
         return isinstance(error, (self._driver.Error, PostgresPoolClosedError, PostgresPoolConnectionError, PostgresPoolExhaustedError))
+
+    # Classify only the finite PostgreSQL lock outcomes a game-action resolver may report.
+    def _is_game_action_lock_contention(self, error: BaseException) -> bool:
+        # Bind the connector-neutral hook to psycopg's public lock and deadlock categories.
+        return isinstance(error, (self._driver.errors.LockNotAvailable, self._driver.errors.DeadlockDetected))
 
     # Translate one native database failure into a fixed application conflict.
     def _raise_database_error(self, error: BaseException) -> None:
@@ -400,6 +405,13 @@ class PostgresStorageProvider(PostgresSessionMixin, StorageProvider):
         target = f"{self.config.host.lower()}:{self.config.port}/{self.config.database}"
         # Convert the first eight digest bytes to PostgreSQL's signed bigint domain.
         return int.from_bytes(hashlib.sha256(target.encode("utf-8")).digest()[:8], byteorder="big", signed=True)
+
+    # Report process-local reset ownership without opening or waiting on a database session.
+    def _game_action_reset_is_active(self) -> bool:
+        # Serialize inspection against equivalent-provider reset registration and cleanup.
+        with _POSTGRES_RESET_REGISTRY_LOCK:
+            # Match only this normalized target identity, never credentials or object identity.
+            return self._planner_key() in _POSTGRES_RESET_TARGETS
 
     # Validate the singleton game-action reset epoch row inside an active transaction.
     def _reset_epoch(self, cursor: Any, *, exclusive: bool) -> dict:
