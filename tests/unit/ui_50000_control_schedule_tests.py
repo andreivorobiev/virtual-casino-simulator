@@ -1,0 +1,141 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+"""Focused exact-control schedule proofs extracted from the formal UI harness suite."""
+
+# Run async helper seams without starting Chromium.
+import asyncio
+# Integrate the extracted proofs with the repository API harness.
+import unittest
+# Count exact per-control activation schedules.
+from collections import Counter
+
+# Exercise the production formal UI schedule owner without starting its CLI.
+from tests import ui_50000
+
+
+# Prove TEST-092 exact-control schedules and browser-operation complexity independently of aggregate fixtures.
+class UI50000ControlScheduleTests(unittest.TestCase):
+    # Prove exact Repeat ownership sums to one hundred while every isolated user keeps cycle zero as a fresh seed.
+    def test_formal_repeat_plan_frontloads_capacity_without_replica_restarts(self):
+        expected = {"keno": [100, 0, 0, 0, 0, 0], "bingo": [51, 49] + [0] * 19, "double_bonus_video_poker": [63, 37] + [0] * 15, "texas_holdem_practice_table": [90, 10] + [0] * 10, "sic_bo": [100]}  # Pin representative single- and multi-worker capacity boundaries.
+        allocations = ui_50000.formal_allocations()  # Resolve the exact current 140-worker plan once.
+        for game_id in ui_50000.REPEAT_CONTROL_SELECTORS:  # Audit every aggregate-short Repeat identity.
+            module_source = (ui_50000.ROOT / "web" / "games" / f"{game_id}.js").read_text(encoding="utf-8")  # Read the exact registered frontend source owning this selector.
+            selector = ui_50000.REPEAT_CONTROL_SELECTORS[game_id]  # Resolve the exact schedule identity under review.
+            source_attribute = selector.strip("[]") if "data-testid" in selector else 'data-action="repeat"'  # Convert selector quoting into the product markup identity.
+            self.assertIn(source_attribute, module_source, game_id)  # Bind every schedule identity to real product markup or handler code.
+            game_allocations = [allocation for allocation in allocations if allocation[0] == game_id]  # Preserve stable replica order and per-user quota.
+            shares = [ui_50000.formal_repeat_quota(game_id, allocation[2]) for allocation in game_allocations]  # Derive the exact local Repeat shares.
+            self.assertEqual(sum(shares), ui_50000.CONTROL_ACTIVATION_FLOOR, game_id)  # Allocate the literal floor once, never once per replica.
+            self.assertTrue(all(share <= allocation[3] - 1 for share, allocation in zip(shares, game_allocations)), game_id)  # Reserve every owning user's local cycle zero.
+            self.assertFalse(ui_50000.should_schedule_repeat(game_id, 0, 0, True), game_id)  # Require the first settlement to seed real history.
+        for game_id, shares in expected.items():  # Pin the reviewed capacity-frontloaded edge cases exactly.
+            self.assertEqual([ui_50000.formal_repeat_quota(game_id, replica) for replica in range(len(shares))], shares, game_id)  # Reject a future round-robin overrun.
+
+    # Prove Keno and Sic Bo retain every literal board floor after exactly one hundred sole-terminal Repeat cycles.
+    def test_formal_board_schedules_exceed_floor_after_repeat_capacity(self):
+        keno_counts = Counter()  # Count real individual Keno pointer targets under the exact six-worker plan.
+        sic_bo_counts = Counter()  # Count real Sic Bo wager targets under the exact one-worker plan.
+        repeat_counts = Counter()  # Prove each affected game spends exactly the assigned Repeat floor.
+        fresh_counts = Counter()  # Prove the remaining 987 cycles stay globally continuous.
+        for game_id, _game_index, replica_index, quota, cycle_start in ui_50000.formal_allocations():  # Traverse immutable worker ranges without browser work.
+            if game_id not in {"keno", "sic_bo"}:  # Limit arithmetic to the two repaired aggregate board deficits.
+                continue  # Preserve a focused executable proof.
+            for local_ordinal in range(quota):  # Reproduce every exact assigned cycle once.
+                game_ordinal = ui_50000.coverage_ordinal(game_id, local_ordinal, cycle_start + local_ordinal, True)  # Resolve the same formal rank used by the worker.
+                if ui_50000.should_schedule_repeat(game_id, local_ordinal, replica_index, True):  # Remove this user's exact replay-only cycles.
+                    repeat_counts[game_id] += 1  # Count the sole-terminal Repeat allocation.
+                    continue  # Do not credit fresh board controls during replay.
+                ordinary = ui_50000.formal_ordinary_ordinal(game_id, game_ordinal, local_ordinal, replica_index)  # Collapse replicas and Repeat gaps into one fresh rank.
+                self.assertEqual(ordinary, fresh_counts[game_id], (game_id, replica_index, local_ordinal))  # Require exact continuity without aliasing or holes.
+                fresh_counts[game_id] += 1  # Advance the canonical fresh-cycle inventory.
+                if game_id == "keno":  # Reproduce the production quick-pick and individual-cell schedule.
+                    mode = ordinary % 16  # Apply the two quick modes and fourteen individual modes.
+                    if mode >= 2:  # Credit only actual individual number clicks.
+                        number_start, replacement_start = ui_50000.keno_number_schedule(ordinary)  # Resolve the same gapless cell slice as production.
+                        for offset in range(ui_50000.KENO_NUMBER_CLICKS_PER_CYCLE):  # Spend the checked-in exact pointer budget.
+                            keno_counts[(number_start + offset) % 80] += 1  # Rotate across all eighty rendered cells.
+                        if mode == 2:  # Reproduce the five-cell rebuild after the real Clear Selection action.
+                            for offset in range(5):  # Restore one legal bounded ticket.
+                                keno_counts[(replacement_start + offset) % 80] += 1  # Credit only the next five gapless replacement clicks.
+                else:  # Reproduce the Sic Bo fresh wager and first-hundred ordinary Clear schedule.
+                    wager_start, replacement_index = ui_50000.sic_bo_wager_schedule(ordinary)  # Resolve the shared gapless action slice.
+                    for offset in range(ui_50000.SIC_BO_WAGER_CLICKS_PER_CYCLE):  # Spend five distinct real bets per fresh shake.
+                        sic_bo_counts[(wager_start + offset) % 50] += 1  # Rotate across all fifty wager identities.
+                    if replacement_index is not None:  # Preserve the Clear control's own literal ordinary-cycle floor.
+                        sic_bo_counts[replacement_index % 50] += 1  # Credit the one real post-clear replacement wager.
+        self.assertEqual(repeat_counts, Counter({"keno": 100, "sic_bo": 100}))  # Require exactly one hundred replays per affected game.
+        self.assertEqual(fresh_counts, Counter({"keno": 987, "sic_bo": 987}))  # Preserve every non-Repeat cycle without gaps.
+        self.assertEqual((len(keno_counts), min(keno_counts.values()), max(keno_counts.values())), (80, 100, 101))  # Reach the floor exactly through nine ordinary clicks plus real Clear replacements.
+        self.assertEqual((len(sic_bo_counts), min(sic_bo_counts.values()), max(sic_bo_counts.values())), (50, 100, 101))  # Reach the floor exactly through five ordinary bets plus real Clear replacements.
+
+    # Prove the time-balanced Roulette plan covers both mode inventories while moving autoplay off the primary Rebet range.
+    def test_roulette_mode_relative_schedules_exceed_every_literal_floor(self):
+        from casino.games.roulette.rules import catalog as roulette_catalog, roulette_numbers  # Bind browser inventory arithmetic to the exact production rules catalog.
+
+        frontend_source = (ui_50000.ROOT / "web" / "games" / "roulette.js").read_text(encoding="utf-8")  # Read the renderer that owns the raw selector union.
+        self.assertIn("catalog.filter(bet => bet.layout_kind !== 'outside' && bet.type !== 'straight')", frontend_source)  # Bind hotspot counts to the production filtering rule.
+        self.assertIn("['red', 'black', 'odd', 'even', 'low', 'high'].map(type => `<button type=\"button\" data-outbtn=", frontend_source)  # Bind the six duplicate fast-bet targets to source.
+        self.assertIn("['snake', 'voisins', 'tiers', 'orphelins', 'jeu_zero', 'neighbors', 'final', 'complete'].map(type => `<button type=\"button\" data-call=", frontend_source)  # Bind the eight racetrack call targets to source.
+        for mode, expected in ui_50000.ROULETTE_SPECIAL_COUNTS.items():  # Derive exact raw mode inventories from source-owned catalog rows and fixed render groups.
+            hotspots = sum(row.get("layout_kind") != "outside" and row.get("type") != "straight" for row in roulette_catalog(mode))  # Match the production hotspot filter byte-for-byte.
+            raw_special_count = hotspots + 6 + 3 + 3 + 6 + 8  # Add table outside, dozen, column, duplicate fast-bet, and call controls rendered by source.
+            self.assertEqual(raw_special_count, expected, mode)  # Reject stale constants before formal browser dispatch.
+            self.assertEqual(len(roulette_numbers(mode)), ui_50000.ROULETTE_NUMBER_COUNTS[mode], mode)  # Bind each straight-number count to the production wheel helper.
+        number_counts = {mode: Counter() for mode in ui_50000.ROULETTE_NUMBER_COUNTS}  # Count stable number positions independently per wheel inventory.
+        special_counts = {mode: Counter() for mode in ui_50000.ROULETTE_SPECIAL_COUNTS}  # Count stable special positions independently per wheel inventory.
+        mode_cycles = Counter()  # Bind the schedule to the exact 551/536 capacity split.
+        autoplay_ranks = []  # Preserve only cycles accepted by the existing first-hundred autoplay helper.
+        for game_ordinal in range(1087):  # Reproduce every exact Roulette cycle once without browser work.
+            mode = ui_50000.roulette_mode_for_ordinal(game_ordinal)  # Resolve the same contiguous mode assignment as production.
+            mode_cycles[mode] += 1  # Count exact inventory ownership.
+            number_start, number_clicks = ui_50000.roulette_number_schedule(game_ordinal)  # Resolve the cumulative number slice.
+            for offset in range(number_clicks):  # Credit only scheduled real number clicks.
+                number_counts[mode][(number_start + offset) % ui_50000.ROULETTE_NUMBER_COUNTS[mode]] += 1  # Rotate within the exact mode-owned inventory.
+            special_start, special_clicks = ui_50000.roulette_special_schedule(game_ordinal)  # Resolve the cumulative special slice.
+            for offset in range(special_clicks):  # Credit only scheduled real special clicks.
+                special_counts[mode][(special_start + offset) % ui_50000.ROULETTE_SPECIAL_COUNTS[mode]] += 1  # Rotate within the exact mode-owned inventory.
+            autoplay_ordinal = ui_50000.roulette_autoplay_ordinal(game_ordinal)  # Apply the time-balanced ordinal translation.
+            if autoplay_ordinal < ui_50000.CONTROL_ACTIVATION_FLOOR:  # Match the shared autoplay helper's exact acceptance window.
+                autoplay_ranks.append((game_ordinal, autoplay_ordinal))  # Preserve only scheduled session cycles.
+        self.assertEqual(mode_cycles, Counter({"double": 551, "single": 536}))  # Pin the exact source-reviewed inventory split.
+        self.assertEqual(set(number_counts["double"].values()), {100})  # Cover all 38 double-zero numbers exactly at the literal floor.
+        self.assertEqual(set(number_counts["single"].values()), {100})  # Cover all 37 single-zero numbers exactly at the literal floor.
+        self.assertEqual(set(special_counts["double"].values()), {100})  # Cover all 139 raw double-zero specials exactly at the literal floor.
+        self.assertEqual(set(special_counts["single"].values()), {100})  # Cover all 135 raw single-zero specials exactly at the literal floor.
+        self.assertEqual(autoplay_ranks, [(ordinal, ordinal - 101) for ordinal in range(101, 201)])  # Move exactly one hundred sessions away from ranks0..100.
+        roulette_allocations = [allocation for allocation in ui_50000.formal_allocations() if allocation[0] == "roulette"]  # Read exact frozen replica boundaries for runtime-budget ownership.
+        per_replica_budgets = []  # Preserve number, special, and autoplay work assigned to each measured worker.
+        for _game, _game_index, replica, quota, cycle_start in roulette_allocations:  # Reproduce each formal worker's exact game-relative range.
+            first = ui_50000.coverage_ordinal("roulette", 0, cycle_start, True)  # Resolve the first continuous Roulette rank.
+            ranks = range(first, first + quota)  # Preserve the immutable contiguous per-replica interval.
+            per_replica_budgets.append((replica, quota, sum(ui_50000.roulette_number_schedule(rank)[1] for rank in ranks), sum(ui_50000.roulette_special_schedule(rank)[1] for rank in ranks), sum(ui_50000.roulette_autoplay_ordinal(rank) < 100 for rank in ranks)))  # Count only scheduled real pointer/session work.
+        self.assertEqual(per_replica_budgets, [(0,101,505,2424,0),(1,90,450,2160,90),(2,90,720,2340,10),(3,90,685,2296,0),(4,90,720,2340,0),(5,90,720,2340,0),(6,90,630,2250,0),(7,90,630,2250,0),(8,89,623,2314,0),(9,89,571,2225,0),(10,89,623,2225,0),(11,89,623,2236,0)])  # Pin the reviewed time-balanced plan that keeps heavy workers below the unchanged ceiling.
+
+    # Prove exact Roulette rotation acquires one collection count and performs only its O(clicks) nth actions.
+    def test_roulette_exact_rotation_does_not_rescan_target_inventory(self):
+        events = []  # Record collection creation, one count acquisition, and selected stable indices.
+
+        class FakeCollection:  # Model one stable-order locator collection across API rerenders.
+            async def count(self):
+                events.append("count")  # Expose any repeated full-inventory acquisition.
+                return 5  # Provide the exact reviewed fake inventory.
+
+            def nth(self, index):
+                events.append(("nth", index))  # Record O(clicks) target resolution only.
+                return index  # Return the stable index as the fake locator.
+
+        class FakePage:  # Provide only the one collection lookup owned by the helper.
+            def locator(self, selector):
+                events.append(("locator", selector))  # Record one public selector acquisition.
+                return FakeCollection()  # Return the stable fake collection.
+
+        async def fake_action(_page, target, _activated_counts):
+            events.append(("click", target))  # Record one serialized real-action seam per scheduled target.
+
+        asyncio.run(ui_50000.rotate_exact_control_group(FakePage(), "[data-target]", 5, 3, 3, Counter(), fake_action))  # Exercise one wrapping stable-order slice.
+        self.assertEqual(events, [("locator", "[data-target]"), "count", ("nth", 3), ("click", 3), ("nth", 4), ("click", 4), ("nth", 0), ("click", 0)])  # Reject any O(clicks×controls) scan.
+
+
+if __name__ == "__main__":  # Preserve direct focused execution for local diagnostics.
+    unittest.main()  # Run only the extracted exact-control schedule proofs.

@@ -40,9 +40,9 @@ def _run_concurrent_browser_138_harness_tests():
 def _run_ui_50000_harness_tests():
     """Run the exact UI 50,000-cycle harness policy suite."""
     # Import the focused harness suite only when its mapped case runs.
-    from tests.unit import ui_50000_tests
-    # Load only the exact allocation, classification, and resume-policy class.
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(ui_50000_tests.UI50000HarnessTests)
+    from tests.unit import ui_50000_control_schedule_tests, ui_50000_tests
+    # Load both the exact allocation/resume class and extracted control-schedule class under the same required API case.
+    suite = unittest.TestSuite((unittest.defaultTestLoader.loadTestsFromTestCase(ui_50000_tests.UI50000HarnessTests), unittest.defaultTestLoader.loadTestsFromTestCase(ui_50000_control_schedule_tests.UI50000ControlScheduleTests)))
     # Execute the focused suite with concise standard output.
     result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
     # Fail the named case when any harness policy proof fails.

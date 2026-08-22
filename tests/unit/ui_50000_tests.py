@@ -394,14 +394,50 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn(roulette_nav, focused_result["excluded"])  # Exclude only the omitted registered route from focused acceptance.
         self.assertIn(roulette_open, focused_result["excluded"])  # Apply the same exact rule to lobby open controls.
         self.assertEqual(focused_result["excluded"][roulette_nav]["reason"], "unselected registered-game navigation outside focused profile")  # Publish a durable non-waiver explanation.
-        self.assertIn(unknown_nav, focused_result["failed"])  # Refuse to exempt unregistered or malformed catalog identities.
+        self.assertIn(unknown_nav, focused_result["excluded"])  # Keep unregistered or utility-like shell identities outside the gameplay floor.
+        self.assertEqual(focused_result["excluded"][unknown_nav]["reason"], "non-gameplay shell control")  # Prevent a nav-shaped utility from becoming eligible by prefix alone.
         self.assertIn(baccarat_nav, focused_result["exercised"])  # Keep selected navigation on the literal floor.
         self.assertIn(deal, focused_result["exercised"])  # Keep selected game-owned actions fully governed.
 
-    # Prove only replicated Roulette continues its deterministic target schedule across worker boundaries.
-    def test_coverage_ordinal_continues_roulette_replicas_only(self):
+    # Prove every exact formal game continues one deterministic schedule across worker boundaries.
+    def test_coverage_ordinal_continues_every_formal_replica(self):
         self.assertEqual(ui_50000.coverage_ordinal("roulette", 0, 417), 417)  # Continue Roulette after the prior replica's exact range.
         self.assertEqual(ui_50000.coverage_ordinal("blackjack", 0, 6667), 0)  # Preserve the local first-one-hundred budgets for ordinary games.
+        keno_allocations = [allocation for allocation in ui_50000.formal_allocations() if allocation[0] == "keno"]  # Read the exact six-worker Keno plan.
+        first, second = keno_allocations[:2]  # Resolve one real replica boundary from the governed profile.
+        self.assertEqual(ui_50000.coverage_ordinal("keno", 0, second[4], True), first[3])  # Continue immediately after the preceding worker's quota.
+
+    # Prove locale synchronization observes old-node detachment before replacement-form readiness.
+    def test_login_locale_synchronization_orders_detachment_before_new_form(self):
+        events = []  # Record the exact browser-owned transition sequence without launching Chromium.
+
+        class FakeGateHandle:  # Model the captured old DOM owner independently from later locator resolution.
+            async def wait_for_element_state(self, state, timeout):
+                events.append(("old_gate", state, timeout))  # Record the detachment/hide oracle before replacement lookup.
+
+        class FakeLocator:  # Provide only the current gate and locale-control surfaces used by the helper.
+            def __init__(self, test_id):
+                self.test_id = test_id  # Preserve the stable public identity for assertions.
+
+            async def element_handle(self):
+                events.append(("element_handle", self.test_id))  # Capture the exact pre-change node first.
+                return FakeGateHandle()  # Return one immutable old-node handle.
+
+            async def select_option(self, locale, timeout):
+                events.append(("select", self.test_id, locale, timeout))  # Record visible selection before detachment.
+
+        class FakePage:  # Model locator replacement and the final attached-form predicate.
+            def get_by_test_id(self, test_id):
+                return FakeLocator(test_id)  # Resolve current semantic locators by public identity.
+
+            async def wait_for_function(self, expression, arg, timeout):
+                events.append(("replacement", arg, timeout, "login-submit" in expression))  # Require committed locale and complete replacement fields.
+
+        counts = Counter()  # Capture the successful locale activation identity.
+        with mock.patch.object(ui_50000, "control_signature", new=mock.AsyncMock(return_value="auth::select[data-testid=auth-locale-select]")):  # Isolate signature extraction from DOM evaluation.
+            asyncio.run(ui_50000.synchronize_login_locale(FakePage(), "ru-RU", counts, lambda: 3210))  # Exercise the ordered helper with one unchanged caller deadline.
+        self.assertEqual(events, [("element_handle", "login-gate"), ("select", "auth-locale-select", "ru-RU", 3210), ("old_gate", "hidden", 3210), ("replacement", "ru-RU", 3210, True)])  # Reject credential readiness before old-node detachment.
+        self.assertEqual(counts, Counter({"auth::select[data-testid=auth-locale-select]": 1}))  # Count only a complete replacement transition.
 
     # Prove Rebet closes a real activation deficit beyond the first hundred cycles without duplicating work across Roulette shards.
     def test_roulette_rebet_retries_only_primary_shard_until_floor(self):
@@ -411,6 +447,17 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertTrue(ui_50000.should_exercise_roulette_rebet(0, under_floor))  # Continue real rendered attempts on the first Roulette shard after cycle one hundred.
         self.assertFalse(ui_50000.should_exercise_roulette_rebet(1, under_floor))  # Prevent every later replica from restarting the same control budget.
         self.assertFalse(ui_50000.should_exercise_roulette_rebet(0, at_floor))  # Stop immediately after one hundred successful pointer activations.
+        exact_primary = Counter()  # Simulate the frozen 101-cycle primary shard with cycle zero reserved for its seed spin.
+        rebet_ranks = []  # Record only cycles that can see and activate the real restored template.
+        for game_ordinal in range(101):  # Reproduce every exact primary rank once.
+            if game_ordinal > 0 and ui_50000.should_exercise_roulette_rebet(0, exact_primary):  # Model disabled Rebet before rank-zero settlement and ready Rebet thereafter.
+                exact_primary[signature] += 1  # Count the successful real pointer activation.
+                rebet_ranks.append(game_ordinal)  # Preserve exact affinity evidence.
+        self.assertEqual((rebet_ranks, exact_primary[signature]), (list(range(1, 101)), 100))  # Require exactly ranks1..100 and no overrun.
+        play_source = (ui_50000.ROOT / "tests" / "ui_50000.py").read_text(encoding="utf-8")  # Read the exact dispatch owner for ordering governance.
+        rebet_position = play_source.index("if should_exercise_roulette_rebet(replica_index, activated_counts)")  # Locate the real ready-template attempt.
+        configuration_position = play_source.index("await exercise_configuration_controls(page, ordinal, activated_counts)", rebet_position)  # Locate the next generic mutation boundary.
+        self.assertLess(rebet_position, configuration_position)  # Preserve Rebet before configuration and autoplay can invalidate its template.
 
     # Prove Roulette cannot mistake its pre-click enabled node for post-settlement readiness.
     def test_roulette_terminal_action_observes_resolving_before_ready(self):
