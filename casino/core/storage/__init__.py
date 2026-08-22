@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Import annotations so facade type hints remain compatible with historical callers.
 from __future__ import annotations
-# Import process-exit hooks so cached MySQL pools release idle connections on shutdown.
+# Import process-exit hooks so cached relational pools release idle connections on shutdown.
 import atexit
 # Preserve the historical deep-copy module attribute during incremental package cutover.
 import copy
@@ -86,21 +86,21 @@ def _build_provider() -> StorageProvider:
         return MySQLStorageProvider()
     # Resolve PostgreSQL only after its explicit selector so default installs never import psycopg. (STORAGE-020)
     if name == "postgres":
-        # Bound the intentionally incomplete lane and an absent optional driver to one fixed diagnostic.
+        # Bound an absent provider module, class, or optional driver to one fixed diagnostic.
         try:
-            # Import the future concrete owner only inside the explicit PostgreSQL branch.
+            # Import the concrete provider owner only inside the explicit PostgreSQL branch.
             postgres_module = importlib.import_module("casino.core.storage.postgres_provider")
-            # Resolve the future provider class without requiring a placeholder in this lane.
+            # Resolve the complete provider class without importing it during JSON or MySQL startup.
             postgres_provider = getattr(postgres_module, "PostgresStorageProvider")
             # Reject a malformed future module before its attribute can be invoked.
             if not callable(postgres_provider):
-                # Route the malformed export through the fixed incomplete-provider boundary.
+                # Route a malformed export through the fixed unavailable-provider boundary.
                 raise AttributeError("PostgresStorageProvider is not callable")
-            # Construct the future provider while optional-driver import failures remain bounded.
+            # Construct the provider while optional-driver import failures remain bounded.
             return postgres_provider()
         # Hide module, optional-driver, and missing-class details from configuration callers.
         except (ImportError, AttributeError):
-            # Fail closed until Lane 4 installs the complete provider implementation. (TEST-252)
+            # Fail closed when the complete provider or optional driver is unavailable. (TEST-252)
             raise ValidationError("PostgreSQL storage provider is unavailable") from None
     # Reject unknown provider names with a clear validation error.
     raise ValidationError(f"Unsupported storage provider: {name}")
@@ -138,7 +138,7 @@ def set_provider_for_tests(provider: StorageProvider | None) -> None:
     _PROVIDER = None
     # Close the regular cache, plus a test provider only when test injection is being cleared.
     providers_to_close = (previous_runtime_provider, previous_test_provider if provider is None else None)
-    # Release eligible replaced MySQL pools without affecting the newly injected provider.
+    # Release eligible replaced relational pools without affecting the newly injected provider.
     for previous_provider in providers_to_close:
         # Skip empty caches, duplicate references, and the provider now being installed.
         if previous_provider is None or previous_provider is provider:
@@ -152,7 +152,7 @@ def set_provider_for_tests(provider: StorageProvider | None) -> None:
             close_pool()
 
 
-# Close process-wide cached MySQL pools during interpreter shutdown.
+# Close process-wide cached relational pools during interpreter shutdown.
 def _close_cached_provider_pools() -> None:
     # Deduplicate current test and runtime provider references by object identity.
     cached_providers = {id(provider): provider for provider in (_TEST_PROVIDER, _PROVIDER) if provider is not None}
