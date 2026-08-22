@@ -4,6 +4,8 @@
 
 # Import annotations so immutable records can refer to their own types.
 from __future__ import annotations
+# Import the abstract mapping shape used by psycopg dict-row connections.
+from collections.abc import Mapping
 # Import UTC timestamps for durable migration-state transitions.
 from datetime import datetime, timezone
 # Import immutable records for configuration, migrations, and inspected state.
@@ -360,6 +362,24 @@ def require_disposable_target(config: MigrationConfig) -> None:
         raise MigrationError("PostgreSQL migration target is not an authorized disposable target")
 
 
+# Normalize one exact SELECT row from tuple or psycopg dict-row results.
+def _row_values(row, columns: tuple[str, ...]) -> tuple:
+    # Accept mapping rows only when every selected column is present.
+    if isinstance(row, Mapping):
+        # Refuse missing keys without publishing native row content.
+        if any(column not in row for column in columns):
+            # Preserve one fixed connector-neutral result-shape diagnostic.
+            raise MigrationError("PostgreSQL migration query result is invalid")
+        # Return values in the reviewed SELECT order.
+        return tuple(row[column] for column in columns)
+    # Accept tuple-like positional rows only when they expose the exact selected width.
+    if isinstance(row, (tuple, list)) and len(row) == len(columns):
+        # Return one immutable normalized tuple.
+        return tuple(row)
+    # Reject arbitrary driver values and surprising result widths.
+    raise MigrationError("PostgreSQL migration query result is invalid")
+
+
 # Read migration metadata through one shared SELECT-only engine with an optional deployment binding.
 def _inspect_schema(connection, catalog: tuple[Migration, ...], expected_target_hmac: str | None) -> SchemaState:
     # Open one cursor for metadata inspection.
@@ -367,7 +387,7 @@ def _inspect_schema(connection, catalog: tuple[Migration, ...], expected_target_
     # Query only Casino-owned table names in the selected current schema.
     cursor.execute("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = current_schema() AND tablename LIKE 'casino\\_%' ESCAPE '\\' ORDER BY tablename")
     # Normalize positional or mapping driver rows into a stable set.
-    table_names = {str(row[0] if not isinstance(row, dict) else row["tablename"]) for row in cursor.fetchall()}
+    table_names = {str(_row_values(row, ("tablename",))[0]) for row in cursor.fetchall()}
     # Compute which migration-control tables exist.
     present_controls = table_names.intersection(CONTROL_TABLES)
     # Reject a partially created metadata boundary.
@@ -389,15 +409,17 @@ def _inspect_schema(connection, catalog: tuple[Migration, ...], expected_target_
         # Require a reviewed forward-fix.
         raise MigrationError("PostgreSQL migration state is missing and requires a forward-fix packet")
     # Normalize the persisted scalar state.
-    current_version, status = int(row[0]), str(row[1])
+    values = _row_values(row, ("current_version", "status", "applying_version", "catalog_sha256", "target_hmac_sha256"))
+    # Normalize current version and finite status from the reviewed column order.
+    current_version, status = int(values[0]), str(values[1])
     # Preserve null only for a clean state.
-    applying_version = None if row[2] is None else int(row[2])
+    applying_version = None if values[2] is None else int(values[2])
     # Normalize immutable prefix and target digests.
-    catalog_sha256, target_hmac_sha256 = str(row[3]), str(row[4])
+    catalog_sha256, target_hmac_sha256 = str(values[3]), str(values[4])
     # Read every applied migration row in strict numeric order.
     cursor.execute("SELECT version, name, checksum FROM casino_schema_migrations ORDER BY version")
     # Normalize applied rows for exact comparison.
-    applied = tuple((int(item[0]), str(item[1]), str(item[2])) for item in cursor.fetchall())
+    applied = tuple((int(values[0]), str(values[1]), str(values[2])) for values in (_row_values(item, ("version", "name", "checksum")) for item in cursor.fetchall()))
     # Reject negative, future, or row-count-divergent versions.
     if current_version < 0 or current_version > len(catalog) or len(applied) != current_version:
         # Refuse gaps and unknown future state.
@@ -531,7 +553,7 @@ def _mark_applying(connection, state: SchemaState, migration: Migration) -> None
     # Update only the exact clean prefix observed under the advisory lock.
     cursor.execute("UPDATE casino_schema_migration_state SET status = 'applying', applying_version = %s, updated_at = %s WHERE state_id = 1 AND status = 'clean' AND current_version = %s RETURNING state_id", (migration.version, datetime.now(timezone.utc).isoformat(), state.current_version))
     # Require the singleton transition to return its identity.
-    if cursor.fetchone() != (1,):
+    if _row_values(cursor.fetchone(), ("state_id",)) != (1,):
         # Roll back the contradictory transition before failing closed.
         connection.rollback()
         # Refuse concurrent or foreign state changes.
@@ -549,7 +571,7 @@ def _mark_dirty(connection, migration: Migration) -> None:
     # Preserve the interrupted version without advancing applied history.
     cursor.execute("UPDATE casino_schema_migration_state SET status = 'dirty', applying_version = %s, updated_at = %s WHERE state_id = 1 AND status = 'applying' AND applying_version = %s RETURNING state_id", (migration.version, datetime.now(timezone.utc).isoformat(), migration.version))
     # Require the exact in-flight singleton to become dirty.
-    if cursor.fetchone() != (1,):
+    if _row_values(cursor.fetchone(), ("state_id",)) != (1,):
         # Roll back an unconfirmed secondary state transition.
         connection.rollback()
         # Refuse to claim dirty state when it was not confirmed.
@@ -575,7 +597,7 @@ def _apply_one(connection, state: SchemaState, migration: Migration, migrations:
         # Advance only the exact in-flight singleton and return its identity.
         cursor.execute("UPDATE casino_schema_migration_state SET current_version = %s, status = 'clean', applying_version = NULL, catalog_sha256 = %s, updated_at = %s WHERE state_id = 1 AND status = 'applying' AND applying_version = %s RETURNING state_id", (migration.version, migration_chain_digest(migrations, migration.version), datetime.now(timezone.utc).isoformat(), migration.version))
         # Require exact completion before commit.
-        if cursor.fetchone() != (1,):
+        if _row_values(cursor.fetchone(), ("state_id",)) != (1,):
             # Refuse a contradictory state transition.
             raise MigrationError("PostgreSQL migration completion state is inconsistent")
         # Commit DDL, history, and clean prefix atomically.
@@ -601,13 +623,13 @@ def _verify_connected_target(connection, config: MigrationConfig) -> None:
     # Read the numeric PostgreSQL server version.
     cursor.execute("SHOW server_version_num")
     # Require the official PostgreSQL 16 major version.
-    if int(cursor.fetchone()[0]) // 10000 != 16:
+    if int(_row_values(cursor.fetchone(), ("server_version_num",))[0]) // 10000 != 16:
         # Refuse another major without publishing the observed value.
         raise MigrationError("PostgreSQL migration requires PostgreSQL 16")
     # Read only the server-confirmed current database and role identities.
     cursor.execute("SELECT current_database(), current_user")
     # Require the connection to match the target authorized before connector access.
-    if cursor.fetchone() != (config.database, config.user):
+    if _row_values(cursor.fetchone(), ("current_database", "current_user")) != (config.database, config.user):
         # Refuse redirected connection configuration.
         raise MigrationError("PostgreSQL migration connection target is inconsistent")
     # End the read-only verification transaction before session advisory locking.
@@ -639,7 +661,7 @@ def apply_migrations(connection, config: MigrationConfig) -> SchemaState:
     # Attempt the target-specific session lock without unbounded waiting.
     lock_cursor.execute("SELECT pg_try_advisory_lock(%s)", (lock_key,))
     # Require affirmative acquisition before any metadata read or write.
-    if lock_cursor.fetchone() != (True,):
+    if _row_values(lock_cursor.fetchone(), ("pg_try_advisory_lock",)) != (True,):
         # Close the read transaction without mutating schema state.
         connection.rollback()
         # Report only the fixed lock category.
@@ -703,7 +725,7 @@ def apply_migrations(connection, config: MigrationConfig) -> SchemaState:
         # Release only this target-derived session lock.
         release_cursor.execute("SELECT pg_advisory_unlock(%s)", (lock_key,))
         # Require confirmation that this session owned the lock.
-        if release_cursor.fetchone() != (True,):
+        if _row_values(release_cursor.fetchone(), ("pg_advisory_unlock",)) != (True,):
             # Refuse unconfirmed lock state.
             raise MigrationError("PostgreSQL migration advisory lock release could not be confirmed")
         # End the unlock statement transaction.

@@ -63,6 +63,10 @@ class ModelCursor:
         self.one = None
         # Initialize no pending row collection.
         self.all = []
+        # Initialize no selected scalar-column identity.
+        self.one_columns = tuple()
+        # Initialize no selected collection-column identity.
+        self.all_columns = tuple()
 
     # Execute one exact statement against deterministic modeled state.
     def execute(self, statement, params=None):
@@ -73,35 +77,49 @@ class ModelCursor:
             # Preserve a driver-like exception containing a value that public boundaries must hide.
             raise RuntimeError("driver-secret-target")
         # Reset pending rows for this operation.
-        self.one, self.all = None, []
+        self.one, self.all, self.one_columns, self.all_columns = None, [], tuple(), tuple()
         # Return the configured server major as a positional psycopg row.
         if statement == "SHOW server_version_num":
             # Model official PostgreSQL 16.
             self.one = ("160011",)
+            # Name the SHOW result exactly as psycopg dict_row does.
+            self.one_columns = ("server_version_num",)
         # Return exact server-confirmed database and role identities.
         elif statement == "SELECT current_database(), current_user":
             # Bind the connection to its synthetic authorized target.
             self.one = (self.connection.config.database, self.connection.config.user)
+            # Name both selected identity columns.
+            self.one_columns = ("current_database", "current_user")
         # Acquire the session advisory lock unless explicitly blocked.
         elif statement.startswith("SELECT pg_try_advisory_lock"):
             # Model immediate fail-closed acquisition semantics.
             self.one = (self.connection.lock_available,)
+            # Name the PostgreSQL advisory-lock result.
+            self.one_columns = ("pg_try_advisory_lock",)
         # Release the session advisory lock unless explicitly made unconfirmable.
         elif statement.startswith("SELECT pg_advisory_unlock"):
             # Model the required affirmative unlock result.
             self.one = (self.connection.unlock_confirmed,)
+            # Name the PostgreSQL advisory-unlock result.
+            self.one_columns = ("pg_advisory_unlock",)
         # Return current Casino table inventory in stable order.
         elif "FROM pg_catalog.pg_tables" in statement:
             # Model tuple rows returned by default psycopg cursors.
             self.all = [(name,) for name in sorted(self.connection.tables)]
+            # Name the selected table column for dict-row modeling.
+            self.all_columns = ("tablename",)
         # Return the singleton migration state.
         elif statement.startswith("SELECT current_version, status"):
             # Return missing state as a missing row.
             self.one = None if self.connection.state is None else tuple(self.connection.state)
+            # Name the exact state SELECT columns.
+            self.one_columns = ("current_version", "status", "applying_version", "catalog_sha256", "target_hmac_sha256")
         # Return immutable applied history rows.
         elif statement.startswith("SELECT version, name, checksum"):
             # Copy rows so callers cannot mutate modeled history.
             self.all = list(self.connection.history)
+            # Name the exact history SELECT columns.
+            self.all_columns = ("version", "name", "checksum")
         # Track every created Casino table for later inspection.
         elif statement.startswith("CREATE TABLE "):
             # Extract the fixed unquoted table identifier from reviewed DDL.
@@ -124,6 +142,8 @@ class ModelCursor:
                 self.connection.state[1:3] = ["applying", params[0]]
                 # Return the singleton identity through RETURNING.
                 self.one = (1,)
+                # Name the RETURNING column.
+                self.one_columns = ("state_id",)
         # Persist the independently committed dirty marker.
         elif statement.startswith("UPDATE casino_schema_migration_state SET status = 'dirty'"):
             # Require the exact in-flight version before marking dirty.
@@ -132,6 +152,8 @@ class ModelCursor:
                 self.connection.state[1:3] = ["dirty", params[0]]
                 # Return the singleton identity through RETURNING.
                 self.one = (1,)
+                # Name the RETURNING column.
+                self.one_columns = ("state_id",)
         # Complete one migration and advance its exact prefix digest.
         elif statement.startswith("UPDATE casino_schema_migration_state SET current_version"):
             # Require the exact applying version before clean transition.
@@ -140,15 +162,29 @@ class ModelCursor:
                 self.connection.state[0:4] = [params[0], "clean", None, params[1]]
                 # Return the singleton identity through RETURNING.
                 self.one = (1,)
+                # Name the RETURNING column.
+                self.one_columns = ("state_id",)
 
     # Fetch the pending scalar result once.
     def fetchone(self):
-        # Return the modeled positional row.
+        # Return missing rows unchanged.
+        if self.one is None:
+            # Preserve ordinary fetchone missing-row behavior.
+            return None
+        # Return a psycopg-style mapping when the model selects dict rows.
+        if self.connection.dict_rows:
+            # Bind every selected name to its positional value.
+            return dict(zip(self.one_columns, self.one))
+        # Return the modeled positional tuple by default.
         return self.one
 
     # Fetch the pending row collection.
     def fetchall(self):
-        # Return a detached list like an ordinary driver cursor.
+        # Return psycopg-style mappings when the model selects dict rows.
+        if self.connection.dict_rows:
+            # Bind every row to the exact selected column names.
+            return [dict(zip(self.all_columns, row)) for row in self.all]
+        # Return detached positional rows by default.
         return list(self.all)
 
 
@@ -160,6 +196,8 @@ class ModelConnection:
         self.config = config
         # Require transactional mode by default.
         self.autocommit = False
+        # Return positional tuples unless a test explicitly selects dict rows.
+        self.dict_rows = False
         # Seed both control tables only for initialized state.
         self.tables = set(postgres_migrations.CONTROL_TABLES if initialized else ())
         # Load the immutable catalog for exact prefix rows.
@@ -355,6 +393,25 @@ class PostgreSQLMigrationTests(unittest.TestCase):
         with self.assertRaisesRegex(postgres_migrations.MigrationError, "target binding"):
             # Inspect the same copied state through the migration-runner boundary.
             postgres_migrations.inspect_schema(connection, connection.config)
+
+    # Support psycopg dict_row results across runtime and migration SELECT boundaries.
+    def test_dict_row_runtime_and_apply_paths_are_supported(self):
+        # Seed one exact complete target using mapping results.
+        runtime = ModelConnection(synthetic_config(), initialized=True, version=5)
+        # Select psycopg dict-row behavior for every cursor.
+        runtime.dict_rows = True
+        # Require connection-only runtime compatibility with mapping rows.
+        state = postgres_migrations.verify_runtime_compatibility(runtime)
+        # Require exact clean schema five.
+        self.assertEqual((state.current_version, state.status), (5, "clean"))
+        # Build one empty mapping-row target for the deployment runner path.
+        migration = ModelConnection(synthetic_config())
+        # Select psycopg dict-row behavior before server and lock queries.
+        migration.dict_rows = True
+        # Apply the complete chain through mapping results.
+        applied = postgres_migrations.apply_migrations(migration, migration.config)
+        # Require exact clean schema five and all history rows.
+        self.assertEqual((applied.current_version, applied.status, len(applied.applied)), (5, "clean", 5))
 
     # Require the config-free runtime verifier to fail closed on incomplete, dirty, or wrong versions.
     def test_runtime_verifier_rejects_incomplete_dirty_and_wrong_schema(self):

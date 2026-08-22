@@ -34,6 +34,8 @@ if str(ROOT) not in sys.path:
 import psycopg
 # Import PostgreSQL-safe dynamic identifier and literal composition.
 from psycopg import sql
+# Import the exact mapping row factory used by the planned runtime provider.
+from psycopg.rows import dict_row
 # Import JSONB adaptation for real provider-schema DML.
 from psycopg.types.json import Jsonb
 
@@ -290,14 +292,24 @@ def main() -> int:
             raise RuntimeError("PostgreSQL disposable apply did not reach exact clean schema five")
         # Build the same deployment-only configuration for in-process read-only inspection.
         config = MigrationConfig("127.0.0.1", port, role, password, database, binding_key, DISPOSABLE_MARKER)
+        # Open one mapping-row connection matching the planned PostgreSQL runtime provider.
+        runtime_connection = psycopg.connect(**_target_kwargs(port, role, password, database), autocommit=False, row_factory=dict_row)
+        # Start protected config-free readiness verification.
+        try:
+            # Require exact checksum-bound state through mapping rows and no migration configuration.
+            state = verify_runtime_compatibility(runtime_connection)
+            # End its SELECT-only transaction.
+            runtime_connection.rollback()
+        # Close the mapping-row runtime connection on every outcome.
+        finally:
+            # Release all readiness connector state.
+            runtime_connection.close()
+        # Report successful mapping-row runtime readiness.
+        _phase("dict_row_runtime_validated")
         # Open the migrated target for real semantic evidence.
         connection = psycopg.connect(**_target_kwargs(port, role, password, database), autocommit=False)
         # Start protected semantic exercise.
         try:
-            # Require exact checksum-bound state through the public verifier.
-            state = verify_runtime_compatibility(connection)
-            # End its read-only transaction.
-            connection.rollback()
             # Exercise PostgreSQL-only DML semantics and constraints.
             semantics = _exercise_postgres_semantics(connection)
             # Report successful identity/JSONB/conflict/constraint/lock semantics.
@@ -315,7 +327,7 @@ def main() -> int:
             # End the read-only inventory transaction.
             connection.rollback()
             # Retain only sanitized success evidence.
-            evidence = {"server_major": 16, "applied_version": state.current_version, "history_versions": [row[0] for row in state.applied], "table_count": len(tables), "jsonb_columns": jsonb_columns, "semantics": semantics}
+            evidence = {"server_major": 16, "applied_version": state.current_version, "history_versions": [row[0] for row in state.applied], "dict_row_runtime": True, "table_count": len(tables), "jsonb_columns": jsonb_columns, "semantics": semantics}
         # Close target DML connection before restart.
         finally:
             # Release all target-owned connection state.
