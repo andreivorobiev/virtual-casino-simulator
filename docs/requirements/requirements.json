@@ -1921,12 +1921,13 @@
         "contracts/compatibility/app-0.9.5.82.json",
         "contracts/compatibility/app-0.9.5.83.json",
         "contracts/compatibility/app-0.9.5.84.json",
+        "contracts/compatibility/app-0.9.5.85.json",
         "scripts/resolve_release_predecessor.py",
         "tests/release_predecessor_tests.py"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "0.9.5.84",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.84 publication derives exact retained terminal-green v0.9.5.83 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Its Git-archive API copy receives a complete disposable index before repository gates run, preserving tracked-only inventory without a filesystem fallback, source-byte mutation, user Git templates, or remote contact. The release declares rollback at unchanged MySQL schema 2 inside both runtime windows while the candidate catalog remains minimum 2, expected 5, and apply held; rollback is application-only and never reverses the MySQL schema. v0.9.6.0 remains reserved for a separately accepted product wave."
+      "changed_in": "0.9.5.85",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.85 publication derives exact immutable v0.9.5.84 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Its Git-archive API copy imports the exact local source commit and tree into a complete disposable index before repository gates run, preserving tracked-only inventory and source-bound diagnostics without a filesystem fallback, source-byte mutation, user Git templates, or network contact. The release declares rollback at unchanged MySQL schema 2 inside both runtime windows while the candidate catalog remains minimum 2, expected 5, and apply held; rollback is application-only and never reverses the MySQL schema. v0.9.6.0 remains reserved for a separately accepted product wave."
     },
     {
       "id": "BOT-001",
@@ -7655,7 +7656,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.84 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.85 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -7692,7 +7693,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.84 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.85 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -9440,7 +9441,7 @@
       ],
       "introduced_in": "issue-430-mysql-schema-rollback-bridge",
       "changed_in": "issue-1039-first-class-session-storage",
-      "notes": "The bridge rejects an exact-schema-three, exact-schema-four, or exact-schema-five candidate mapped to an exact-schema-two-only predecessor, accepts schema-two rollback through compatible bridge windows, and accepts a future schema-three, schema-four, or schema-five release rollback only to a bridge that accepts that exact schema. The separately governed v0.9.5.39 through v0.9.5.84 compatibility records declare unchanged schema-two application rollback and authorize no migration, database rollback, credential, provider, server-global, schema-three, schema-four, or schema-five production activation, or issue closure."
+      "notes": "The bridge rejects an exact-schema-three, exact-schema-four, or exact-schema-five candidate mapped to an exact-schema-two-only predecessor, accepts schema-two rollback through compatible bridge windows, and accepts a future schema-three, schema-four, or schema-five release rollback only to a bridge that accepts that exact schema. The separately governed v0.9.5.39 through v0.9.5.85 compatibility records declare unchanged schema-two application rollback and authorize no migration, database rollback, credential, provider, server-global, schema-three, schema-four, or schema-five production activation, or issue closure."
     },
     {
       "id": "UX-023",

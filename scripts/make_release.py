@@ -83,12 +83,18 @@ def run(command):
     subprocess.check_call(command, cwd=ROOT)
 
 
-# Give one trusted Git-archive extraction an authoritative tracked-file index for repository gates.
-def initialize_validation_index(source_root):
-    # Create repository metadata without copying user templates or contacting any remote.
+# Give one trusted Git-archive extraction the exact source identity and tracked index for repository gates.
+def initialize_validation_index(source_root, source_repository):
+    # Create repository metadata without copying user templates or contacting any network remote.
     subprocess.check_call(["git", "init", "--quiet", "--template="], cwd=source_root)
-    # Index every already validated archive member while leaving its working-tree bytes unchanged.
-    subprocess.check_call(["git", "add", "--all", "--force"], cwd=source_root)
+    # Disable host line-ending conversion so the extracted Git-archive bytes remain exact.
+    subprocess.check_call(["git", "config", "core.autocrlf", "false"], cwd=source_root)
+    # Resolve the exact source commit whose trusted archive populated the disposable copy.
+    source_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source_repository, text=True).strip()
+    # Import only that exact commit and tree from the local source repository without network contact.
+    subprocess.check_call(["git", "fetch", "--quiet", "--no-tags", "--depth=1", str(source_repository), source_commit], cwd=source_root)
+    # Point HEAD and the complete index at the imported commit without rewriting extracted source bytes.
+    subprocess.check_call(["git", "reset", "--mixed", "--quiet", source_commit], cwd=source_root)
 
 
 # Run API tests from an exact tracked archive so resets cannot touch repository runtime fixtures.
@@ -115,7 +121,7 @@ def run_api_isolated(command):
             # Extract the already validated tracked source into the disposable target.
             archive.extractall(source_root)
         # Restore tracked-inventory semantics required by repository gates inside the exact copy.
-        initialize_validation_index(source_root)
+        initialize_validation_index(source_root, ROOT)
         # Execute the full API suite where resets and generated runtime files are disposable.
         subprocess.check_call(command, cwd=source_root)
 

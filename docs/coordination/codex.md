@@ -1,30 +1,28 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-21T18:13:00Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-22T20:20:11Z.
 
 ## Current branch / active Codex work
 
-- Protected main is exact `667bdf2b4a0b3d997d5bf18f9bf158fa49749c01`, including the catalog-derived 49-worker formal matrix from issue #1048.
-- Isolated branch `codex/1050-formal-strategies` repairs the missing rendered-control strategies and the Bingo confirmation timeout exposed by exact-main formal run `32480806914` under issues #1050 and #1052.
-- No production, database, provider, release, public-policy, deployment, API, game-engine, paytable, or settlement mutation is authorized by this branch.
+- Protected main is frozen at exact `52608d7b55da23d16608801752b42c0e6cf15f5f`, containing requested runtime source `e27fb35fdcf1fce38c18caf3a502ef38234da3f7` plus #1063's independently accepted documentation-only engineering-workforce governance.
+- Isolated branch `codex/release-v0.9.5.85` is the owner-authorized release-only wrapper for that exact protected-main base.
+- Production publication and pull-poller deployment are authorized for v0.9.5.85; database migration, grant, provider, public-policy, API, game-engine, paytable, and settlement mutations remain prohibited.
 
 ## Accepted scope and requirements
 
-- `TEST-092` keeps its exact 50,000-cycle, full-catalog, four-viewport, per-control, exact-source, and fail-closed aggregate contract.
-- Every registered catalog game now maps to an implemented strategy family; unknown games and unknown families fail before action dispatch.
-- The fifteen formerly hidden games from Color Wheel through Teen Patti receive explicit visible-choice, replay, decision, and terminal-readiness coverage; Double Bonus Video Poker stays on the existing draw-poker family.
-- Stable control signatures distinguish the new board, choice, hand-setting, wager, decision, deal, and repeat identities.
-- Bingo's formal strategy now detects an active called session through the rendered Call control and called-ball history, accepts exactly the native destructive Reset confirmation, and installs no handler for safe or completed-history resets.
+- `TOOL-003` binds v0.9.5.85 to the exact immutable v0.9.5.84 hosted archive and manifest as its application-only predecessor.
+- `TOOL-011` keeps production and rollback at exact schema 2 while the schema-five catalog remains apply-held.
+- `TEST-092` retains its accepted exact 50,000-cycle, 140-worker, full-catalog, public-control, exact-source, and fail-closed aggregate evidence.
 - Requirements remain exactly 1114 and the frozen `/api/v1` contract remains unchanged.
 
 ## Version and validation allocation
 
-- Packaged release remains `0.9.5.84`.
-- Tests and docs receive compatible patch revisions; every runtime and game module remains at its exact protected-main revision.
+- Packaged release advances to `0.9.5.85`.
+- Application, contracts, tests, docs, and tooling receive compatible release-wrapper patch revisions; Core, operations, Admin, and every content-owned game module remain at their exact protected-main revisions.
 - The frozen `/api/v1` contract and all game, paytable, settlement, signup, OAuth, provider, billing, and public-launch behavior remain unchanged.
 
 ## Validation and handback
 
-- Local work is browser-free by policy: syntax, catalog/registry proofs, strategy state-machine unit seams, requirements, versions, contracts, boundaries, comments, headers, and rule gates run locally.
-- The immutable exact-head PR must pass ordinary checks plus one 49-worker formal dispatch before merge and issues #1050 and #1052 closure; Bingo worker 6 must complete exactly 1,087/1,087 cycles with zero failures.
-- One fresh exact-main formal dispatch after merge must repeat every worker, aggregate, and visual gate before parent #1041 can close.
+- Local validation rebuilds the canonical tagged candidate twice, compares all three artifact bytes, and verifies exact commit, tag, predecessor, schema window, inventory, and clean-copy smoke.
+- The immutable release-only PR must pass every ordinary protected-branch context on its exact head before one normal non-bypass merge.
+- The protected-main production workflow must publish exact hosted assets, after which the installed host poller must report exact v0.9.5.85 readiness SHA, schema 2, health, cleanup, and alarm-free rollout evidence.

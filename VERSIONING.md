@@ -9,17 +9,17 @@ cannot silently rot.
 
 ## Current numbers
 
-- Packaged application release: `0.9.5.84`
+- Packaged application release: `0.9.5.85`
 - Historical source baseline: `9.1.0`
 
 ## What each number means
 
-- **Packaged application release** (for example `0.9.5.84`). The single
+- **Packaged application release** (for example `0.9.5.85`). The single
   user-facing release number, held at the top-level `application` key of
   `modules/module-manifest.json`. Runtime, API, browser, and Admin surfaces all
   display this number, and it changes only through a formal release-artifact
   packet. GitHub release tags for the current lineage are `v<packaged>` (for
-  example `v0.9.5.84`).
+  example `v0.9.5.85`).
 - **Historical source baseline** (`9.1.0`). Provenance only. It records the
   source revision the current repository was reorganized from and is never a
   current release number. It is held at the top-level `source_baseline` key of
@@ -37,7 +37,7 @@ cannot silently rot.
 Earlier releases were tagged in a `9.x` lineage (for example `v9.2.0` through
 `v9.5.6`); those tags remain in GitHub for historical continuity. The project
 then adopted the four-part packaged-release lineage `0.9.x.y` (for example
-`0.9.5.5` and onward through `0.9.5.84`) to express pre-1.0 packaged releases
+`0.9.5.5` and onward through `0.9.5.85`) to express pre-1.0 packaged releases
 independently of the historical source baseline. Both tag lineages are visible
 on the GitHub Releases and Tags pages; the current lineage is `v0.9.5.*` and the
 `v9.*` tags are historical.
@@ -46,7 +46,7 @@ on the GitHub Releases and Tags pages; the current lineage is `v0.9.5.*` and the
 
 | Surface | Number shown |
 | --- | --- |
-| Runtime, API, browser shell, Admin | Packaged application release (`0.9.5.84`) |
+| Runtime, API, browser shell, Admin | Packaged application release (`0.9.5.85`) |
 | `README.md`, `CODEX_START_HERE.md`, this file | Packaged application release and historical source baseline |
 | `modules/module-manifest.json` | Canonical packaged release, source baseline, and every module revision |
 | GitHub Releases / Tags — current lineage | `v0.9.5.*` |

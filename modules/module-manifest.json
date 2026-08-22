@@ -1,8 +1,8 @@
 {
-  "application": "0.9.5.84",
+  "application": "0.9.5.85",
   "source_baseline": "9.1.0",
   "modules": {
-    "application": "9.72.0",
+    "application": "9.72.1",
     "core": "10.13.1",
     "mobile": "1.0.0",
     "ledger": "9.1.2",
@@ -49,7 +49,7 @@
     "teen_patti": "1.1.7",
     "tests": "1.116.10",
     "docs": "1.113.1",
-    "contracts": "1.63.0",
+    "contracts": "1.63.1",
     "tooling": "1.45.2",
     "commenting_policy": "2.1.0",
     "color_wheel": "1.1.7",
