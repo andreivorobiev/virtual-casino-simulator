@@ -31,7 +31,7 @@
 ## Scope
 
 - Impacted modules: application docs surface, docs; tooling only if generator source changes.
-- Packaged application release impact: none; remain `0.9.5.84` absent separate release authority.
+- Packaged application release impact: none; remain `0.9.5.85` absent separate release authority.
 - Independent module revision bumps planned: next unused application/docs documentation revisions; tooling only if source changes.
 - Owned files: `README.md`, `CHANGELOG.md`, new/updated PostgreSQL docs, generated `CODEX_START_HERE.md`, conformance README, final metadata/requirements reconciliation under exclusive lease.
 - Files not to touch: runtime/provider/pool/migration/test source, contracts, games, deployment, release artifacts/manifests/notes, provider/secret files.
