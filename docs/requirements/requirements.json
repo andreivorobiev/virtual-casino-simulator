@@ -5238,22 +5238,25 @@
     {
       "id": "TEST-053",
       "module": "Tests",
-      "description": "Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry. Playwright readiness boundaries consume one bounded environment-scalable WAIT_MS policy rather than duplicated five- and ten-second literals.",
+      "description": "Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry. Playwright readiness boundaries consume one bounded environment-scalable WAIT_MS policy rather than duplicated five- and ten-second literals. Slots route restoration observes pre-document shared-application ready or error state within that same budget, then independently requires its module root and retains at most one bounded sanitized first-failure bundle.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-ROU-HITMAP-001"
+        "BR-ROU-HITMAP-001",
+        "BR-SLOT-ECONOMICS-001"
       ],
       "implementation_files": [
         ".github/workflows/browser-tests.yml",
+        "tests/browser_readiness.py",
         "tests/browser_timing.py",
         "tests/browser_wait_governance_tests.py",
+        "tests/cases/browser/roulette_slots_keno.py",
         "tests/run_tests.py",
         "web/games/roulette.js"
       ],
       "introduced_in": "issue-222-roulette-hit-target",
-      "changed_in": "issue-721-test-harness-knobs",
-      "notes": "Issue #348 removes dispatch_event from acceptance, audits every zero split, trio, first-four, and top-line target in both modes, and rejects stacked pointer rectangles. Issue #750 requires each audit wager response to complete before the refund so late UI adoption cannot overtake clear. Issue #721 keeps the historical five-second default, derives longer waits from the same knob, permits one bounded decimal CI/local override, and fails closed on unsafe values."
+      "changed_in": "issue-1053-formal-worker-budget",
+      "notes": "Issue #348 removes dispatch_event from acceptance, audits every zero split, trio, first-four, and top-line target in both modes, and rejects stacked pointer rectangles. Issue #750 requires each audit wager response to complete before the refund so late UI adoption cannot overtake clear. Issue #721 keeps the historical five-second default, derives longer waits from the same knob, permits one bounded decimal CI/local override, and fails closed on unsafe values. Issue #1053 makes the Slots route-restored reload observe the shared bootstrap signal without changing WAIT_MS, retrying, falling back, or replacing its independent module-readiness assertion; its best-effort diagnostic stores only allowlisted bounded classifications and never raw event, cache, service-worker URL, exception, secret, or personal data."
     },
     {
       "id": "DOC-017",

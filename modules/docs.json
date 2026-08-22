@@ -1,6 +1,6 @@
 {
   "module": "docs",
-  "version": "1.112.5",
+  "version": "1.112.6",
   "paths": [
     "agents/",
     "docs/",

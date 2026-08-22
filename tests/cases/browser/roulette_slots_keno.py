@@ -8,9 +8,15 @@ import json
 import re
 # Import monotonic waits retained by the extracted game-state transitions.
 import time
+# Import disposable directories for browser-only diagnostic publication proofs.
+import tempfile
+# Import portable paths for disposable browser-only artifact assertions.
+from pathlib import Path
 
 # Import the sole environment-scalable Playwright wait budget. (TEST-053)
 from tests.browser_timing import WAIT_MS
+# Import the pre-document shared-application boundary and sanitized first-failure writer. (TEST-053)
+from tests.browser_readiness import install_shared_app_readiness_probe, persist_shared_app_first_failure, reload_and_wait_for_shared_app_readiness
 
 
 # Execute each game-local producer/consumer family under its deterministic shard owner.
@@ -1015,6 +1021,88 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             page.remove_listener('request',observe_slots_spin)
         # Record immediate feedback, synchronization, localization, evidence, and real request coverage.
         run_case('BR-SLOT-LINE-BET-001',['SLOT-027','SLOT-036','TEST-058','UX-009'],slots_line_bet_validation)
+        # Prove shared-app readiness and bounded diagnostics in the Chromium-installed Browser lane. (TEST-053)
+        def shared_app_readiness_browser_proof():
+            # Reuse the runner-owned governed page because Browser.new_page convenience contexts reject child pages.
+            proof_page=page
+            # Track only bounded route counts needed to delay the second late navigation.
+            route_counts={}
+            # Fulfill synthetic same-process documents without external network access.
+            def fulfill_probe_document(route):
+                # Classify the fixed proof path without retaining query or request payloads.
+                proof_path=route.request.url.partition('?')[0].rsplit('/',1)[-1]
+                # Increment only the three fixed proof counters.
+                route_counts[proof_path]=route_counts.get(proof_path,0)+1
+                # Delay only the reload of the fixed late-navigation document past its 100ms budget.
+                if proof_path=='late' and route_counts[proof_path]>1: time.sleep(0.2)
+                # Dispatch the fixed error event only from the error document.
+                event_name='casino:shared-app-error' if proof_path=='error' else 'casino:shared-app-ready'
+                # Prove the marker existed before the application document dispatched its terminal event.
+                body=f"<script>window.markerBeforeDispatch=Boolean(window.__casinoSharedAppReadinessProbe);window.dispatchEvent(new Event('{event_name}'))</script>"
+                # Complete the synthetic navigation with no external assets.
+                route.fulfill(status=200,content_type='text/html',body=body)
+            try:
+                # Intercept the fixed synthetic origin entirely inside Chromium.
+                proof_page.route('http://shared-ready.test/**',fulfill_probe_document)
+                # Install the production pre-document probe before any proof document runs.
+                install_shared_app_readiness_probe(proof_page)
+                # Establish and reload the ready document under the ordinary Browser budget.
+                proof_page.goto('http://shared-ready.test/ready',wait_until='load'); ready=reload_and_wait_for_shared_app_readiness(proof_page,timeout_ms=WAIT_MS)
+                # Require both pre-document execution and the exact terminal ready marker.
+                assert proof_page.evaluate('window.markerBeforeDispatch') is True and ready=={'status':'ready','milestone':'shared_app_ready'}
+                # Establish the error document before exercising the same production reload helper.
+                proof_page.goto('http://shared-ready.test/error',wait_until='load')
+                # Track fail-closed error observation without retaining exception detail.
+                error_failed_closed=False
+                try: reload_and_wait_for_shared_app_readiness(proof_page,timeout_ms=WAIT_MS)
+                except AssertionError as error: error_failed_closed='terminal error signal' in str(error)
+                # Require the real terminal error event to fail closed.
+                assert error_failed_closed
+                # Establish the document whose reload is deliberately later than the total proof budget.
+                proof_page.goto('http://shared-ready.test/late',wait_until='load')
+                # Start one bounded measurement around reload plus terminal observation.
+                late_started=time.monotonic(); late_failed_closed=False
+                try: reload_and_wait_for_shared_app_readiness(proof_page,timeout_ms=100)
+                except AssertionError: late_failed_closed=True
+                # Reject a second terminal-sized allowance after the deliberately late navigation.
+                assert late_failed_closed and time.monotonic()-late_started<1.0
+            finally:
+                # Remove the synthetic origin handler before restoring the canonical authenticated Slots route.
+                proof_page.unroute('http://shared-ready.test/**',fulfill_probe_document)
+                # Restore the governed runner-owned page even when a synthetic navigation assertion fails.
+                proof_page.goto(base+'/games/slots',wait_until='networkidle'); proof_page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
+            # Reuse the governed page for one disposable document whose cache and worker inventories never resolve.
+            capture_page=page
+            try:
+                # Load one self-contained document for the bounded diagnostic evaluation.
+                capture_page.goto('data:text/html,<div id="view"></div>',wait_until='load')
+                # Replace inventory seams only in this disposable document so canonical navigation clears them.
+                capture_page.evaluate("""() => { Object.defineProperty(window,'caches',{value:{keys:()=>new Promise(()=>{})},configurable:true}); Object.defineProperty(navigator,'serviceWorker',{value:{getRegistrations:()=>new Promise(()=>{}),controller:null},configurable:true}); }""")
+                # Isolate the synthetic first-failure artifact outside the repository.
+                with tempfile.TemporaryDirectory() as directory:
+                    # Resolve one disposable fixed evidence path.
+                    target=Path(directory)/'shared-app-first-failure.json'
+                    # Freeze one original exception object for exact bare-rethrow identity proof.
+                    original=RuntimeError('browser-only diagnostic proof')
+                    # Retain publication outcome and elapsed time outside the nested handler.
+                    persisted=False; capture_elapsed=0.0; captured=None
+                    try:
+                        try: raise original
+                        except RuntimeError as error:
+                            # Bound the complete diagnostic call around deliberately unresolved Browser promises.
+                            capture_started=time.monotonic(); persisted=persist_shared_app_first_failure(capture_page,target,failure=error); capture_elapsed=time.monotonic()-capture_started
+                            # Preserve the exact original exception and traceback.
+                            raise
+                    except RuntimeError as error: captured=error
+                    # Require bounded capture, atomic publication, and original-exception identity.
+                    assert persisted and capture_elapsed<2.0 and captured is original
+                    # Read the fixed-schema evidence after atomic publication.
+                    artifact=json.loads(target.read_text(encoding='utf-8'))
+                    # Require both unresolved inventory seams to collapse into fixed capture enums.
+                    assert {'cache_capture','service_worker_capture'}<=set(artifact['capture_failures'])
+            finally:
+                # Canonical navigation destroys the disposable unresolved Promise overrides.
+                capture_page.goto(base+'/games/slots',wait_until='networkidle'); capture_page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
         # Define the complete governed Slots economics and visual-state matrix for SLOT-036.
         def slots_economics_visual_matrix():
             # Resolve the authenticated player whose isolated Slots state drives deterministic evidence.
@@ -1098,8 +1186,23 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     for state_name,prepared_state in persisted_states.items():
                         # Save one detached copy so route reads cannot mutate a later matrix cell.
                         save_player_game_state('slots',matrix_player,json.loads(json.dumps(prepared_state)))
-                        # Reload the canonical Slots route from the persisted state.
-                        page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
+                        # Isolate the route-restored reload behind the shared application's own pre-document terminal signal. (TEST-053)
+                        if state_name=='route_restored':
+                            # Install the listener before reload so neither a fast ready nor error event can escape observation.
+                            install_shared_app_readiness_probe(page)
+                            try:
+                                # Require reload and the terminal shared-app signal to share the one unchanged Browser deadline.
+                                reload_and_wait_for_shared_app_readiness(page,timeout_ms=WAIT_MS)
+                                # Preserve the independent module-owned readiness assertion after shared bootstrap succeeds.
+                                page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
+                            except Exception as error:
+                                # Persist at most one bounded sanitized diagnostic bundle for this exact case and boundary.
+                                persist_shared_app_first_failure(page,screenshots/'before-failure-slots-route-restored-shared-app.json',failure=error)
+                                # Preserve the original readiness or module-mount exception unchanged.
+                                raise
+                        else:
+                            # Keep every non-restoration matrix reload on its established independent module readiness path.
+                            page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
                         # Switch through the visible locale control and wait for the runtime rerender.
                         page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("expected => window.CasinoI18n?.getLocaleState().locale === expected",arg=locale)
                         # Read the exact backing state/config returned to the mounted browser.
@@ -1211,6 +1314,8 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(matrix_viewports['desktop_primary']); page.emulate_media(reduced_motion='no-preference'); page.evaluate("document.body.style.zoom=''")
         # Execute the existing economics matrix plus the real normal/reduced presentation matrix under one permanent case.
         def slots_economics_and_presentation():
+            # Execute disposable real-Chromium readiness and diagnostic proofs in the Browser-only lane.
+            shared_app_readiness_browser_proof()
             # Preserve the complete engine, configuration, copy, state, and geometry matrix.
             slots_economics_visual_matrix()
             # Execute the new real normal/reduced action matrix inside the same permanent owner case.
