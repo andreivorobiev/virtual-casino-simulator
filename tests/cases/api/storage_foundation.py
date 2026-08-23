@@ -19,6 +19,8 @@ from tests import mysql_pool_tests
 from tests import postgres_migration_tests
 # Import the listener-free complete PostgreSQL provider-core suite. (TEST-255)
 from tests import postgres_provider_tests
+# Import the transaction-faithful PostgreSQL game-action lifecycle suite. (TEST-256)
+from tests import postgres_game_action_provider_tests
 # Import PostgreSQL configuration and lazy-selector coverage without importing psycopg. (TEST-252)
 from tests import postgres_registration_tests
 # Import the transaction-faithful PostgreSQL session lifecycle suite. (TEST-255)
@@ -46,7 +48,7 @@ from tests.games import test_game_rule_schema
 
 
 # Register the complete storage/MySQL area at its historical CLI boundary.
-def run_cases(run_case, include_live=False, include_migration_live=False, include_postgres_migration_live=False, include_postgres_storage_live=False, request_latency_callback=None, gunicorn_json_load_callback=None, gunicorn_load_callback=None):
+def run_cases(run_case, include_live=False, include_migration_live=False, include_postgres_migration_live=False, include_postgres_storage_live=False, include_postgres_game_action_live=False, request_latency_callback=None, gunicorn_json_load_callback=None, gunicorn_load_callback=None):
     """Run the exact default and explicitly selected live storage cases."""
     # Define one focused runner for the extracted provider-neutral package boundary.
     def run_storage_package_boundary_tests():
@@ -183,6 +185,17 @@ def run_cases(run_case, include_live=False, include_migration_live=False, includ
             # Preserve one fixed connector- and target-free diagnostic.
             raise AssertionError("PostgreSQL storage provider suite failed")
 
+    # Define one listener-free runner for PostgreSQL exactly-once game actions.
+    def run_postgres_game_action_tests():
+        # Load only the STORAGE-024 and TEST-256 transaction-faithful test class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(postgres_game_action_provider_tests.PostgresGameActionProviderTests)
+        # Execute without importing psycopg, opening a listener, or selecting a target.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the named central case when lifecycle or transaction evidence drifts.
+        if not result.wasSuccessful():
+            # Preserve one fixed connector- and target-free diagnostic.
+            raise AssertionError("PostgreSQL game-action provider suite failed")
+
     # Define one focused unittest runner for authenticated recovery and clean-target policy.
     def run_recovery_policy_tests():
         # Load only the #205 synthetic recovery test case.
@@ -228,6 +241,8 @@ def run_cases(run_case, include_live=False, include_migration_live=False, includ
     run_case("POSTGRES-MIGRATION-001", ["STORAGE-022", "TEST-254"], run_postgres_migration_policy_tests)
     # Prove the complete ordinary PostgreSQL provider and first-class session contract.
     run_case("POSTGRES-STORAGE-001", ["STORAGE-023", "TEST-255"], run_postgres_storage_tests)
+    # Prove PostgreSQL exactly-once execution, resolution, rollback, and reset semantics.
+    run_case("POSTGRES-GAME-ACTION-001", ["STORAGE-024", "TEST-256"], run_postgres_game_action_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "STORAGE-016", "TEST-030", "TEST-243"], run_storage_base_and_json_parity)
     # Execute one identical paid settlement, replay, resolve, and conflict schedule on JSON and MySQL.
@@ -335,5 +350,11 @@ def run_cases(run_case, include_live=False, include_migration_live=False, includ
                     else:
                         # Restore exact caller-owned marker or target state.
                         os.environ[key] = value
-        # Map complete ordinary storage, sessions, contention, restart, and cleanup evidence.
+        # Map complete ordinary storage, sessions, contention, reset, and cleanup evidence.
         run_case("POSTGRES-STORAGE-LIVE-001", ["STORAGE-023", "TEST-255"], run_postgres_storage_live_tests)
+    # Execute the disposable PostgreSQL 16 game-action gate only when explicitly selected.
+    if include_postgres_game_action_live:
+        # Import the service-dependent lifecycle only after its explicit selector is set.
+        from tests import postgres_game_action_live
+        # Map paid, zero-cost, contention, reset, immutable history, and cleanup evidence.
+        run_case("POSTGRES-GAME-ACTION-LIVE-001", ["STORAGE-024", "TEST-256"], postgres_game_action_live.main)

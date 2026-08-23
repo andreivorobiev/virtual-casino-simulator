@@ -5741,6 +5741,8 @@ def main():
     ap.add_argument('--postgres-migrations-live',action='store_true')
     # Add the explicit disposable PostgreSQL 16 complete-provider selector. (TEST-255)
     ap.add_argument('--postgres-storage-live',action='store_true')
+    # Add the explicit disposable PostgreSQL 16 game-action selector. (TEST-256)
+    ap.add_argument('--postgres-game-actions-live',action='store_true')
     # Select one explicit listener-free request-latency provider baseline.
     ap.add_argument('--request-latency',choices=('json','mysql'),default=None)
     # Select the caller-owned external aggregate evidence destination.
@@ -5793,7 +5795,7 @@ def main():
     if args.shard_count>1 and not (args.browser or args.verify_browser_shards): ap.error('--shard-count applies only to --browser or --verify-browser-shards')
     # Run aggregate shard verification alone using the detector-owned expected selection.
     if args.verify_browser_shards: return verify_browser_shards(args.verify_browser_shards,args.shard_count,affected_games)
-    if not args.api and not args.browser and not args.storage and not args.mysql_live and not args.mysql_migrations_live and not args.postgres_migrations_live and not args.postgres_storage_live and not args.request_latency: args.api=True
+    if not args.api and not args.browser and not args.storage and not args.mysql_live and not args.mysql_migrations_live and not args.postgres_migrations_live and not args.postgres_storage_live and not args.postgres_game_actions_live and not args.request_latency: args.api=True
     # Start protected logic so failures can be handled safely.
     try:
         # Build the credential-free MySQL callback only for the explicit benchmark selector.
@@ -5813,7 +5815,7 @@ def main():
         # Build the provider-neutral companion case only when its external report was explicitly supplied.
         gunicorn_json_load_callback=(lambda: run_case('GUNICORN-LOAD-JSON-001',['CORE-035','TEST-251'],lambda: gunicorn_load_smoke.run('json',int(gunicorn_users),Path(gunicorn_json_report)))) if gunicorn_json_report else None
         # Delegate the complete storage/MySQL area while preserving explicit live selectors and callback wiring.
-        if args.storage or args.mysql_live or args.mysql_migrations_live or args.postgres_migrations_live or args.postgres_storage_live: api_storage_foundation.run_cases(run_case,include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,include_postgres_migration_live=args.postgres_migrations_live,include_postgres_storage_live=args.postgres_storage_live,request_latency_callback=request_latency_callback,gunicorn_json_load_callback=gunicorn_json_load_callback,gunicorn_load_callback=gunicorn_load_callback)
+        if args.storage or args.mysql_live or args.mysql_migrations_live or args.postgres_migrations_live or args.postgres_storage_live or args.postgres_game_actions_live: api_storage_foundation.run_cases(run_case,include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,include_postgres_migration_live=args.postgres_migrations_live,include_postgres_storage_live=args.postgres_storage_live,include_postgres_game_action_live=args.postgres_game_actions_live,request_latency_callback=request_latency_callback,gunicorn_json_load_callback=gunicorn_json_load_callback,gunicorn_load_callback=gunicorn_load_callback)
         # Run the JSON provider only through its explicit benchmark selector.
         if args.request_latency=='json': run_case('REQUEST-LATENCY-JSON-001',['TEST-148'],lambda: run_request_latency_provider('json',args.request_latency_output))
         if args.api: run_api_tests()
