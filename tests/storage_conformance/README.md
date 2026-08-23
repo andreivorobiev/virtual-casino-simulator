@@ -53,5 +53,6 @@ uses the accepted migration path once, and bounds its provider pool. PostgreSQL 
 `CASINO_POSTGRES_CONFORMANCE_LIVE=CASINO-POSTGRES-1060-LIVE` and the reviewed official binary root
 in `CASINO_POSTGRES_TEST_BIN`; it starts one private loopback cluster, applies the accepted migration
 catalog, and never selects a persistent service. Both relational harnesses keep credentials out of
-reports, reset mutable state within the accepted schema between groups, and verify database,
-accounts, process, listener, and filesystem cleanup before returning.
+reports, reset mutable state within the accepted schema between groups, and verify generated
+database/account removal plus provider and administrator connector release. PostgreSQL additionally
+verifies its owned private process, listener, and temporary-root cleanup before returning.
