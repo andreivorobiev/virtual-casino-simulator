@@ -85,6 +85,8 @@ class ReleasePollerTests(unittest.TestCase):
         self.environment = dict(os.environ)
         # Point embedded helpers at the active test interpreter.
         self.environment["CASINO_PYTHON"] = bash_path(sys.executable)
+        # Isolate the production poller fixture from the API lane's JSON storage-provider setting.
+        self.environment["CASINO_STORAGE_PROVIDER"] = "mysql"
 
     # Invoke one listener-free poller subcommand with bounded captured output.
     def run_poller(self, *arguments: str, check: bool = True, environment: dict | None = None):
