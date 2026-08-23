@@ -6,16 +6,22 @@ from __future__ import annotations
 
 # Import dynamic loading so optional database drivers remain absent from default runs.
 import importlib
+# Import metadata preservation for fixed infrastructure-error decorators.
+from functools import wraps
 # Import environment access for explicit disposable-service authorization.
 import os
 # Import portable paths for the private PostgreSQL cluster and reviewed binaries.
 from pathlib import Path
 # Import safe entropy for test-only database, role, account, and password identities.
 import secrets
+# Import bounded loopback probes for exact PostgreSQL listener shutdown evidence.
+import socket
 # Import bounded process execution for PostgreSQL emergency shutdown.
 import subprocess
 # Import temporary-root allocation outside the repository.
 import tempfile
+# Import monotonic bounded readiness waits for the tracked PostgreSQL process.
+import time
 # Import structural values without importing either concrete provider module.
 from typing import Any
 # Import restoring environment patches around the public storage factory.
@@ -39,6 +45,69 @@ POSTGRES_MARKER_VALUE = "CASINO-POSTGRES-1060-LIVE"
 POSTGRES_BIN_NAME = "CASINO_POSTGRES_TEST_BIN"
 # Keep all absence outcomes value-free and provider-neutral.
 ABSENT_REASON = "reviewed disposable reachability variables are absent"
+# Keep MySQL setup failures independent of connector, target, and credential values.
+MYSQL_SETUP_FAILURE = "Disposable MySQL conformance setup failed"
+# Keep MySQL cleanup failures independent of connector, target, and credential values.
+MYSQL_CLEANUP_FAILURE = "Disposable MySQL conformance cleanup failed"
+# Keep PostgreSQL setup failures independent of process, path, target, and credential values.
+POSTGRES_SETUP_FAILURE = "Disposable PostgreSQL conformance setup failed"
+# Keep PostgreSQL cleanup failures independent of process, path, target, and credential values.
+POSTGRES_CLEANUP_FAILURE = "Disposable PostgreSQL conformance cleanup failed"
+
+
+# Convert only unexpected infrastructure exceptions at an authorized create boundary.
+def _fixed_setup_errors(message: str):
+    """Preserve harness assertions while sanitizing native setup failures."""
+
+    # Build one decorator bound to a fixed source-owned category.
+    def decorate(operation):
+        # Preserve the wrapped lifecycle method's diagnostic identity.
+        @wraps(operation)
+        def guarded(*args, **kwargs):
+            # Run the ordinary authorized setup path unchanged.
+            try:
+                # Return the exact provider or helper result on success.
+                return operation(*args, **kwargs)
+            # Preserve explicit harness policy and injected controller assertions.
+            except AssertionError:
+                # Retain the exact exception identity and traceback.
+                raise
+            # Collapse connector, subprocess, filesystem, and provider-native detail.
+            except Exception:
+                # Publish only the fixed provider-scoped infrastructure category.
+                raise AssertionError(message) from None
+        # Return the bounded setup wrapper.
+        return guarded
+    # Return the decorator selected by each relational harness.
+    return decorate
+
+
+# Retain the first cleanup failure while converting only native infrastructure detail.
+def _first_cleanup_failure(current: BaseException | None, error: BaseException, message: str) -> BaseException:
+    """Return the first exact policy failure or one fixed native-failure category."""
+
+    # Preserve the failure that already owns terminal cleanup reporting.
+    if current is not None:
+        # Ignore later cleanup failures without stopping cleanup progress.
+        return current
+    # Preserve explicit harness assertions and process-control BaseExceptions by identity.
+    if isinstance(error, AssertionError) or not isinstance(error, Exception):
+        # Return the exact original object for caller identity checks.
+        return error
+    # Replace every native error and its potentially sensitive message.
+    return AssertionError(message)
+
+
+# Prove the exact private PostgreSQL loopback listener no longer accepts connections.
+def _loopback_listener_closed(port: int) -> bool:
+    """Return true only when one bounded IPv4 connection probe is refused."""
+
+    # Allocate one short-lived IPv4 TCP probe with no ambient hostname resolution.
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        # Bound cleanup verification independently from the harness budget.
+        probe.settimeout(0.2)
+        # Treat only a refused or otherwise unsuccessful connection as closure.
+        return probe.connect_ex(("127.0.0.1", port)) != 0
 
 
 # Build one provider through the selector facade while restoring every environment value.
@@ -222,6 +291,7 @@ class MySQLHarness:
         # Permit only the singleton reset-epoch compare-and-set update.
         cursor.execute(f"GRANT UPDATE ON `{self._database}`.`casino_game_action_epoch_state` TO '{self._runtime_user}'@'%'")
 
+    @_fixed_setup_errors(MYSQL_SETUP_FAILURE)
     def create(self) -> StorageProvider:
         """Create, migrate, grant, and open one isolated MySQL provider."""
 
@@ -293,44 +363,82 @@ class MySQLHarness:
     def destroy(self) -> None:
         """Close the pool and remove every generated MySQL identity."""
 
+        # Track the first failure while every independent cleanup stage continues.
+        cleanup_failure: BaseException | None = None
         # Release runtime connections before attempting database deletion.
-        _close_provider(self._provider)
-        # Clear the provider reference even when later cleanup fails.
+        try:
+            # Close the exact harness-owned runtime pool.
+            _close_provider(self._provider)
+        except BaseException as error:
+            # Preserve an explicit assertion or sanitize native provider detail.
+            cleanup_failure = _first_cleanup_failure(cleanup_failure, error, MYSQL_CLEANUP_FAILURE)
+        # Clear the provider reference after the close attempt so repeat destroy is safe.
         self._provider = None
         # Preserve the administrator connection needed for exact teardown.
         admin = self._admin
         # Clear the retained field before connector cleanup can raise.
         self._admin = None
-        try:
-            # Skip database teardown only when setup never proved ownership.
-            if admin is not None and self._identities_owned:
+        # Skip database teardown only when setup never opened an administrator connection.
+        if admin is not None and self._identities_owned:
+            # Attempt cursor creation independently from pool cleanup.
+            try:
                 # Open one administrator cursor on the disposable service.
                 cursor = admin.cursor()
-                # Drop only the generated database proven absent before setup.
-                cursor.execute(f"DROP DATABASE IF EXISTS `{self._database}`")
-                # Drop only the generated migration account.
-                cursor.execute(f"DROP USER IF EXISTS '{self._migrator_user}'@'%'")
-                # Drop only the generated runtime account.
-                cursor.execute(f"DROP USER IF EXISTS '{self._runtime_user}'@'%'")
-                # Commit complete identity removal.
-                admin.commit()
-                # Verify the database no longer exists.
-                cursor.execute("SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = %s", (self._database,))
-                # Retain the database residue count before account verification.
-                database_count = int(cursor.fetchone()[0])
-                # Verify neither generated account remains.
-                cursor.execute("SELECT COUNT(*) FROM mysql.user WHERE User IN (%s, %s)", (self._migrator_user, self._runtime_user))
-                # Fail closed on any task-owned residue.
-                if database_count != 0 or int(cursor.fetchone()[0]) != 0:
-                    # Publish no identifier, endpoint, account, or secret.
-                    raise AssertionError("Disposable MySQL conformance cleanup was incomplete")
-        finally:
-            # Release the administrator connector after every outcome.
-            if admin is not None:
-                # Close the exact test-owned physical connection.
+            except BaseException as error:
+                # Preserve or sanitize the first target-cleanup failure.
+                cleanup_failure = _first_cleanup_failure(cleanup_failure, error, MYSQL_CLEANUP_FAILURE)
+                # Record that no individual DDL step can run on this connection.
+                cursor = None
+            # Continue through every independently safe generated-identity removal.
+            if cursor is not None:
+                # Visit database and accounts without letting one failed drop skip the others.
+                for statement in (f"DROP DATABASE IF EXISTS `{self._database}`", f"DROP USER IF EXISTS '{self._migrator_user}'@'%'", f"DROP USER IF EXISTS '{self._runtime_user}'@'%'"):
+                    # Attempt only the exact generated identity statement.
+                    try:
+                        # Execute the bounded identifier-safe cleanup DDL.
+                        cursor.execute(statement)
+                    except BaseException as error:
+                        # Retain the first fixed or exact policy failure and continue.
+                        cleanup_failure = _first_cleanup_failure(cleanup_failure, error, MYSQL_CLEANUP_FAILURE)
+                # Attempt to publish every successful cleanup statement.
+                try:
+                    # Commit the remaining successful identity removals.
+                    admin.commit()
+                except BaseException as error:
+                    # Preserve or sanitize commit failure without skipping verification.
+                    cleanup_failure = _first_cleanup_failure(cleanup_failure, error, MYSQL_CLEANUP_FAILURE)
+                # Verify exact zero residue only when the cursor remains usable.
+                try:
+                    # Verify the database no longer exists.
+                    cursor.execute("SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = %s", (self._database,))
+                    # Retain the database residue count before account verification.
+                    database_count = int(cursor.fetchone()[0])
+                    # Verify neither generated account remains.
+                    cursor.execute("SELECT COUNT(*) FROM mysql.user WHERE User IN (%s, %s)", (self._migrator_user, self._runtime_user))
+                    # Require exact absence before releasing deletion ownership.
+                    identities_removed = database_count == 0 and int(cursor.fetchone()[0]) == 0
+                    # Fail closed on any task-owned residue.
+                    if not identities_removed:
+                        # Publish no identifier, endpoint, account, or secret.
+                        raise AssertionError("Disposable MySQL conformance cleanup was incomplete")
+                    # Prevent later destroy calls from deleting unrelated identities.
+                    self._identities_owned = False
+                except BaseException as error:
+                    # Preserve or sanitize verification failure after all drops ran.
+                    cleanup_failure = _first_cleanup_failure(cleanup_failure, error, MYSQL_CLEANUP_FAILURE)
+        # Release the administrator connector after all target cleanup attempts.
+        if admin is not None:
+            # Close without letting connector failure replace earlier evidence.
+            try:
+                # Release the exact test-owned physical connection.
                 admin.close()
-            # Prevent a later destroy call from deleting unowned identities.
-            self._identities_owned = False
+            except BaseException as error:
+                # Preserve or sanitize the first terminal cleanup failure.
+                cleanup_failure = _first_cleanup_failure(cleanup_failure, error, MYSQL_CLEANUP_FAILURE)
+        # Surface the first cleanup failure after every stage was attempted.
+        if cleanup_failure is not None:
+            # Preserve its exact identity when it was a harness assertion.
+            raise cleanup_failure
 
 
 class PostgresHarness:
@@ -359,6 +467,12 @@ class PostgresHarness:
         self._sql: Any | None = None
         # Track the process and generated identity ownership independently.
         self._started = False
+        # Track every start attempt so start-then-raise still owns mandatory shutdown.
+        self._start_attempted = False
+        # Retain the exact directly launched PostgreSQL process before readiness.
+        self._process: subprocess.Popen | None = None
+        # Retain the bounded private log handle until confirmed process death.
+        self._log_handle: Any | None = None
         # Track whether absence proof authorized database and role removal.
         self._identities_owned = False
         # Generate accepted migration-suffix identities without reading host state.
@@ -480,6 +594,7 @@ class PostgresHarness:
             # Release administrator connector state after setup.
             admin.close()
 
+    @_fixed_setup_errors(POSTGRES_SETUP_FAILURE)
     def create(self) -> StorageProvider:
         """Start, migrate, and open one isolated PostgreSQL provider."""
 
@@ -507,10 +622,40 @@ class PostgresHarness:
         self._port = self._live._loopback_port()
         # Initialize only the private PostgreSQL 16 cluster.
         self._live._postgres_command([str(self._bin / "initdb.exe"), "-D", str(self._data_root), "-A", "trust", "-U", "casino_admin_1060", "--encoding=UTF8", "--no-locale"])
-        # Start one listener on literal loopback with durability disabled for disposable speed.
-        self._live._postgres_command([str(self._bin / "pg_ctl.exe"), "-D", str(self._data_root), "-l", str(self._root / "postgres.log"), "-o", f"-p {self._port} -h 127.0.0.1 -F", "-w", "start"])
-        # Record active process ownership before target creation.
+        # Claim cleanup ownership before process creation because Popen may partially launch.
+        self._start_attempted = True
+        # Open one private binary log that is deleted without publication.
+        self._log_handle = (self._root / "postgres.log").open("ab")
+        # Suppress a Windows console window while retaining ordinary behavior elsewhere.
+        creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        # Launch the exact reviewed PostgreSQL binary with an argv list and no shell.
+        self._process = subprocess.Popen([str(self._bin / "postgres.exe"), "-D", str(self._data_root), "-p", str(self._port), "-h", "127.0.0.1", "-F"], stdin=subprocess.DEVNULL, stdout=self._log_handle, stderr=subprocess.STDOUT, shell=False, creationflags=creation_flags)
+        # Record active-process ownership immediately after the handle is retained.
         self._started = True
+        # Bound administrator readiness independently from the complete harness budget.
+        readiness_deadline = time.monotonic() + 10.0
+        # Poll connector readiness without reading or publishing native detail.
+        while True:
+            # Fail when the tracked process exits before accepting connections.
+            if self._process.poll() is not None:
+                # Preserve only the fixed outer setup category.
+                raise RuntimeError("PostgreSQL conformance process readiness failed")
+            try:
+                # Probe only the process-created literal-loopback administrator endpoint.
+                readiness = self._driver.connect(host="127.0.0.1", port=self._port, user="casino_admin_1060", dbname="postgres", autocommit=True, connect_timeout=1)
+            except Exception:
+                # Fail after one finite readiness ceiling without connector text.
+                if time.monotonic() >= readiness_deadline:
+                    # Preserve only the fixed outer setup category.
+                    raise RuntimeError("PostgreSQL conformance process readiness failed") from None
+                # Yield briefly before the next bounded connector attempt.
+                time.sleep(0.05)
+                # Continue without retaining the connector error.
+                continue
+            # Release the successful readiness-only administrator connection.
+            readiness.close()
+            # Continue target setup only after exact connector readiness.
+            break
         # Create only the generated role and database.
         self._create_target()
         # Build exact migration and runtime settings after target creation.
@@ -549,34 +694,73 @@ class PostgresHarness:
         if not self._identities_owned or not self._started:
             # Preserve the active process for independent stop cleanup.
             return
+        # Track the first target-cleanup failure while later safe steps continue.
+        cleanup_failure: BaseException | None = None
         # Open one private administrator connector for exact teardown.
         admin = self._admin_connection(timeout=3)
         try:
-            # Open one autocommit cursor on the private default database.
-            cursor = admin.cursor()
-            # Terminate only sessions bound to the generated database.
-            cursor.execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid()", (self._database,))
-            # Drop only the process-generated database.
-            cursor.execute(self._sql.SQL("DROP DATABASE IF EXISTS {}").format(self._sql.Identifier(self._database)))
-            # Drop only the process-generated role.
-            cursor.execute(self._sql.SQL("DROP ROLE IF EXISTS {}").format(self._sql.Identifier(self._role)))
-            # Verify exact zero database and role residue.
-            cursor.execute("SELECT (SELECT count(*) FROM pg_roles WHERE rolname = %s), (SELECT count(*) FROM pg_database WHERE datname = %s)", (self._role, self._database))
-            # Fail closed if either generated identity remains.
-            if tuple(cursor.fetchone()) != (0, 0):
-                # Publish no role, database, port, path, or credential.
-                raise AssertionError("Disposable PostgreSQL conformance cleanup was incomplete")
-            # Prevent repeated removal after verified cleanup.
-            self._identities_owned = False
+            # Attempt cursor creation before the independent DDL sequence.
+            try:
+                # Open one autocommit cursor on the private default database.
+                cursor = admin.cursor()
+            except BaseException as error:
+                # Preserve or sanitize cursor setup failure.
+                cleanup_failure = _first_cleanup_failure(cleanup_failure, error, POSTGRES_CLEANUP_FAILURE)
+                # Record that no statement can safely run on this connector.
+                cursor = None
+            # Continue through every exact generated-target cleanup operation.
+            if cursor is not None:
+                # Build the fixed termination and driver-safe drop statements.
+                statements = (
+                    ("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid()", (self._database,)),
+                    (self._sql.SQL("DROP DATABASE IF EXISTS {}").format(self._sql.Identifier(self._database)), None),
+                    (self._sql.SQL("DROP ROLE IF EXISTS {}").format(self._sql.Identifier(self._role)), None),
+                )
+                # Do not let one database or role operation skip its independent successor.
+                for statement, parameters in statements:
+                    # Attempt only this generated-identity operation.
+                    try:
+                        # Bind parameters only for the exact session-termination statement.
+                        if parameters is None:
+                            # Execute driver-composed identifier-safe DDL.
+                            cursor.execute(statement)
+                        else:
+                            # Execute the fixed query with its bound generated database.
+                            cursor.execute(statement, parameters)
+                    except BaseException as error:
+                        # Preserve or sanitize the first target-cleanup failure and continue.
+                        cleanup_failure = _first_cleanup_failure(cleanup_failure, error, POSTGRES_CLEANUP_FAILURE)
+                # Verify exact zero database and role residue after all drop attempts.
+                try:
+                    # Query only the two process-generated identities through bound values.
+                    cursor.execute("SELECT (SELECT count(*) FROM pg_roles WHERE rolname = %s), (SELECT count(*) FROM pg_database WHERE datname = %s)", (self._role, self._database))
+                    # Fail closed if either generated identity remains.
+                    if tuple(cursor.fetchone()) != (0, 0):
+                        # Publish no role, database, port, path, or credential.
+                        raise AssertionError("Disposable PostgreSQL conformance cleanup was incomplete")
+                    # Prevent repeated removal only after verified cleanup.
+                    self._identities_owned = False
+                except BaseException as error:
+                    # Preserve or sanitize verification failure after every drop attempt.
+                    cleanup_failure = _first_cleanup_failure(cleanup_failure, error, POSTGRES_CLEANUP_FAILURE)
         finally:
-            # Release the teardown administrator connector.
-            admin.close()
+            # Release the teardown administrator connector without masking prior failures.
+            try:
+                # Close the exact private-cluster connection.
+                admin.close()
+            except BaseException as error:
+                # Preserve or sanitize close failure after all target operations.
+                cleanup_failure = _first_cleanup_failure(cleanup_failure, error, POSTGRES_CLEANUP_FAILURE)
+        # Surface the first failure only after every cleanup stage ran.
+        if cleanup_failure is not None:
+            # Preserve exact assertion identity where supplied by the controller.
+            raise cleanup_failure
 
     def _stop_cluster(self) -> None:
         """Stop the exact private process with one bounded fallback."""
 
-        # Stop when create failed before process startup.
-        if not self._started or self._live is None or self._bin is None or self._data_root is None:
+        # Stop when create failed before any process-start attempt.
+        if (not self._start_attempted and not self._started) or self._live is None or self._bin is None or self._data_root is None or self._port is None:
             # Preserve filesystem cleanup for a partially initialized root.
             return
         try:
@@ -585,53 +769,103 @@ class PostgresHarness:
         except Exception:
             # Fall back to immediate stop only for this verified private cluster.
             subprocess.run([str(self._bin / "pg_ctl.exe"), "-D", str(self._data_root), "-m", "immediate", "-w", "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30, check=False)
-        finally:
-            # Prevent any later cleanup from assuming an active owned listener.
-            self._started = False
+        # Retain the directly launched process handle for bounded terminal fallback.
+        process = self._process
+        # Terminate only when pg_ctl paths left the exact tracked process alive.
+        if process is not None and process.poll() is None:
+            # Attempt graceful operating-system termination without trusting it as proof.
+            try:
+                # Signal only the exact process object launched by this harness.
+                process.terminate()
+            except Exception:
+                # Continue to bounded wait and kill fallback.
+                pass
+            try:
+                # Bound graceful termination independently from pg_ctl waits.
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                # Force only the exact tracked process after graceful timeout.
+                process.kill()
+                # Require terminal handle completion after forceful fallback.
+                process.wait(timeout=5)
+        # Query exact data-directory process ownership after either stop path.
+        status = subprocess.run([str(self._bin / "pg_ctl.exe"), "-D", str(self._data_root), "status"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, check=False)
+        # Require tracked death, data-directory process absence, and listener closure.
+        process_stopped = process is None or process.poll() is not None
+        # Refuse ownership release unless all three independent shutdown proofs pass.
+        if not process_stopped or status.returncode == 0 or not _loopback_listener_closed(self._port):
+            # Retain every ownership handle so a later destroy can retry safely.
+            raise AssertionError("Disposable PostgreSQL conformance cleanup was incomplete")
+        # Close the private log only after the tracked process cannot write again.
+        if self._log_handle is not None:
+            # Release the exact harness-owned file descriptor before root deletion.
+            self._log_handle.close()
+        # Clear the terminal process and log handles beside shutdown proof.
+        self._process, self._log_handle = None, None
+        # Clear process ownership only after both independent shutdown proofs pass.
+        self._started = False
+        # Clear start-attempt ownership beside verified process absence.
+        self._start_attempted = False
 
     def destroy(self) -> None:
         """Close, drop, stop, and delete every PostgreSQL harness resource."""
 
+        # Track the first failure before provider shutdown so later cleanup still runs.
+        cleanup_failure: BaseException | None = None
         # Release runtime sessions before database termination and deletion.
-        _close_provider(self._provider)
-        # Clear the provider reference even when later cleanup fails.
+        try:
+            # Close the exact harness-owned runtime pool.
+            _close_provider(self._provider)
+        except BaseException as error:
+            # Preserve an explicit assertion or sanitize native provider detail.
+            cleanup_failure = _first_cleanup_failure(cleanup_failure, error, POSTGRES_CLEANUP_FAILURE)
+        # Clear the provider reference after the close attempt so repeat destroy is safe.
         self._provider = None
         # Preserve the root for verified deletion and final residue assertion.
         root = self._root
-        # Track the first cleanup failure while still attempting process and file teardown.
-        cleanup_failure: BaseException | None = None
         try:
             # Remove generated database and role while the private cluster is active.
             self._drop_identities()
         except BaseException as error:
-            # Retain only the first failure identity through remaining cleanup.
-            cleanup_failure = error
+            # Retain only the first fixed or exact policy failure through later cleanup.
+            cleanup_failure = _first_cleanup_failure(cleanup_failure, error, POSTGRES_CLEANUP_FAILURE)
         try:
             # Stop the exact process before deleting its data directory.
             self._stop_cluster()
         except BaseException as error:
             # Preserve an earlier identity-cleanup failure when one exists.
-            if cleanup_failure is None:
-                # Retain the process-stop failure for terminal reporting.
-                cleanup_failure = error
+            # Retain the first sanitized process-stop failure for terminal reporting.
+            cleanup_failure = _first_cleanup_failure(cleanup_failure, error, POSTGRES_CLEANUP_FAILURE)
         # Resolve the system temporary root once for containment validation.
         temp_root = Path(tempfile.gettempdir()).resolve()
         # Delete only a correctly prefixed direct child allocated by this harness.
         safe_root = root is not None and root.parent == temp_root and root.name.startswith("storage-conformance-postgres-")
-        # Remove the private cluster tree after process-stop attempts.
-        if safe_root:
+        # Remove the private cluster tree only after verified process and listener shutdown.
+        if safe_root and not self._started and not self._start_attempted:
             # Import filesystem deletion only at the exact bounded cleanup site.
             import shutil
-            # Delete every private data and log byte.
-            shutil.rmtree(root, ignore_errors=True)
-        # Clear lifecycle fields so repeat destroy is non-destructive.
-        self._root = None
-        self._data_root = None
-        self._bin = None
-        self._live = None
-        self._driver = None
-        self._sql = None
-        self._port = None
+            # Delete every private data and log byte without hiding residue.
+            try:
+                # Remove only the verified direct-child root.
+                shutil.rmtree(root)
+            except BaseException as error:
+                # Preserve or sanitize filesystem cleanup failure.
+                cleanup_failure = _first_cleanup_failure(cleanup_failure, error, POSTGRES_CLEANUP_FAILURE)
+        # Clear lifecycle fields only after verified terminal resource removal.
+        if (root is None or not root.exists()) and not self._started and not self._start_attempted:
+            # Release every non-secret lifecycle handle after zero residue.
+            self._root = None
+            self._data_root = None
+            self._bin = None
+            self._live = None
+            self._driver = None
+            self._sql = None
+            self._port = None
+            # Release already-confirmed terminal process and log references.
+            self._process = None
+            self._log_handle = None
+            # The removed private data directory contains no retained identities.
+            self._identities_owned = False
         # Require complete filesystem cleanup even after a successful database drop.
         if root is not None and root.exists() and cleanup_failure is None:
             # Publish no local path.

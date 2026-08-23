@@ -377,13 +377,16 @@ def group_i_reset(context: CaseContext) -> None:
     """I. Verify fresh-equivalent reset state and rerun document basics."""
 
     provider = context.provider
+    # Capture this provider's complete normalized fresh wallet document before mutation.
+    fresh_players = provider.load_players(_empty_players)
     provider.bootstrap_players(_players(_player("reset-player", 5.0)))
     provider.transact_ledger("reset-player", 1.0, "RESET", "conformance", "reset-round")
     provider.append_history(_history_event(1, "slots"))
     provider.write_document("conformance/i/stale", {"stale": True})
     provider.reset()
     provider.ensure_ready()
-    _require(provider.load_players(_empty_players) == _empty_players(), "reset did not restore fresh wallet state")
+    # Require reset to restore the complete provider-normalized fresh wallet document.
+    _require(provider.load_players(_empty_players) == fresh_players, "reset did not restore fresh wallet state")
     _require(provider.read_ledger_recent(limit=10) == [], "reset retained mutable ledger state")
     _require(provider.recent_history(limit=10) == [], "reset retained mutable history state")
     _require(not provider.document_exists("conformance/i/stale"), "reset retained a mutable document")

@@ -88,6 +88,17 @@ class StorageConformanceBoundaryTests(unittest.TestCase):
         self.assertEqual(len(registrations), len({registration.name for registration in registrations}))
         self.assertEqual(tuple(sorted(registration.name for registration in registrations)), tuple(registration.name for registration in registrations))
 
+    def test_reset_group_compares_complete_provider_normalized_fresh_state(self) -> None:
+        """Bind group I to complete fresh-state equivalence without provider-specific metadata."""
+
+        case_source = (PACKAGE_ROOT / "cases.py").read_text(encoding="utf-8")
+        case_tree = ast.parse(case_source, filename="cases.py")
+        group_i = next(node for node in case_tree.body if isinstance(node, ast.FunctionDef) and node.name == "group_i_reset")
+        group_source = ast.get_source_segment(case_source, group_i) or ""
+        self.assertIn("fresh_players = provider.load_players(_empty_players)", group_source)
+        self.assertIn("provider.load_players(_empty_players) == fresh_players", group_source)
+        self.assertNotIn('["players"] == []', group_source)
+
 
 if __name__ == "__main__":
     unittest.main()
