@@ -21,6 +21,8 @@ from tests import postgres_migration_tests
 from tests import postgres_provider_tests
 # Import the transaction-faithful PostgreSQL game-action lifecycle suite. (TEST-256)
 from tests import postgres_game_action_provider_tests
+# Import the provider-neutral permanent A-J suite without importing either optional connector. (TEST-257)
+from tests.storage_conformance import test_database_harnesses, test_import_boundaries, test_json_conformance
 # Import PostgreSQL configuration and lazy-selector coverage without importing psycopg. (TEST-252)
 from tests import postgres_registration_tests
 # Import the transaction-faithful PostgreSQL session lifecycle suite. (TEST-255)
@@ -196,6 +198,17 @@ def run_cases(run_case, include_live=False, include_migration_live=False, includ
             # Preserve one fixed connector- and target-free diagnostic.
             raise AssertionError("PostgreSQL game-action provider suite failed")
 
+    # Define the permanent provider-neutral storage conformance runner. (STORAGE-025, TEST-257)
+    def run_storage_conformance_tests():
+        # Combine the unchanged A-J run with import and disposable-lifecycle governance.
+        suite = unittest.TestSuite((unittest.defaultTestLoader.loadTestsFromModule(test_json_conformance), unittest.defaultTestLoader.loadTestsFromModule(test_import_boundaries), unittest.defaultTestLoader.loadTestsFromModule(test_database_harnesses)))
+        # Execute JSON always and each relational harness only under its exact reviewed marker.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the permanent case on behavior, timing, boundary, or cleanup drift.
+        if not result.wasSuccessful():
+            # Publish one connector-, target-, and credential-free diagnostic.
+            raise AssertionError("storage provider conformance suite failed")
+
     # Define one focused unittest runner for authenticated recovery and clean-target policy.
     def run_recovery_policy_tests():
         # Load only the #205 synthetic recovery test case.
@@ -243,6 +256,8 @@ def run_cases(run_case, include_live=False, include_migration_live=False, includ
     run_case("POSTGRES-STORAGE-001", ["STORAGE-023", "TEST-255"], run_postgres_storage_tests)
     # Prove PostgreSQL exactly-once execution, resolution, rollback, and reset semantics.
     run_case("POSTGRES-GAME-ACTION-001", ["STORAGE-024", "TEST-256"], run_postgres_game_action_tests)
+    # Enforce one unchanged A-J contract across every registered reachable provider.
+    run_case("STORAGE-CONFORMANCE-001", ["STORAGE-025", "TEST-257"], run_storage_conformance_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "STORAGE-016", "TEST-030", "TEST-243"], run_storage_base_and_json_parity)
     # Execute one identical paid settlement, replay, resolve, and conflict schedule on JSON and MySQL.

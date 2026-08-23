@@ -563,6 +563,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             ("POSTGRES-MIGRATION-001", ["STORAGE-022", "TEST-254"]),
             ("POSTGRES-STORAGE-001", ["STORAGE-023", "TEST-255"]),
             ("POSTGRES-GAME-ACTION-001", ["STORAGE-024", "TEST-256"]),
+            ("STORAGE-CONFORMANCE-001", ["STORAGE-025", "TEST-257"]),
             ("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "STORAGE-016", "TEST-030", "TEST-243"]),
             ("STORAGE-PROVIDER-SETTLEMENT-PARITY-001", ["CORE-031", "STORAGE-013", "STORAGE-016", "TEST-243"]),
             ("STORAGE-WALLET-CORRUPTION-001", ["STORAGE-014", "TEST-177"]),
@@ -600,16 +601,16 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Preserve permanent ID, mapping, order, and callback identity.
             default_captured.append((case_id, requirements, callback.__name__))
         module.run_cases(capture_default)
-        # Require both live registrations to remain absent without explicit selectors.
-        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in default_captured), expected_cases[:24])
+        # Require every selector-owned live registration to remain absent from the default inventory.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in default_captured), expected_cases[:25])
         # Capture the explicitly selected live registrations without invoking their callbacks.
         live_captured = []
         def capture_live(case_id, requirements, callback):
             # Preserve the complete explicit-live registration packet.
             live_captured.append((case_id, requirements, callback.__name__))
         module.run_cases(capture_live, include_live=True, include_migration_live=True, request_latency_callback=object())
-        # Bind all twenty-five default and MySQL-live IDs, mappings, and historical order.
-        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in live_captured), expected_cases[:26])
+        # Bind all twenty-five default plus two MySQL-live IDs, mappings, and historical order.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in live_captured), expected_cases[:27])
         # Bind the two explicit selector cases to the final two historical positions.
         self.assertEqual(tuple(case_id for case_id, _, _ in live_captured[-2:]), ("STORAGE-MYSQL-LIVE-001", "MYSQL-MIGRATION-LIVE-001"))
         # Capture the PostgreSQL live registration independently from both MySQL selectors.
@@ -629,7 +630,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Select only the PostgreSQL live path while keeping both MySQL selectors false.
             module.run_cases(capture_postgres_live, include_postgres_migration_live=True)
         # Require the separate selector to append only the exact PostgreSQL live registration.
-        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in postgres_live_captured), expected_cases[:24] + expected_cases[26:27])
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in postgres_live_captured), expected_cases[:25] + expected_cases[27:28])
         # Bind the imported live entrypoint without executing the disposable service lifecycle.
         self.assertEqual(postgres_live_captured[-1], ("POSTGRES-MIGRATION-LIVE-001", ["STORAGE-022", "TEST-254"], "main"))
         # Capture the complete-provider live registration separately from migration authority.
@@ -646,7 +647,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Select only complete-provider live evidence, not migration or MySQL lifecycles.
             module.run_cases(capture_postgres_storage_live, include_postgres_storage_live=True)
         # Require the new selector to append only the exact complete-provider live case.
-        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in postgres_storage_live_captured), expected_cases[:24] + expected_cases[27:28])
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in postgres_storage_live_captured), expected_cases[:25] + expected_cases[28:29])
         # Bind the provider-live entrypoint without executing any connector or listener lifecycle.
         self.assertEqual(postgres_storage_live_captured[-1], ("POSTGRES-STORAGE-LIVE-001", ["STORAGE-023", "TEST-255"], "run_postgres_storage_live_tests"))
         # Capture game-action live registration independently from all other live selectors.
@@ -663,7 +664,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Select only exact PostgreSQL game-action live evidence.
             module.run_cases(capture_postgres_game_action_live, include_postgres_game_action_live=True)
         # Require one explicit live append after the complete default inventory.
-        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in postgres_game_action_live_captured), expected_cases[:24] + expected_cases[28:])
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in postgres_game_action_live_captured), expected_cases[:25] + expected_cases[29:])
         # Bind the imported game-action entrypoint without executing a listener lifecycle.
         self.assertEqual(postgres_game_action_live_captured[-1], ("POSTGRES-GAME-ACTION-LIVE-001", ["STORAGE-024", "TEST-256"], "main"))
         # Reject duplicate literal registration ownership in the compatibility runner.

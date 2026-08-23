@@ -363,6 +363,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 ### Test-scoped instructions
 
 - [`tests/AGENTS.md`](tests/AGENTS.md) — AGENTS.md - tests module
+- [`tests/storage_conformance/README.md`](tests/storage_conformance/README.md) — Storage provider conformance
 
 ### Web-scoped instructions
 
