@@ -63,10 +63,16 @@ Repository PostgreSQL live tests are destructive only to targets they create the
 | --- | --- |
 | `tests/postgres_migration_live.py` | `CASINO_POSTGRES_LIVE_TEST=CASINO-POSTGRES-1057-LIVE` |
 | `tests/postgres_provider_live.py` | `CASINO_POSTGRES_LIVE_TEST=CASINO-POSTGRES-1058-LIVE` |
-| Native session case | `CASINO_POSTGRES_SESSION_LIVE=CASINO-POSTGRES-1058-SESSION-LIVE` |
+| Native session case, inner gate | `CASINO_POSTGRES_SESSION_LIVE=CASINO-POSTGRES-1058-SESSION-LIVE` |
 | `tests/postgres_game_action_live.py` | `CASINO_POSTGRES_GAME_ACTION_LIVE=CASINO-POSTGRES-1059-LIVE` |
 
-These are separate invocations; the reused `CASINO_POSTGRES_LIVE_TEST` name deliberately has a different exact value for the migration and provider lanes. Do not invent a shared alias or set every marker globally. The managed storage gate supplies its own temporary markers and restores the environment.
+These are separate invocations; the reused `CASINO_POSTGRES_LIVE_TEST` name deliberately has a different exact value for the migration and provider lanes. Do not invent a shared alias or set every marker globally.
+
+The native session case is not a standalone `SESSION_LIVE` plus `TEST_BIN` command. Its test-only environment has two layers:
+
+- `CASINO_POSTGRES_SESSION_MANAGED_LIVE=CASINO-POSTGRES-1058-MANAGED-LIVE` selects the outer self-managed runner when `tests/postgres_session_provider_tests.py` is executed directly. Direct managed execution also needs the inner `CASINO_POSTGRES_SESSION_LIVE` value shown above, `CASINO_POSTGRES_LIVE_TEST=CASINO-POSTGRES-1057-LIVE` for the reused migration helper, and `CASINO_POSTGRES_TEST_BIN`.
+- The outer runner creates the disposable cluster and schema before injecting `CASINO_POSTGRES_SESSION_HOST`, `CASINO_POSTGRES_SESSION_PORT`, `CASINO_POSTGRES_SESSION_USER`, `CASINO_POSTGRES_SESSION_PASSWORD`, and `CASINO_POSTGRES_SESSION_DATABASE` for the inner native-session case. These five values are ephemeral test internals, not operator runtime configuration, and must never be copied into the application's `CASINO_POSTGRES_*` runtime namespace.
+- The central managed storage callback calls the same outer lifecycle directly instead of using `SESSION_MANAGED_LIVE`; it supplies the inner session and migration markers temporarily, while the lifecycle supplies the generated target values. It restores or removes every marker and generated target value after success or failure.
 
 The live helpers create a fresh loopback-only cluster, synthetic issue-suffixed identities, and a temporary data root, then verify process, listener, role, database, pool, and filesystem cleanup. Never point them at an existing database. Successful source evidence is recorded in the rollout comments for [registration](https://github.com/andreivorobiev/virtual-casino-simulator/issues/1055#issuecomment-5382985428), [pooling](https://github.com/andreivorobiev/virtual-casino-simulator/issues/1056#issuecomment-5383101536), [migrations](https://github.com/andreivorobiev/virtual-casino-simulator/issues/1057#issuecomment-5383248847), [provider/session storage](https://github.com/andreivorobiev/virtual-casino-simulator/issues/1058#issuecomment-5383419007), and [game actions](https://github.com/andreivorobiev/virtual-casino-simulator/issues/1059#issuecomment-5383505517).
 
