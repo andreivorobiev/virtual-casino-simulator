@@ -44,3 +44,13 @@ python -m unittest tests.storage_conformance.test_json_conformance tests.storage
 
 The run prints one provider/group timing section and fails when the provider's hard total budget is
 reached. The harness destroys its synthetic target after both passing and failing cases.
+
+The permanent central registration runs with `python tests/run_tests.py --storage`. JSON always
+executes. MySQL executes only with the existing exact disposable marker plus complete reviewed
+loopback administrator reachability; it creates dedicated synthetic runtime and migration accounts,
+uses the accepted migration path once, and bounds its provider pool. PostgreSQL executes only with
+`CASINO_POSTGRES_CONFORMANCE_LIVE=CASINO-POSTGRES-1060-LIVE` and the reviewed official binary root
+in `CASINO_POSTGRES_TEST_BIN`; it starts one private loopback cluster, applies the accepted migration
+catalog, and never selects a persistent service. Both relational harnesses keep credentials out of
+reports, fast-reset the accepted schema between groups, and verify target, account, process,
+listener, and filesystem cleanup before returning.

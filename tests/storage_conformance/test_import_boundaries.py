@@ -6,8 +6,10 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
+import tempfile
 import unittest
 
+from scripts import validate_module_boundaries
 from tests.storage_conformance.cases import GROUPS
 from tests.storage_conformance.database_harnesses import MySQLHarness, PostgresHarness
 from tests.storage_conformance.harness import JsonHarness, ProviderHarness
@@ -98,6 +100,21 @@ class StorageConformanceBoundaryTests(unittest.TestCase):
         self.assertIn("fresh_players = provider.load_players(_empty_players)", group_source)
         self.assertIn("provider.load_players(_empty_players) == fresh_players", group_source)
         self.assertNotIn('["players"] == []', group_source)
+
+    def test_central_boundary_validator_rejects_concrete_provider_imports(self) -> None:
+        """Prove the ordinary boundary stage scans future conformance-kit files recursively."""
+
+        with tempfile.TemporaryDirectory(prefix="storage-conformance-boundary-") as root:
+            package_root = Path(root)
+            (package_root / "future_case.py").write_text("from casino.core.storage import PostgresStorageProvider\n", encoding="utf-8")
+            nested_root = package_root / "nested"
+            nested_root.mkdir()
+            (nested_root / "future_harness.py").write_text("import casino.core.storage.mysql_provider\n", encoding="utf-8")
+            errors: list[str] = []
+            validate_module_boundaries.check_storage_conformance_imports(errors, package_root)
+        self.assertEqual(2, len(errors))
+        self.assertTrue(any("PostgresStorageProvider" in error for error in errors))
+        self.assertTrue(any("casino.core.storage.mysql_provider" in error for error in errors))
 
 
 if __name__ == "__main__":

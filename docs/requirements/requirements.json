@@ -13951,6 +13951,28 @@
       "notes": "This lane changes no schema, game, public API, MySQL, JSON, deployment workflow, production target, or migration authority. It uses the schema-four claim and receipt relations under the exact clean schema-five runtime prefix."
     },
     {
+      "id": "STORAGE-025",
+      "module": "Storage",
+      "description": "One executable provider-independent StorageProvider contract defines backend acceptance with no capability carve-outs. The unchanged A-J inventory covers documents, players, ledger arithmetic and sequencing, exactly-once actions, history, real threaded schedules, transaction visibility, reset fresh-equivalence, and declared secret-safe errors; supports_true_concurrency may size a thread wave but cannot skip any call, case, or assertion.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-CONFORMANCE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/storage_conformance/cases.py",
+        "tests/storage_conformance/harness.py",
+        "tests/storage_conformance/registry.py",
+        "tests/storage_conformance/test_json_conformance.py",
+        "tests/storage_conformance/test_import_boundaries.py",
+        "tests/cases/api/storage_foundation.py",
+        "scripts/validate_module_boundaries.py"
+      ],
+      "introduced_in": "issue-1060-storage-conformance",
+      "changed_in": "issue-1060-storage-conformance",
+      "notes": "This test-only contract changes no provider implementation, schema, public API, gameplay, production target, deployment workflow, or migration authority. A future backend is complete only after one isolated harness passes the same complete inventory."
+    },
+    {
       "id": "MYSQL-010",
       "module": "MySQL",
       "description": "Schema five adds casino_sessions with one binary opaque primary key, one unique lowercase token digest, user-activity and expiry indexes, finite lifecycle and generation checks, and a canonical JSON payload bound to duplicated indexed columns. The migration backfills only keyed schema-two-through-four session bridge rows, never persists plaintext bearer tokens, and removes those bridge rows after insertion; runtime session DML is table-scoped while catalog application remains held.",
@@ -14168,6 +14190,30 @@
       "introduced_in": "issue-1059-postgres-game-actions",
       "changed_in": "issue-1059-postgres-game-actions",
       "notes": "The listener-free suite imports no psycopg and opens no listener. The live gate requires a distinct exact authorization marker and official PostgreSQL 16 binary root, uses only synthetic loopback identities, and proves pool, role, database, process, listener, and filesystem cleanup."
+    },
+    {
+      "id": "TEST-257",
+      "module": "Tests",
+      "description": "One registered conformance run executes the unchanged A-J storage contract against temporary JSON, disposable MySQL, and disposable PostgreSQL harnesses with per-group timings, hard total budgets below ten seconds for JSON and sixty seconds for each reachable relational provider, real thread calls, complete fresh-state reset comparison, declared error containment, and success/failure cleanup. Central and package boundary gates reject concrete-provider imports or classes anywhere in the case kit; absent reviewed relational reachability skips cleanly, while present malformed reachability fails closed before optional-driver or network access.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-CONFORMANCE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/storage_conformance/README.md",
+        "tests/storage_conformance/database_harnesses.py",
+        "tests/storage_conformance/test_database_harnesses.py",
+        "tests/storage_conformance/test_import_boundaries.py",
+        "tests/storage_conformance/test_json_conformance.py",
+        "tests/cases/api/storage_foundation.py",
+        "tests/api_case_inventory.json",
+        "tests/cicd_deployment_tests.py",
+        "scripts/validate_module_boundaries.py"
+      ],
+      "introduced_in": "issue-1060-storage-conformance",
+      "changed_in": "issue-1060-storage-conformance",
+      "notes": "All targets, roles, accounts, passwords, files, and rows are synthetic. Default execution opens no absent provider; authorized relational runs remain loopback-only, expose no credential, target, SQL, query, or native error detail, and verify database, account, process, listener, and filesystem cleanup."
     },
     {
       "id": "ROU-001",
