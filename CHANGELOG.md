@@ -9,8 +9,23 @@ Canonical version sources:
   `modules` are independent per-module source revisions.
 - `pyproject.toml` — package metadata version, kept in step by `scripts/validate_versions.py`.
 
-This file is retained only for the historical bootstrap entry below. It is **not** a current
-statement of repository state: the repository has advanced many releases past 9.1.1.
+This file retains the historical bootstrap entry and concise unreleased source-delivery notes.
+Packaged release history, deployment evidence, and rollback statements remain exclusively in
+`RELEASE_NOTES.md`.
+
+## PostgreSQL storage-provider source delivery (unreleased documentation)
+
+- Documented the explicit optional PostgreSQL provider, bounded per-process pool, checksum-bound
+  schema-five catalog, disposable-only migration runner, and provider-neutral storage behavior
+  delivered by issues #1055 through #1060.
+- Documented the unchanged A–J conformance contract, exact relational authorization boundaries,
+  and distinct MySQL service versus PostgreSQL private-cluster cleanup ownership.
+- Added local PostgreSQL 16, connection-pool, migration, authorization-marker, cleanup, and rollback
+  guidance without changing application, API, gameplay, schema, provider, or deployment behavior.
+- Kept JSON as the absent-selector default and MySQL behavior unchanged; PostgreSQL requires
+  explicit selection and the optional `postgres` dependency group.
+- This documentation does not create or authorize a production PostgreSQL target, apply migrations
+  to existing data, publish a release, or change packaged application release `0.9.5.85`.
 
 ## 9.1.1 - Repository Bootstrap + Codex Migration Payload (historical)
 
