@@ -10,14 +10,15 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 JSON remains the default provider when `CASINO_STORAGE_PROVIDER` is absent. MySQL and PostgreSQL are opt-in providers selected explicitly with `CASINO_STORAGE_PROVIDER=mysql` or `CASINO_STORAGE_PROVIDER=postgres`; neither is an automatic fallback. The PostgreSQL provider is imported lazily only after explicit selection and requires the optional driver installed with `python -m pip install -e ".[postgres]"`.
 
-The PostgreSQL runtime performs no schema DDL. It accepts only the exact clean checksum-bound schema version 5 prepared by the disposable-only migration runner and fails closed on missing, partial, dirty, foreign, or future state. Source configuration, bounded pooling, and migration/testing boundaries are documented in:
+The PostgreSQL runtime performs no schema DDL. It accepts only the exact clean checksum-bound schema version 5 prepared on a newly created guarded target and fails closed on missing, partial, dirty, foreign, or future state. Source configuration, bounded pooling, migration/testing boundaries, and the separate OCI preview deployment are documented in:
 
 - [`docs/local_postgres_setup.md`](docs/local_postgres_setup.md)
 - [`docs/postgres_connection_pool.md`](docs/postgres_connection_pool.md)
 - [`docs/postgres_migrations.md`](docs/postgres_migrations.md)
+- [`docs/oci_postgres_preview.md`](docs/oci_postgres_preview.md)
 - [`tests/storage_conformance/README.md`](tests/storage_conformance/README.md)
 
-Requirements `STORAGE-025` and `TEST-257` bind JSON, MySQL, and PostgreSQL to one unchanged A–J provider contract. These repository documents describe source availability and isolated validation. They do not claim a PostgreSQL production target, deployment, grant change, or migration of existing data.
+Requirements `STORAGE-025` and `TEST-257` bind JSON, MySQL, and PostgreSQL to one unchanged A–J provider contract. Requirements `STORAGE-026`, `TOOL-021`, and `TEST-258` govern the one-time empty-target PostgreSQL bootstrap and the additional OCI restricted preview without migrating existing JSON or MySQL data.
 
 ## Design decisions
 

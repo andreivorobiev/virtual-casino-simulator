@@ -83,6 +83,30 @@ class EdgeGateTests(unittest.TestCase):
         # Confirm the validated packet remains explicitly unactivated.
         self.assertEqual(policy["stage"], "repository-preparation-only")
 
+    # Prove the separate PostgreSQL preview is bound to its provider, hostname, and protected port.
+    def test_postgres_preview_profile_is_statically_bound(self):
+        # Select the repository-owned OCI preview policy copied into the disposable fixture.
+        postgres_policy_path = self.root / "deploy" / "edge" / "postgres-preview.json"
+        # Validate only inert repository content without opening a socket or process.
+        policy = edge_gate.validate_policy(postgres_policy_path, self.root)
+        # Require the exact profile, same-origin host, and native PostgreSQL readiness contract.
+        self.assertEqual(policy["deployment_profile"], "oci-postgres-preview")
+        self.assertEqual(policy["canonical_origin"], "https://preview.tiltseven.com")
+        self.assertEqual(policy["monitoring"]["probes"][1]["expected_json"]["storage_provider"], "postgres")
+        self.assertEqual(policy["ingress"]["protected_tcp_ports"], [5432, 8765, 8877])
+
+    # Prove profile-owned values cannot be mixed across the two deployments.
+    def test_cross_profile_origin_and_provider_are_rejected(self):
+        # Load the isolated MySQL policy and substitute the PostgreSQL profile identifier only.
+        policy = self.read_policy()
+        policy["deployment_profile"] = "oci-postgres-preview"
+        # Persist the inconsistent profile/origin combination in the disposable tree.
+        self.write_policy(policy)
+        # Reject the cross-profile origin before any live observation can occur.
+        with self.assertRaisesRegex(edge_gate.EdgeGateError, "^origin_policy$"):
+            # Validate only the deliberately inconsistent static policy.
+            edge_gate.validate_policy(self.policy_path, self.root)
+
     # Prove public signup or OAuth relaxation fails closed.
     def test_access_weakening_is_rejected(self):
         # Load one isolated policy mutation target.

@@ -2,7 +2,7 @@
   "schema": "casino-postgres-migration-catalog-v1",
   "minimum_runtime_version": 5,
   "expected_version": 5,
-  "apply_policy": "disposable-only",
+  "apply_policy": "guarded-empty-target-only",
   "migrations": [
     {
       "version": 1,

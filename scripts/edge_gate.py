@@ -31,8 +31,11 @@ COOKIE_ENV = "CASINO_EDGE_MONITOR_COOKIE"
 AUTHORIZATION_ENV = "CASINO_EDGE_MONITOR_AUTHORIZATION"
 # Keep all policy failures in a fixed secret-safe category vocabulary.
 ALLOWED_ERROR_CODES = {"access_policy", "certificate_age", "certificate_unavailable", "credential_missing", "endpoint_body", "endpoint_headers", "endpoint_status", "endpoint_unavailable", "ingress_policy", "invalid_policy", "monitoring_policy", "origin_policy", "proxy_policy", "rollback_policy", "template_content", "template_path", "upstream_policy"}
-# Define the complete fixed probe contract so additional public or privileged routes fail closed.
-EXPECTED_PROBES = [("liveness", "/healthz", False, 200, {"status": "live"}), ("readiness", "/readyz", True, 200, {"ready": True, "storage_provider": "mysql"}), ("admin_operations", "/api/v2/admin/operations", True, 200, {"ready": True})]
+# Bind each reviewed deployment profile to one exact origin, provider, ingress, and nginx contract.
+DEPLOYMENT_PROFILES = {
+    "primary-mysql": {"origin": "https://casino.tiltseven.com", "host": "casino.tiltseven.com", "storage_provider": "mysql", "protected_ports": [3306, 8765, 8877], "nginx": "deploy/nginx/casino.conf.template", "server_names": "casino.tiltseven.com casino.andvor.com"},
+    "oci-postgres-preview": {"origin": "https://preview.tiltseven.com", "host": "preview.tiltseven.com", "storage_provider": "postgres", "protected_ports": [5432, 8765, 8877], "nginx": "deploy/nginx/casino-postgres-preview.conf.template", "server_names": "preview.tiltseven.com"},
+}
 # Define the exact hardened response headers already emitted by the #203 application boundary.
 EXPECTED_HEADERS = {"Content-Security-Policy": "present", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY", "Strict-Transport-Security": "max-age=31536000"}
 
@@ -121,12 +124,16 @@ def validate_policy(policy_path=DEFAULT_POLICY, root=ROOT):
     policy = _read_policy(policy_path)
     # Require the exact schema and non-activated stage markers.
     _require(policy.get("schema") == "casino.edge-policy.v1", "invalid_policy")
+    # Select only one reviewed deployment profile before validating profile-owned values.
+    profile = DEPLOYMENT_PROFILES.get(policy.get("deployment_profile"))
+    # Reject unknown, missing, or type-confused deployment profiles.
+    _require(isinstance(profile, dict), "invalid_policy")
     # Refuse any policy that claims deployment or activation has already occurred.
     _require(policy.get("stage") == "repository-preparation-only", "invalid_policy")
     # Bind the edge to the owner-confirmed same-origin HTTPS hostname only.
-    _require(policy.get("canonical_origin") == "https://casino.tiltseven.com", "origin_policy")
+    _require(policy.get("canonical_origin") == profile["origin"], "origin_policy")
     # Require the matching canonical Host value consumed by #203.
-    _require(policy.get("canonical_host") == "casino.tiltseven.com", "origin_policy")
+    _require(policy.get("canonical_host") == profile["host"], "origin_policy")
     # Require the complete application upstream to remain plain HTTP on fixed IPv4 loopback.
     _require(policy.get("upstream") == {"scheme": "http", "host": "127.0.0.1", "port": 8765}, "upstream_policy")
     # Extract the ingress policy for exact port and SSH-boundary checks.
@@ -134,7 +141,7 @@ def validate_policy(policy_path=DEFAULT_POLICY, root=ROOT):
     # Allow only normal HTTP and HTTPS in the future cutover template.
     _require(ingress.get("public_tcp_ports") == [80, 443], "ingress_policy")
     # Preserve the database and both protected application/runtime ports as non-public.
-    _require(ingress.get("protected_tcp_ports") == [3306, 8765, 8877], "ingress_policy")
+    _require(ingress.get("protected_tcp_ports") == profile["protected_ports"], "ingress_policy")
     # Preserve source-restricted SSH rather than broadening administrative ingress.
     _require(ingress.get("ssh_source_restricted") is True, "ingress_policy")
     # Require the complete restricted-preview enrollment and Admin policy from #203.
@@ -142,7 +149,7 @@ def validate_policy(policy_path=DEFAULT_POLICY, root=ROOT):
     # Extract the proxy header contract for exact replacement and clearing checks.
     proxy = policy.get("proxy", {})
     # Replace Host and trusted forwarding headers with edge-owned canonical values.
-    _require(proxy.get("request_headers") == {"Host": "casino.tiltseven.com", "X-Forwarded-For": "$remote_addr", "X-Forwarded-Proto": "https"}, "proxy_policy")
+    _require(proxy.get("request_headers") == {"Host": profile["host"], "X-Forwarded-For": "$remote_addr", "X-Forwarded-Proto": "https"}, "proxy_policy")
     # Clear every other forwarding header so client-supplied chains cannot cross #203.
     _require(proxy.get("cleared_request_headers") == ["Forwarded", "X-Forwarded-Host", "X-Forwarded-Port"], "proxy_policy")
     # Require HTTP-01, nginx preflight, and keep-current-on-failure ACME behavior.
@@ -162,17 +169,19 @@ def validate_policy(policy_path=DEFAULT_POLICY, root=ROOT):
     # Convert the JSON probe mappings to stable tuples for one exact comparison.
     probes = [(item.get("name"), item.get("path"), item.get("authenticated"), item.get("expected_status"), item.get("expected_json")) for item in monitoring.get("probes", []) if isinstance(item, dict)]
     # Reject missing, reordered, additional, public, or weakened probe declarations.
-    _require(probes == EXPECTED_PROBES, "monitoring_policy")
+    expected_probes = [("liveness", "/healthz", False, 200, {"status": "live"}), ("readiness", "/readyz", True, 200, {"ready": True, "storage_provider": profile["storage_provider"]}), ("admin_operations", "/api/v2/admin/operations", True, 200, {"ready": True})]
+    # Reject missing, reordered, additional, public, weakened, or cross-provider probes.
+    _require(probes == expected_probes, "monitoring_policy")
     # Preserve application/edge-only rollback and prohibit schema reversal.
     _require(policy.get("rollback") == {"application_release": "atomic-symlink", "edge_configuration": "prevalidated-replacement", "database_rollback": "prohibited", "post_rollback_probe_required": True}, "rollback_policy")
     # Require the exact five inert template keys and repository-relative locations.
-    expected_templates = {"nginx": "deploy/nginx/casino.conf.template", "acme_renewal_hook": "deploy/acme/casino-renewal-hook.sh.template", "monitor_service": "deploy/systemd/casino-edge-monitor.service.template", "monitor_timer": "deploy/systemd/casino-edge-monitor.timer.template", "rollback": "deploy/rollback/casino-edge-rollback.sh.template"}
+    expected_templates = {"nginx": profile["nginx"], "acme_renewal_hook": "deploy/acme/casino-renewal-hook.sh.template", "monitor_service": "deploy/systemd/casino-edge-monitor.service.template", "monitor_timer": "deploy/systemd/casino-edge-monitor.timer.template", "rollback": "deploy/rollback/casino-edge-rollback.sh.template"}
     # Reject missing, additional, or redirected template declarations.
     _require(policy.get("templates") == expected_templates, "template_path")
     # Read the nginx source only after its path has passed exact declaration checks.
     nginx = _read_template(root, expected_templates["nginx"])
     # Require exact loopback, ACME, redirect, TLS, forwarding, clearing, and bounded proxy behavior.
-    _validate_template(nginx, ("server 127.0.0.1:8765;", "listen 80;", "listen 443 ssl http2;", "server_name casino.tiltseven.com casino.andvor.com;", "location ^~ /.well-known/acme-challenge/", "return 308 https://casino.tiltseven.com$request_uri;", "ssl_certificate __TLS_FULLCHAIN_PATH__;", "ssl_certificate_key __TLS_PRIVATE_KEY_PATH__;", "proxy_pass http://casino_restricted_preview;", "proxy_set_header Host casino.tiltseven.com;", "proxy_set_header X-Forwarded-For $remote_addr;", "proxy_set_header X-Forwarded-Proto https;", "proxy_set_header Forwarded \"\";", "proxy_set_header X-Forwarded-Host \"\";", "proxy_set_header X-Forwarded-Port \"\";", "client_max_body_size 1m;"), ("$proxy_add_x_forwarded_for", "listen 8765", "listen 8877", "listen 3306", "proxy_pass http://0.0.0.0"))
+    _validate_template(nginx, ("server 127.0.0.1:8765;", "listen 80;", "listen 443 ssl http2;", f"server_name {profile['server_names']};", "location ^~ /.well-known/acme-challenge/", f"return 308 {profile['origin']}$request_uri;", "ssl_certificate __TLS_FULLCHAIN_PATH__;", "ssl_certificate_key __TLS_PRIVATE_KEY_PATH__;", "proxy_pass http://casino_restricted_preview;", f"proxy_set_header Host {profile['host']};", "proxy_set_header X-Forwarded-For $remote_addr;", "proxy_set_header X-Forwarded-Proto https;", "proxy_set_header Forwarded \"\";", "proxy_set_header X-Forwarded-Host \"\";", "proxy_set_header X-Forwarded-Port \"\";", "client_max_body_size 1m;"), ("$proxy_add_x_forwarded_for", "listen 8765", "listen 8877", "listen 3306", "listen 5432", "proxy_pass http://0.0.0.0"))
     # Read and validate the renewal hook without invoking nginx or a certificate client.
     renewal = _read_template(root, expected_templates["acme_renewal_hook"])
     # Require fail-before-reload behavior and prohibit issuance from the renewal hook.
@@ -180,7 +189,7 @@ def validate_policy(policy_path=DEFAULT_POLICY, root=ROOT):
     # Read and validate the inactive read-only monitor service template.
     monitor_service = _read_template(root, expected_templates["monitor_service"])
     # Require least privilege, external secret loading, bounded execution, and the observe-only command.
-    _validate_template(monitor_service, ("Type=oneshot", "User=casino-monitor", "EnvironmentFile=/etc/casino/edge-monitor.env", "EnvironmentFile=-/etc/casino/release-poller.env", "edge_gate.py observe", "ExecStartPost=+/usr/local/libexec/casino-release-poller check-lag", "TimeoutStartSec=40s", "ReadWritePaths=/var/lib/casino/release-poller", "NoNewPrivileges=true"), ("edge_gate.py validate --activate", "ExecStart=nginx", "ExecStart=certbot"))
+    _validate_template(monitor_service, ("Type=oneshot", "User=casino-monitor", "Environment=CASINO_EDGE_POLICY_PATH=/opt/casino/current/deploy/edge/restricted-preview.json", "EnvironmentFile=/etc/casino/edge-monitor.env", "EnvironmentFile=-/etc/casino/release-poller.env", "edge_gate.py observe --policy ${CASINO_EDGE_POLICY_PATH}", "ExecStartPost=+/usr/local/libexec/casino-release-poller check-lag", "TimeoutStartSec=40s", "ReadWritePaths=/var/lib/casino/release-poller", "NoNewPrivileges=true"), ("edge_gate.py validate --activate", "ExecStart=nginx", "ExecStart=certbot"))
     # Read and validate the inactive periodic schedule template.
     monitor_timer = _read_template(root, expected_templates["monitor_timer"])
     # Require a bounded five-minute timer and no command-bearing timer directives.
@@ -188,7 +197,7 @@ def validate_policy(policy_path=DEFAULT_POLICY, root=ROOT):
     # Read and validate the explicitly application/edge-only rollback template.
     rollback = _read_template(root, expected_templates["rollback"])
     # Require candidate preflight, atomic links, service recovery, observation, and compensation.
-    _validate_template(rollback, ("set -eu", ": \"$CASINO_NGINX_PREFLIGHT_CONFIG\"", "nginx -t -c \"$CASINO_NGINX_PREFLIGHT_CONFIG\"", "test -L /opt/casino/current", "test -L /etc/nginx/sites-enabled/casino.conf", "mv -Tf /opt/casino/current.next /opt/casino/current", "if ! systemctl restart casino || ! systemctl reload nginx || !", "edge_gate.py observe", "CASINO_CURRENT_RELEASE", "CASINO_CURRENT_NGINX", "systemctl restart casino || true", "systemctl reload nginx || true"), ("mysqldump ", "mysql ", "scripts/recovery.py", "listen 3306"))
+    _validate_template(rollback, ("set -eu", ": \"$CASINO_NGINX_PREFLIGHT_CONFIG\"", "CASINO_EDGE_POLICY_PATH=${CASINO_EDGE_POLICY_PATH:-/opt/casino/current/deploy/edge/restricted-preview.json}", "nginx -t -c \"$CASINO_NGINX_PREFLIGHT_CONFIG\"", "test -L /opt/casino/current", "test -L /etc/nginx/sites-enabled/casino.conf", "mv -Tf /opt/casino/current.next /opt/casino/current", "if ! systemctl restart casino || ! systemctl reload nginx || !", "edge_gate.py observe --policy \"$CASINO_EDGE_POLICY_PATH\"", "CASINO_CURRENT_RELEASE", "CASINO_CURRENT_NGINX", "systemctl restart casino || true", "systemctl reload nginx || true"), ("mysqldump ", "mysql ", "scripts/recovery.py", "listen 3306", "listen 5432"))
     # Return the exact validated policy for the optional read-only observation phase.
     return policy
 

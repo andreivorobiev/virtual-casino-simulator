@@ -13,6 +13,8 @@ readonly CURRENT_LINK="${CASINO_CURRENT_LINK:-${INSTALL_ROOT}/current}"
 readonly RELEASES_ROOT="${CASINO_RELEASES_ROOT:-${INSTALL_ROOT}/releases}"
 readonly RELEASE_ENV="${CASINO_RELEASE_ENV:-/etc/casino/release.env}"
 readonly MONITOR_ENV="${CASINO_EDGE_MONITOR_ENV:-/etc/casino/edge-monitor.env}"
+readonly STORAGE_PROVIDER="${CASINO_STORAGE_PROVIDER:-mysql}"
+readonly EDGE_POLICY_PATH="${CASINO_EDGE_POLICY_PATH:-${CURRENT_LINK}/deploy/edge/restricted-preview.json}"
 readonly POLLER_STATE_ROOT="${CASINO_RELEASE_POLLER_STATE_ROOT:-/var/lib/casino/release-poller}"
 readonly ALARM_FILE="${CASINO_RELEASE_POLLER_ALARM_FILE:-${POLLER_STATE_ROOT}/alarm}"
 readonly STABLE_POLLER="${CASINO_RELEASE_POLLER_STABLE_PATH:-/usr/local/libexec/casino-release-poller}"
@@ -112,6 +114,8 @@ require_runtime() {
   [[ "${API_ROOT}" =~ ^https://[A-Za-z0-9._:/-]+$ ]] || fail "invalid_api_root"
   [[ "${POLL_INTERVAL_SECONDS}" =~ ^[1-9][0-9]*$ ]] || fail "invalid_poll_interval"
   [[ "${LAG_INTERVAL_MULTIPLIER}" =~ ^[1-9][0-9]*$ ]] || fail "invalid_lag_multiplier"
+  [[ "${STORAGE_PROVIDER}" =~ ^(mysql|postgres)$ ]] || fail "invalid_storage_provider"
+  [[ "${EDGE_POLICY_PATH}" =~ ^/[A-Za-z0-9._/-]+\.json$ ]] || fail "invalid_edge_policy_path"
   test -x "${PYTHON}" || fail "python_unavailable"
 }
 
@@ -446,15 +450,19 @@ if inventory(Path(sys.argv[1])) != inventory(Path(sys.argv[2])):
 PY
 }
 
-check_schema_two() {
+check_schema_compatibility() {
   local root="$1"
-  PYTHONPATH="${root}" "${PYTHON}" "${root}/scripts/mysql_migrate.py" bridge-check-schema2
+  if test "${STORAGE_PROVIDER}" = "mysql"; then
+    PYTHONPATH="${root}" "${PYTHON}" "${root}/scripts/mysql_migrate.py" bridge-check-schema2
+    return
+  fi
+  PYTHONPATH="${root}" "${PYTHON}" "${root}/scripts/postgres_runtime_check.py"
 }
 
 observe_release() {
   local version="$1"
   local commit="$2"
-  "${PYTHON}" "${CURRENT_LINK}/scripts/run_edge_monitor.py" --monitor-env "${MONITOR_ENV}" --policy "${CURRENT_LINK}/deploy/edge/restricted-preview.json"
+  "${PYTHON}" "${CURRENT_LINK}/scripts/run_edge_monitor.py" --monitor-env "${MONITOR_ENV}" --policy "${EDGE_POLICY_PATH}"
   verify_live_identity "${version}" "${commit}"
 }
 
@@ -471,7 +479,7 @@ rollback_release() {
   fi
   systemctl restart casino
   systemctl reload nginx
-  check_schema_two "${prior_release}"
+  check_schema_compatibility "${prior_release}"
   observe_release "${prior_version}" "${prior_commit}"
 }
 
@@ -518,7 +526,7 @@ deploy_latest() {
   normalize_extracted_directories "${candidate_root}"
   CASINO_VERIFY_ROOT="${candidate_root}" verify_assets "${work_root}" "${latest_tag}" "${latest_commit}"
   validate_monitor_configuration "${candidate_root}"
-  check_schema_two "${candidate_root}"
+  check_schema_compatibility "${candidate_root}"
   write_release_environment "${candidate_root}" "${work_root}/${ASSET_MANIFEST}" "${work_root}/release.env"
   local release_root="${RELEASES_ROOT}/${latest_commit}"
   if test -e "${release_root}"; then
@@ -550,7 +558,7 @@ deploy_latest() {
   switched=1
   systemctl restart casino
   systemctl reload nginx
-  check_schema_two "${release_root}"
+  check_schema_compatibility "${release_root}"
   observe_release "${latest_tag#v}" "${latest_commit}"
   if test "${mode}" = "rollback-drill"; then
     rollback_release "${prior_release}" "${prior_env}" "${current_version}" "${current_commit}"

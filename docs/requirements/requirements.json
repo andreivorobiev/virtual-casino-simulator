@@ -13415,6 +13415,32 @@
       "notes": "The register is an accountable audit decision, not a permanent exception. The four original #727 through #730 monolith paths are absent after their completed splits; all current protected-main offenders are reviewed on their actual successor paths and must remove their row when both thresholds are satisfied. Canonical release validation reconstructs an authoritative complete index from the trusted exact-HEAD archive before this gate runs, including tracked members that also match ignore rules; non-Git source roots still fail closed."
     },
     {
+      "id": "TOOL-021",
+      "module": "Tooling",
+      "description": "The immutable release poller preserves MySQL schema-two compatibility as its default while selecting an explicit PostgreSQL read-only runtime compatibility check when the deployed provider is postgres. Each deployment selects one source-bound edge profile whose exact same-origin hostname, storage readiness value, private database port, nginx template, and authenticated monitor policy fail closed before release activation or rollback observation.",
+      "status": "PASS",
+      "api_tests": [
+        "DEPLOY-PULL-001",
+        "EDGE-PREPARATION-001",
+        "POSTGRES-MIGRATION-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "deploy/pull/casino-release-poller.sh",
+        "deploy/systemd/casino-release-poller.service.template",
+        "deploy/edge/restricted-preview.json",
+        "deploy/edge/postgres-preview.json",
+        "deploy/nginx/casino-postgres-preview.conf.template",
+        "scripts/edge_gate.py",
+        "scripts/postgres_runtime_check.py",
+        "tests/release_poller_tests.py",
+        "tests/edge_gate_tests.py"
+      ],
+      "introduced_in": "issue-1078-oci-postgres-preview",
+      "changed_in": "issue-1078-oci-postgres-preview",
+      "notes": "The existing TiltSeven MySQL profile remains byte-semantically unchanged by default. Provider compatibility commands are read-only and the poller gains no schema, grant, credential, database-create, DNS, certificate-issuance, or firewall mutation authority."
+    },
+    {
       "id": "TEST-244",
       "module": "Tests",
       "description": "Listener-free policy evidence proves the current reviewed baseline, independent line and byte thresholds, exact-versus-greater-than-twenty-percent growth behavior, stale-entry rejection, generated, vendored, and data exclusions, and fail-closed register schema, ordering, and duplication diagnostics without mutating checked source.",
@@ -13973,6 +13999,29 @@
       "notes": "This test-only contract changes no provider implementation, schema, public API, gameplay, production target, deployment workflow, or migration authority. A future backend is complete only after one isolated harness passes the same complete inventory."
     },
     {
+      "id": "STORAGE-026",
+      "module": "Storage",
+      "description": "A production PostgreSQL schema-five bootstrap is authorized only for one literal-loopback, newly created empty ordinary target with distinct bounded migration and runtime identities. The migration runner requires the exact production marker, a separate target-binding key, a lowercase forty-hex release SHA, and an immutable release manifest naming that same SHA; it refuses existing control metadata, any pre-existing table, catalog upgrades, adoption, system databases, system roles, and migration roles with cluster-wide powers. Runtime compatibility remains SELECT-only under the DML-only role.",
+      "status": "PASS",
+      "api_tests": [
+        "POSTGRES-MIGRATION-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/postgres_migrations.py",
+        "scripts/postgres_migrate.py",
+        "scripts/postgres_runtime_check.py",
+        "deploy/postgres/create-target.sql",
+        "deploy/postgres/finalize-runtime-grants.sql",
+        "tests/postgres_migration_tests.py",
+        "tests/postgres_deployment_tests.py",
+        "docs/oci_postgres_preview.md"
+      ],
+      "introduced_in": "issue-1078-oci-postgres-preview",
+      "changed_in": "issue-1078-oci-postgres-preview",
+      "notes": "This is a one-time empty-target bootstrap, not an upgrade or repair path. The application service explicitly strips every migration credential and authorization variable; PostgreSQL remains loopback-only and has no public ingress."
+    },
+    {
       "id": "MYSQL-010",
       "module": "MySQL",
       "description": "Schema five adds casino_sessions with one binary opaque primary key, one unique lowercase token digest, user-activity and expiry indexes, finite lifecycle and generation checks, and a canonical JSON payload bound to duplicated indexed columns. The migration backfills only keyed schema-two-through-four session bridge rows, never persists plaintext bearer tokens, and removes those bridge rows after insertion; runtime session DML is table-scoped while catalog application remains held.",
@@ -14214,6 +14263,29 @@
       "introduced_in": "issue-1060-storage-conformance",
       "changed_in": "issue-1060-storage-conformance",
       "notes": "All targets, roles, accounts, passwords, files, and rows are synthetic. Default execution opens no absent provider; authorized relational runs remain loopback-only, expose no credential, target, SQL, query, or native error detail, and verify database, account, process, listener, and filesystem cleanup."
+    },
+    {
+      "id": "TEST-258",
+      "module": "Tests",
+      "description": "Listener-free production-bootstrap evidence proves mutually exclusive disposable and production authorization, exact release-manifest SHA binding before connector access, empty-target-only application, least-privilege migration-role rejection, runtime provider and loopback binding, fixed secret-free native failures, atomic cleanup, provider-aware release compatibility, and exact source-bound MySQL and PostgreSQL edge profiles without opening a listener or cloud target.",
+      "status": "PASS",
+      "api_tests": [
+        "POSTGRES-MIGRATION-001",
+        "DEPLOY-PULL-001",
+        "EDGE-PREPARATION-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/postgres_migration_tests.py",
+        "tests/postgres_deployment_tests.py",
+        "tests/release_poller_tests.py",
+        "tests/edge_gate_tests.py",
+        "tests/cases/api/storage_foundation.py",
+        "tests/cases/api/delivery_infrastructure.py"
+      ],
+      "introduced_in": "issue-1078-oci-postgres-preview",
+      "changed_in": "issue-1078-oci-postgres-preview",
+      "notes": "All target, role, password, manifest, connector, edge, and service inputs are disposable fakes or inert checked-in text. The suite performs no cloud, DNS, certificate, database, service, firewall, release, or production mutation."
     },
     {
       "id": "ROU-001",
