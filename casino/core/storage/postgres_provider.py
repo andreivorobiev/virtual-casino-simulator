@@ -22,6 +22,8 @@ from typing import Any, Callable
 from casino.config import SCHEMA_VERSION
 # Import the canonical timestamp helper used by provider rows and documents.
 from casino.core.clock import utc_now
+# Import the provider-neutral exactly-once action executor contract.
+from casino.core.game_action import GameActionExecutor
 # Import the read-only PostgreSQL runtime catalog verifier owned by the migration lane.
 from casino.core.postgres_migrations import MigrationError, verify_runtime_compatibility
 # Import the bounded connector-neutral PostgreSQL pool and its fixed error categories.
@@ -30,6 +32,8 @@ from casino.core.postgres_pool import PostgresConnectionPool, PostgresPoolClosed
 from casino.core.storage.base import HISTORY_FIELDS, PostgresConfig, StorageProvider, _action_details, _action_fingerprint, _action_scope, _history_from_row, _ledger_event, _ledger_from_row, _money, _money_decimal, _normalize_action_key, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
 # Import the shared reset-epoch ceiling used by the future game-action lane.
 from casino.core.storage.reset import _GAME_ACTION_MAX_EPOCH
+# Import first-class PostgreSQL exactly-once game-action ownership.
+from casino.core.storage.game_actions_postgres import PostgresGameActionMixin
 # Import first-class PostgreSQL session ownership from the disjoint session lane.
 from casino.core.storage.sessions_postgres import PostgresSessionMixin
 # Import stable application errors that must survive database translation unchanged.
@@ -164,8 +168,8 @@ class _BorrowedPostgresConnection:
         self._closed = True
 
 
-# Implement the complete ordinary PostgreSQL provider while Lane 5 owns game actions.
-class PostgresStorageProvider(PostgresSessionMixin, StorageProvider):
+# Implement the complete ordinary PostgreSQL provider across sessions and game actions.
+class PostgresStorageProvider(PostgresSessionMixin, PostgresGameActionMixin, StorageProvider, GameActionExecutor):
     # Store the provider name used by diagnostics and parity tests.
     name = "postgres"
 

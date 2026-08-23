@@ -15,6 +15,8 @@ from casino.core.clock import utc_now
 from casino.core.game_action import GameActionIdentity, GameActionPlan, GameActionReceipt, GameActionResolution, GameActionResources, GameActionSnapshot, apply_plan_to_snapshot, canonical_json_bytes, validate_execution_request, validate_resolution_request
 # Import the provider-neutral decoder accepted for psycopg JSONB mappings and model rows.
 from casino.core.storage.base import _decode_json
+# Import shared provider-neutral receipt codecs and ledger projection helpers.
+from casino.core.storage.game_actions_json import JsonGameActionMixin
 # Import the shared bounded reset-epoch ceiling.
 from casino.core.storage.reset import _GAME_ACTION_MAX_EPOCH
 # Import fixed application error boundaries retained across provider implementations.
@@ -22,8 +24,8 @@ from casino.errors import ConflictError, NotFoundError, ValidationError
 
 # Keep PostgreSQL lifecycle corruption behind one value-free recovery category.
 _POSTGRES_GAME_ACTION_RECOVERY_ERROR = "Game action storage requires operator recovery"
-# Add PostgreSQL-native exactly-once action ownership to the concrete provider.
-class PostgresGameActionMixin:
+# Add PostgreSQL-native exactly-once action ownership to the shared receipt codecs.
+class PostgresGameActionMixin(JsonGameActionMixin):
     # Require exact clean schema five inside the active lifecycle transaction.
     def _require_postgres_game_action_schema(self, connection) -> None:
         # Re-read checksum-bound control metadata on this transaction connection.

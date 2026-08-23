@@ -23,10 +23,12 @@ import unittest
 
 # Import provider-neutral action contracts used by every modeled call.
 from casino.core.game_action import GameActionIdentity, GameActionMovement, GameActionPlan, GameActionResolution, GameActionResources
-# Import the shared codec and ledger behavior composed by the concrete provider.
-from casino.core.storage.game_actions_json import JsonGameActionMixin
+# Import the provider-neutral executor contract implemented by the concrete provider.
+from casino.core.game_action import GameActionExecutor
 # Import the PostgreSQL lifecycle implementation under test.
 from casino.core.storage.game_actions_postgres import PostgresGameActionMixin
+# Import the concrete provider only to prove the accepted mixin composition seam.
+from casino.core.storage.postgres_provider import PostgresStorageProvider
 # Import stable public conflict and planner-purity boundaries.
 from casino.errors import ConflictError, ValidationError
 
@@ -265,8 +267,8 @@ class _Cursor:
         return self.result
 
 
-# Compose the production mixin with provider-owned host and codec seams.
-class _Provider(PostgresGameActionMixin, JsonGameActionMixin):
+# Compose the production mixin with provider-owned host seams.
+class _Provider(PostgresGameActionMixin):
     # Initialize one isolated model provider.
     def __init__(self, database: _Database, *, schema_version: int = 5) -> None:
         # Retain the shared committed target.
@@ -598,6 +600,10 @@ class PostgresGameActionProviderTests(unittest.TestCase):
         self.assertFalse(any(name == "psycopg" or name.startswith("psycopg.") for name in imports))
         # Forbid direct driver escape in executable attribute access.
         self.assertFalse(any(isinstance(node, ast.Attribute) and node.attr == "_driver" for node in ast.walk(tree)))
+        # Bind the concrete PostgreSQL provider to the native lifecycle mixin.
+        self.assertTrue(issubclass(PostgresStorageProvider, PostgresGameActionMixin))
+        # Bind the same concrete provider to the public executor contract.
+        self.assertTrue(issubclass(PostgresStorageProvider, GameActionExecutor))
 
 
 # Support direct focused execution in local and CI validation.

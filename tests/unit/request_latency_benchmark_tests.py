@@ -1382,7 +1382,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
         # Require PostgreSQL registration, pool, migration, and provider lanes to add eight accepted IDs.
-        self.assertEqual(len(requirements), 1122)
+        self.assertEqual(len(requirements), 1124)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1561,6 +1561,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-254": "Tests",  # Bind listener-free and disposable PostgreSQL migration evidence.
             "STORAGE-023": "Storage",  # Bind the complete ordinary PostgreSQL storage provider contract.
             "TEST-255": "Tests",  # Bind listener-free and disposable PostgreSQL provider parity evidence.
+            "STORAGE-024": "Storage",  # Bind PostgreSQL exactly-once game-action execution and resolution.
+            "TEST-256": "Tests",  # Bind listener-free and disposable PostgreSQL game-action evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
