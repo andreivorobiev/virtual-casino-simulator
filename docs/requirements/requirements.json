@@ -14100,7 +14100,7 @@
     {
       "id": "TEST-255",
       "module": "Tests",
-      "description": "Listener-free transaction-faithful PostgreSQL provider evidence covers complete method inventory, lazy connection and readiness, dict-row session sanitation, document defaults and strict corruption, atomic mutation, player normalization and row locking, cents-exact ledger balance transitions and replay conflicts, chronological history, first-class session caps, rotation, revocation, expiry and import, reset isolation, rollback, state visibility, concurrency, fixed native-error translation, and unchanged JSON/MySQL behavior. Explicit disposable PostgreSQL 16 evidence repeats the storage, state, session, contention, restart and cleanup contract on the accepted schema-five catalog.",
+      "description": "Listener-free transaction-faithful PostgreSQL provider evidence covers complete method inventory, lazy connection and readiness, dict-row session sanitation, document defaults and strict corruption, atomic mutation, player normalization and row locking, cents-exact ledger balance transitions and replay conflicts, chronological history, first-class session caps, rotation, revocation, expiry and import, reset isolation, rollback, state visibility, concurrency, fixed native-error translation, and unchanged JSON/MySQL behavior. Explicit disposable PostgreSQL 16 evidence repeats the storage, state, session, contention, and cleanup contract on the accepted schema-five catalog.",
       "status": "PASS",
       "api_tests": [
         "POSTGRES-STORAGE-001",
