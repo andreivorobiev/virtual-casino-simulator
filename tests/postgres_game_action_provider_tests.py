@@ -57,6 +57,8 @@ class _Database:
         self.lock = threading.RLock()
         # Inject one bounded resolver lock failure before claim mutation.
         self.lock_contention_once = False
+        # Inject one final receipt publication failure after every mutable projection.
+        self.receipt_failure_once = False
 
     # Return one detached transaction image.
     def snapshot(self) -> dict:
@@ -234,6 +236,12 @@ class _Cursor:
             return
         # Insert one immutable committed receipt.
         if sql.startswith("INSERT INTO casino_game_action_receipts"):
+            # Surface one caller-owned failure after wallet, ledger, and state writes.
+            if self.connection.database.receipt_failure_once:
+                # Consume the one-shot late transaction failure.
+                self.connection.database.receipt_failure_once = False
+                # Require the host transaction to roll back every earlier projection.
+                raise RuntimeError("modeled receipt failure")
             # Split every explicit bound value; execute ownership is a SQL literal.
             reset_epoch, game_id, player_id, action_key, fingerprint, resources_json, receipt_json, receipt_sha256 = params
             # Build the epoch-prefixed receipt key.
@@ -454,6 +462,18 @@ class PostgresGameActionProviderTests(unittest.TestCase):
             self.provider.execute_game_action_once(identity=reentry, resources=resources, planner=lambda _snapshot: (self.provider.resolve_game_action(identity=reentry, resources=resources), _plan(_snapshot))[1])
         # Roll back the outer claim and empty state seed too.
         self.assertEqual(before, self.database.snapshot())
+        # Build a third scope for failure at the final receipt publication boundary.
+        late_failure = _identity(action_key="receipt-failure")
+        # Inject the failure after wallet, ledger, and state projection statements.
+        self.database.receipt_failure_once = True
+        # Preserve the exact late failure after host rollback.
+        with self.assertRaisesRegex(RuntimeError, "^modeled receipt failure$"):
+            # Execute the otherwise valid paid action.
+            self.provider.execute_game_action_once(identity=late_failure, resources=resources, planner=_plan)
+        # Roll back claim, wallet, ledger, state, and absent receipt together.
+        self.assertEqual(before, self.database.snapshot())
+        # Permit the resolver to win after no execution authority was published.
+        self.assertEqual(GameActionResolution(status="uncommitted"), self.provider.resolve_game_action(identity=late_failure, resources=resources))
 
     # Prove finite contention/reset pending and fail-closed schema gating create no claims.
     def test_pending_and_schema_boundaries_are_claim_zero(self):
