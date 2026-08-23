@@ -561,6 +561,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             ("POSTGRES-CONFIG-001", ["STORAGE-001", "STORAGE-003", "STORAGE-004", "STORAGE-020", "TEST-252"]),
             ("POSTGRES-POOL-001", ["STORAGE-010", "STORAGE-021", "TEST-253"]),
             ("POSTGRES-MIGRATION-001", ["STORAGE-022", "TEST-254"]),
+            ("POSTGRES-STORAGE-001", ["STORAGE-023", "TEST-255"]),
             ("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "STORAGE-016", "TEST-030", "TEST-243"]),
             ("STORAGE-PROVIDER-SETTLEMENT-PARITY-001", ["CORE-031", "STORAGE-013", "STORAGE-016", "TEST-243"]),
             ("STORAGE-WALLET-CORRUPTION-001", ["STORAGE-014", "TEST-177"]),
@@ -580,6 +581,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             ("STORAGE-MYSQL-LIVE-001", ["STORAGE-001", "STORAGE-002", "STORAGE-003", "STORAGE-004", "STORAGE-005", "STORAGE-006", "STORAGE-010", "MYSQL-001", "MYSQL-002", "MYSQL-003", "MYSQL-004", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "INVITE-003", "TEST-038", "TEST-043", "TEST-089", "TEST-090", "TEST-091", "TEST-141", "TEST-171", "TEST-220"]),
             ("MYSQL-MIGRATION-LIVE-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "STORAGE-010", "STORAGE-018", "GAMECORE-009", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "TEST-048", "TEST-089", "TEST-090", "TEST-141", "TEST-174", "TEST-220", "TEST-246", "TEST-247", "TEST-251"]),
             ("POSTGRES-MIGRATION-LIVE-001", ["STORAGE-022", "TEST-254"]),
+            ("POSTGRES-STORAGE-LIVE-001", ["STORAGE-023", "TEST-255"]),
         )
         # Read the compatibility runner and extracted owner as inert source text.
         runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
@@ -597,15 +599,15 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             default_captured.append((case_id, requirements, callback.__name__))
         module.run_cases(capture_default)
         # Require both live registrations to remain absent without explicit selectors.
-        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in default_captured), expected_cases[:22])
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in default_captured), expected_cases[:23])
         # Capture the explicitly selected live registrations without invoking their callbacks.
         live_captured = []
         def capture_live(case_id, requirements, callback):
             # Preserve the complete explicit-live registration packet.
             live_captured.append((case_id, requirements, callback.__name__))
         module.run_cases(capture_live, include_live=True, include_migration_live=True, request_latency_callback=object())
-        # Bind all twenty-four default and MySQL-live IDs, mappings, and historical order.
-        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in live_captured), expected_cases[:24])
+        # Bind all twenty-five default and MySQL-live IDs, mappings, and historical order.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in live_captured), expected_cases[:25])
         # Bind the two explicit selector cases to the final two historical positions.
         self.assertEqual(tuple(case_id for case_id, _, _ in live_captured[-2:]), ("STORAGE-MYSQL-LIVE-001", "MYSQL-MIGRATION-LIVE-001"))
         # Capture the PostgreSQL live registration independently from both MySQL selectors.
@@ -625,17 +627,34 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Select only the PostgreSQL live path while keeping both MySQL selectors false.
             module.run_cases(capture_postgres_live, include_postgres_migration_live=True)
         # Require the separate selector to append only the exact PostgreSQL live registration.
-        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in postgres_live_captured), expected_cases[:22] + expected_cases[-1:])
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in postgres_live_captured), expected_cases[:23] + expected_cases[25:26])
         # Bind the imported live entrypoint without executing the disposable service lifecycle.
         self.assertEqual(postgres_live_captured[-1], ("POSTGRES-MIGRATION-LIVE-001", ["STORAGE-022", "TEST-254"], "main"))
+        # Capture the complete-provider live registration separately from migration authority.
+        postgres_storage_live_captured = []
+        def capture_postgres_storage_live(case_id, requirements, callback):
+            # Preserve the default inventory plus the complete-provider callback identity.
+            postgres_storage_live_captured.append((case_id, requirements, callback.__name__))
+        # Create a second driver-free module so provider-live capture cannot open a target.
+        postgres_storage_live_module = types.ModuleType("tests.postgres_provider_live")
+        # Reuse the never-executed named callback because only registration identity is governed.
+        postgres_storage_live_module.main = main
+        # Replace only the service-dependent provider-live import during inert capture.
+        with mock.patch.dict(sys.modules, {"tests.postgres_provider_live": postgres_storage_live_module}):
+            # Select only complete-provider live evidence, not migration or MySQL lifecycles.
+            module.run_cases(capture_postgres_storage_live, include_postgres_storage_live=True)
+        # Require the new selector to append only the exact complete-provider live case.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in postgres_storage_live_captured), expected_cases[:23] + expected_cases[26:])
+        # Bind the provider-live entrypoint without executing any connector or listener lifecycle.
+        self.assertEqual(postgres_storage_live_captured[-1], ("POSTGRES-STORAGE-LIVE-001", ["STORAGE-023", "TEST-255"], "run_postgres_storage_live_tests"))
         # Reject duplicate literal registration ownership in the compatibility runner.
         for case_id, _ in expected_cases:
             self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
         # Require one exact delegation that forwards both selectors and the callback.
-        delegation = "api_storage_foundation.run_cases(run_case,include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,include_postgres_migration_live=args.postgres_migrations_live,request_latency_callback=request_latency_callback,gunicorn_json_load_callback=gunicorn_json_load_callback,gunicorn_load_callback=gunicorn_load_callback)"
+        delegation = "api_storage_foundation.run_cases(run_case,include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,include_postgres_migration_live=args.postgres_migrations_live,include_postgres_storage_live=args.postgres_storage_live,request_latency_callback=request_latency_callback,gunicorn_json_load_callback=gunicorn_json_load_callback,gunicorn_load_callback=gunicorn_load_callback)"
         self.assertEqual(runner_source.count(delegation), 1)
         # Preserve the existing dispatch guard so default API runs never open a provider.
-        self.assertIn("if args.storage or args.mysql_live or args.mysql_migrations_live or args.postgres_migrations_live: " + delegation, runner_source)
+        self.assertIn("if args.storage or args.mysql_live or args.mysql_migrations_live or args.postgres_migrations_live or args.postgres_storage_live: " + delegation, runner_source)
         # Keep listener, server, and raw subprocess lifecycle out of the extracted owner.
         self.assertNotIn("start_server", area_source)
         self.assertNotIn("ServerThread", area_source)

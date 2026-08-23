@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Own storage and MySQL API registrations for the #727 thin-runner series."""
 
+# Import environment copying for isolated disposable PostgreSQL session execution.
+import os
 # Import the active interpreter stream for focused unittest reporting.
 import sys
 # Import standard unittest loading and focused class/module execution.
@@ -15,8 +17,12 @@ from tests import mysql_migration_tests
 from tests import mysql_pool_tests
 # Import the checksum-bound PostgreSQL migration-policy suite. (TEST-254)
 from tests import postgres_migration_tests
+# Import the listener-free complete PostgreSQL provider-core suite. (TEST-255)
+from tests import postgres_provider_tests
 # Import PostgreSQL configuration and lazy-selector coverage without importing psycopg. (TEST-252)
 from tests import postgres_registration_tests
+# Import the transaction-faithful PostgreSQL session lifecycle suite. (TEST-255)
+from tests import postgres_session_provider_tests
 # Import the listener-free bounded PostgreSQL pool suite without importing psycopg. (TEST-253)
 from tests import postgres_pool_tests
 # Import the authenticated recovery-policy suite.
@@ -40,7 +46,7 @@ from tests.games import test_game_rule_schema
 
 
 # Register the complete storage/MySQL area at its historical CLI boundary.
-def run_cases(run_case, include_live=False, include_migration_live=False, include_postgres_migration_live=False, request_latency_callback=None, gunicorn_json_load_callback=None, gunicorn_load_callback=None):
+def run_cases(run_case, include_live=False, include_migration_live=False, include_postgres_migration_live=False, include_postgres_storage_live=False, request_latency_callback=None, gunicorn_json_load_callback=None, gunicorn_load_callback=None):
     """Run the exact default and explicitly selected live storage cases."""
     # Define one focused runner for the extracted provider-neutral package boundary.
     def run_storage_package_boundary_tests():
@@ -166,6 +172,17 @@ def run_cases(run_case, include_live=False, include_migration_live=False, includ
             # Preserve one fixed provider-neutral diagnostic.
             raise AssertionError("PostgreSQL migration policy suite failed")
 
+    # Define one listener-free runner for complete PostgreSQL provider and session parity.
+    def run_postgres_storage_tests():
+        # Combine only the provider-core and native-session test cases under one permanent gate.
+        suite = unittest.TestSuite((unittest.defaultTestLoader.loadTestsFromTestCase(postgres_provider_tests.PostgresProviderTests), unittest.defaultTestLoader.loadTestsFromTestCase(postgres_session_provider_tests.PostgresSessionProviderTests)))
+        # Execute without importing psycopg, opening a listener, or selecting an external target.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the named central case when any complete-provider boundary drifts.
+        if not result.wasSuccessful():
+            # Preserve one fixed connector- and target-free diagnostic.
+            raise AssertionError("PostgreSQL storage provider suite failed")
+
     # Define one focused unittest runner for authenticated recovery and clean-target policy.
     def run_recovery_policy_tests():
         # Load only the #205 synthetic recovery test case.
@@ -209,6 +226,8 @@ def run_cases(run_case, include_live=False, include_migration_live=False, includ
     run_case("POSTGRES-POOL-001", ["STORAGE-010", "STORAGE-021", "TEST-253"], run_postgres_pool_tests)
     # Prove the immutable PostgreSQL catalog, runtime verifier, and disposable-only runner policy.
     run_case("POSTGRES-MIGRATION-001", ["STORAGE-022", "TEST-254"], run_postgres_migration_policy_tests)
+    # Prove the complete ordinary PostgreSQL provider and first-class session contract.
+    run_case("POSTGRES-STORAGE-001", ["STORAGE-023", "TEST-255"], run_postgres_storage_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "STORAGE-016", "TEST-030", "TEST-243"], run_storage_base_and_json_parity)
     # Execute one identical paid settlement, replay, resolve, and conflict schedule on JSON and MySQL.
@@ -283,3 +302,38 @@ def run_cases(run_case, include_live=False, include_migration_live=False, includ
         from tests import postgres_migration_live
         # Map exact apply, restart, dialect, locking, runtime-readiness, and cleanup evidence.
         run_case("POSTGRES-MIGRATION-LIVE-001", ["STORAGE-022", "TEST-254"], postgres_migration_live.main)
+    # Execute the disposable PostgreSQL 16 complete-provider gate only when explicitly selected.
+    if include_postgres_storage_live:
+        # Import the service-dependent provider lifecycle only after explicit authorization.
+        from tests import postgres_provider_live
+        # Define one combined live callback for provider core and first-class sessions.
+        def run_postgres_storage_live_tests():
+            # Run ordinary storage, adapter, reset, contention, and exact cleanup first.
+            if postgres_provider_live.main() != 0:
+                # Refuse partial live acceptance through one fixed diagnostic.
+                raise AssertionError("PostgreSQL provider live suite failed")
+            # Enumerate every marker and generated target setting mutated by the managed session lifecycle.
+            session_keys = ("CASINO_POSTGRES_LIVE_TEST", "CASINO_POSTGRES_SESSION_LIVE", "CASINO_POSTGRES_SESSION_HOST", "CASINO_POSTGRES_SESSION_PORT", "CASINO_POSTGRES_SESSION_USER", "CASINO_POSTGRES_SESSION_PASSWORD", "CASINO_POSTGRES_SESSION_DATABASE")
+            # Preserve exact caller state so generated credentials cannot remain in this process.
+            prior_session_environment = {key: os.environ.get(key) for key in session_keys}
+            try:
+                # Enable the exact native-session case for the managed live suite built below.
+                os.environ["CASINO_POSTGRES_SESSION_LIVE"] = "CASINO-POSTGRES-1058-SESSION-LIVE"
+                # Bind its reused migration helper to the accepted migration-live marker.
+                os.environ["CASINO_POSTGRES_LIVE_TEST"] = "CASINO-POSTGRES-1057-LIVE"
+                # Run native sessions, eight-way creation, and cleanup under the existing bounded helpers.
+                if postgres_session_provider_tests._run_managed_live_suite() != 0:
+                    # Refuse provider acceptance when the native session lifecycle is incomplete.
+                    raise AssertionError("PostgreSQL session live suite failed")
+            finally:
+                # Restore or remove every marker and generated credential after success or failure.
+                for key, value in prior_session_environment.items():
+                    # Remove keys that were absent before this live callback.
+                    if value is None:
+                        # Prevent generated role, database, or password residue in process state.
+                        os.environ.pop(key, None)
+                    else:
+                        # Restore exact caller-owned marker or target state.
+                        os.environ[key] = value
+        # Map complete ordinary storage, sessions, contention, restart, and cleanup evidence.
+        run_case("POSTGRES-STORAGE-LIVE-001", ["STORAGE-023", "TEST-255"], run_postgres_storage_live_tests)
