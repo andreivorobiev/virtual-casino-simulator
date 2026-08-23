@@ -56,3 +56,14 @@ catalog, and never selects a persistent service. Both relational harnesses keep 
 reports, reset mutable state within the accepted schema between groups, and verify generated
 database/account removal plus provider and administrator connector release. PostgreSQL additionally
 verifies its owned private process, listener, and temporary-root cleanup before returning.
+
+For one relational-harness investigation, expose only that harness's exact authorization and
+reachability variables; the registry still runs JSON and records the other wholly absent relational
+target as unavailable. MySQL owns its generated database, runtime and migration accounts, and
+connector cleanup on a separately authorized disposable service, but it does not own that service's
+process, listener, or filesystem. PostgreSQL owns its complete private cluster lifecycle, generated
+database and role, direct process, listener, connectors, and temporary root.
+
+A single-harness investigation is focused evidence, not backend acceptance. A future provider is
+complete only after its isolated factory is registered and the full permanent storage run executes
+the same A–J inventory without a case branch, capability skip, weakened assertion, or residue.

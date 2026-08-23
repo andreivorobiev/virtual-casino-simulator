@@ -15,8 +15,9 @@ The PostgreSQL runtime performs no schema DDL. It accepts only the exact clean c
 - [`docs/local_postgres_setup.md`](docs/local_postgres_setup.md)
 - [`docs/postgres_connection_pool.md`](docs/postgres_connection_pool.md)
 - [`docs/postgres_migrations.md`](docs/postgres_migrations.md)
+- [`tests/storage_conformance/README.md`](tests/storage_conformance/README.md)
 
-These repository documents describe source availability and isolated validation. They do not claim a PostgreSQL production target, deployment, grant change, or migration of existing data.
+Requirements `STORAGE-025` and `TEST-257` bind JSON, MySQL, and PostgreSQL to one unchanged A–J provider contract. These repository documents describe source availability and isolated validation. They do not claim a PostgreSQL production target, deployment, grant change, or migration of existing data.
 
 ## Design decisions
 

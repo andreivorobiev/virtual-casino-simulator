@@ -17,7 +17,9 @@ Packaged release history, deployment evidence, and rollback statements remain ex
 
 - Documented the explicit optional PostgreSQL provider, bounded per-process pool, checksum-bound
   schema-five catalog, disposable-only migration runner, and provider-neutral storage behavior
-  delivered by issues #1055 through #1059.
+  delivered by issues #1055 through #1060.
+- Documented the unchanged A–J conformance contract, exact relational authorization boundaries,
+  and distinct MySQL service versus PostgreSQL private-cluster cleanup ownership.
 - Added local PostgreSQL 16, connection-pool, migration, authorization-marker, cleanup, and rollback
   guidance without changing application, API, gameplay, schema, provider, or deployment behavior.
 - Kept JSON as the absent-selector default and MySQL behavior unchanged; PostgreSQL requires
