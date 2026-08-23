@@ -14,11 +14,12 @@ supports true concurrent execution, and owns a hard total time budget. Every cas
 public `StorageProvider` contract. `supports_true_concurrency` may select the size of a real thread
 wave; it never removes a call, case, or assertion.
 
-The early Phase-A head registers only the temporary-directory JSON harness. Disposable MySQL and
-PostgreSQL registrations join after their accepted provider integration; they must create one
-isolated schema, fast-reset it between groups, and destroy the schema and account on every terminal
-path. Missing reviewed reachability variables may suppress creation of an unavailable database
-harness, but they cannot skip behavior after a harness is registered.
+The registry always contains the temporary-directory JSON harness plus disposable MySQL and
+PostgreSQL harnesses. Each database harness creates one isolated schema, fast-resets it between
+groups, and destroys the schema and generated account on every terminal path. A wholly absent
+reviewed reachability marker records one explicit skip; a present but incomplete or invalid marker
+fails closed before optional-driver import or network access. No harness can skip behavior after
+target creation begins.
 
 ## Unchanged inventory
 
@@ -38,7 +39,7 @@ harness, but they cannot skip behavior after a harness is registered.
 Run the early focused gate with:
 
 ```powershell
-python -m unittest tests.storage_conformance.test_json_conformance tests.storage_conformance.test_import_boundaries
+python -m unittest tests.storage_conformance.test_json_conformance tests.storage_conformance.test_import_boundaries tests.storage_conformance.test_database_harnesses
 ```
 
 The run prints one provider/group timing section and fails when the provider's hard total budget is

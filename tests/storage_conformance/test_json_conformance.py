@@ -87,6 +87,10 @@ class RegisteredStorageConformanceTests(unittest.TestCase):
         for registration in registrations:
             with self.subTest(provider=registration.name):
                 harness = registration.factory()
+                unavailable_reason = harness.unavailable_reason()
+                if unavailable_reason is not None:
+                    print(f"STORAGE-CONFORMANCE provider={harness.name} status=SKIP reason=reachability_absent", flush=True)
+                    self.skipTest(unavailable_reason)
                 elapsed, root = _run_harness_contract(harness)
                 print(f"STORAGE-CONFORMANCE provider={harness.name} status=PASS elapsed={elapsed:.3f}s budget={harness.budget_seconds:.3f}s", flush=True)
                 self.assertLess(elapsed, harness.budget_seconds, f"{harness.name} conformance exceeded its hard budget")

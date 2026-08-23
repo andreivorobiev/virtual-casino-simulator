@@ -7,6 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
+from tests.storage_conformance.database_harnesses import MySQLHarness, PostgresHarness
 from tests.storage_conformance.harness import JsonHarness, ProviderHarness
 
 
@@ -18,8 +19,12 @@ class HarnessRegistration:
     factory: Callable[[], ProviderHarness]
 
 
-# Early Phase-A authoring registers JSON only; database registrations join unchanged after #1059.
-REGISTRATIONS = (HarnessRegistration(name="json", factory=JsonHarness),)
+# Keep every provider registered while each database harness owns its reviewed reachability skip.
+REGISTRATIONS = (
+    HarnessRegistration(name="json", factory=JsonHarness),
+    HarnessRegistration(name="mysql", factory=MySQLHarness),
+    HarnessRegistration(name="postgres", factory=PostgresHarness),
+)
 
 
 def registered_harnesses() -> tuple[HarnessRegistration, ...]:

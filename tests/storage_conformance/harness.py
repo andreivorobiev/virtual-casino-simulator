@@ -23,6 +23,9 @@ class ProviderHarness(Protocol):
     def create(self) -> StorageProvider:
         """Create a fresh isolated provider and return its public contract."""
 
+    def unavailable_reason(self) -> str | None:
+        """Return one fixed reason only when reviewed reachability is absent."""
+
     def reset_fast(self) -> StorageProvider:
         """Reset the retained target between unchanged conformance groups."""
 
@@ -59,6 +62,11 @@ class JsonHarness:
         self._provider = storage_facade.JsonStorageProvider(self._root)
         self._provider.ensure_ready()
         return self._provider
+
+    def unavailable_reason(self) -> None:
+        """Keep the local temporary-directory harness always reachable."""
+
+        return None
 
     def reset_fast(self) -> StorageProvider:
         """Use the production reset boundary before each provider-neutral group."""

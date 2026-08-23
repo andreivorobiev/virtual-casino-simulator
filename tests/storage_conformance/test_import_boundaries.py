@@ -9,6 +9,7 @@ from pathlib import Path
 import unittest
 
 from tests.storage_conformance.cases import GROUPS
+from tests.storage_conformance.database_harnesses import MySQLHarness, PostgresHarness
 from tests.storage_conformance.harness import JsonHarness, ProviderHarness
 from tests.storage_conformance.registry import registered_harnesses
 
@@ -79,10 +80,11 @@ class StorageConformanceBoundaryTests(unittest.TestCase):
     def test_protocol_registry_and_group_inventory_are_complete(self) -> None:
         """Bind the required lifecycle surface and exact A-J inventory."""
 
-        self.assertTrue(isinstance(JsonHarness(), ProviderHarness))
+        self.assertTrue(all(isinstance(harness, ProviderHarness) for harness in (JsonHarness(), MySQLHarness(), PostgresHarness())))
         self.assertEqual(("create", "destroy", "reset_fast"), tuple(sorted(name for name in ("create", "destroy", "reset_fast") if hasattr(ProviderHarness, name))))
         self.assertEqual(tuple("ABCDEFGHIJ"), tuple(group.identifier for group in GROUPS))
         registrations = registered_harnesses()
+        self.assertEqual(("json", "mysql", "postgres"), tuple(registration.name for registration in registrations))
         self.assertEqual(len(registrations), len({registration.name for registration in registrations}))
         self.assertEqual(tuple(sorted(registration.name for registration in registrations)), tuple(registration.name for registration in registrations))
 
