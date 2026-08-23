@@ -12,6 +12,8 @@ from copy import deepcopy
 from decimal import Decimal
 # Import JSON for JSONB-like decoded model values and canonical provider text.
 import json
+# Import portable paths for listener-free live-source binding.
+from pathlib import Path
 # Import source inspection for append-only lifecycle assertions.
 import inspect
 # Import thread synchronization for deterministic concurrent ownership tests.
@@ -604,6 +606,15 @@ class PostgresGameActionProviderTests(unittest.TestCase):
         self.assertTrue(issubclass(PostgresStorageProvider, PostgresGameActionMixin))
         # Bind the same concrete provider to the public executor contract.
         self.assertTrue(issubclass(PostgresStorageProvider, GameActionExecutor))
+        # Read the explicit live helper as inert source without importing psycopg.
+        live_source = (Path(__file__).resolve().parent / "postgres_game_action_live.py").read_text(encoding="utf-8")
+        # Locate fresh execution, first pool close, reconstruction, and planner-zero replay markers.
+        fresh_index = live_source.index("paid_receipt, paid_replayed = selected.execute_game_action_once")
+        close_index = live_source.index("selected.close_pool()", fresh_index)
+        restart_index = live_source.index("selected = PostgresStorageProvider(config, pool_config)", close_index)
+        replay_index = live_source.index("replay_receipt, replayed = selected.execute_game_action_once", restart_index)
+        # Require the explicit live gate to prove same-target provider restart before replay.
+        self.assertTrue(fresh_index < close_index < restart_index < replay_index)
 
 
 # Support direct focused execution in local and CI validation.

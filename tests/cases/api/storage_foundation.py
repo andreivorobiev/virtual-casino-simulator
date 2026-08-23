@@ -350,7 +350,7 @@ def run_cases(run_case, include_live=False, include_migration_live=False, includ
                     else:
                         # Restore exact caller-owned marker or target state.
                         os.environ[key] = value
-        # Map complete ordinary storage, sessions, contention, restart, and cleanup evidence.
+        # Map complete ordinary storage, sessions, contention, reset, and cleanup evidence.
         run_case("POSTGRES-STORAGE-LIVE-001", ["STORAGE-023", "TEST-255"], run_postgres_storage_live_tests)
     # Execute the disposable PostgreSQL 16 game-action gate only when explicitly selected.
     if include_postgres_game_action_live:

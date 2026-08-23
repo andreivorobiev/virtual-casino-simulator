@@ -117,8 +117,11 @@ def _paid_plan(snapshot) -> GameActionPlan:
 
 # Exercise paid, zero-cost, contention, resolver, and reset semantics on one live provider.
 def _exercise_provider(port: int, role: str, password: str, database: str) -> dict:
-    # Construct the runtime target and a bounded four-connection pool for contention.
-    selected = PostgresStorageProvider(PostgresConfig("127.0.0.1", port, role, password, database), PostgresPoolConfig(capacity=4, checkout_wait_ms=2000, connect_timeout_seconds=5))
+    # Construct immutable target and pool settings reused across provider restart.
+    config = PostgresConfig("127.0.0.1", port, role, password, database)
+    pool_config = PostgresPoolConfig(capacity=4, checkout_wait_ms=2000, connect_timeout_seconds=5)
+    # Construct the first runtime provider for fresh execution.
+    selected = PostgresStorageProvider(config, pool_config)
     # Track terminal pool cleanup independently from assertions.
     pool_closed = False
     try:
@@ -131,10 +134,24 @@ def _exercise_provider(port: int, role: str, password: str, database: str) -> di
         # Execute one fresh paid action.
         paid_identity = _identity("paid", paid_resources)
         paid_receipt, paid_replayed = selected.execute_game_action_once(identity=paid_identity, resources=paid_resources, planner=_paid_plan)
-        # Replay without allowing a second planner call.
+        # Require the first provider to publish a fresh action.
+        if paid_replayed:
+            # Reject a target that did not begin with an unused action identity.
+            raise RuntimeError("PostgreSQL paid game action unexpectedly replayed")
+        # Close every first-provider socket before reconstructing runtime state.
+        selected.close_pool()
+        # Mark the first provider closed so a reconstruction failure preserves clean ownership.
+        pool_closed = True
+        # Construct a distinct provider instance on the same migrated target.
+        selected = PostgresStorageProvider(config, pool_config)
+        # Transfer cleanup ownership to the restarted provider.
+        pool_closed = False
+        # Require restart readiness to reverify the exact schema-five catalog.
+        selected.ensure_ready()
+        # Replay after reconstruction without allowing a second planner call.
         replay_receipt, replayed = selected.execute_game_action_once(identity=paid_identity, resources=paid_resources, planner=lambda _snapshot: (_ for _ in ()).throw(AssertionError("replay planner ran")))
-        # Require one immutable result and exact resolver commitment.
-        if paid_replayed or not replayed or replay_receipt != paid_receipt or selected.resolve_game_action(identity=paid_identity, resources=paid_resources).receipt != paid_receipt:
+        # Require one byte-semantic immutable result and exact restarted resolver commitment.
+        if not replayed or replay_receipt != paid_receipt or selected.resolve_game_action(identity=paid_identity, resources=paid_resources).receipt != paid_receipt:
             # Reject replay, receipt, or resolver drift.
             raise RuntimeError("PostgreSQL paid game-action parity failed")
         # Execute and replay one state-only action with no invented ledger movement.
@@ -250,7 +267,7 @@ def _exercise_provider(port: int, role: str, password: str, database: str) -> di
             # Reject socket residue before database removal.
             raise RuntimeError("PostgreSQL game-action pool cleanup was incomplete")
         # Return bounded source-owned evidence only.
-        return {"schema_version": 5, "paid": True, "zero_cost": True, "execute_resolve_pending": True, "resolver_first": True, "planner_calls": 1, "reset_epoch_reuse": True, "receipt_epochs": {"one": 3, "two": 1}, "pool_closed": True}
+        return {"schema_version": 5, "paid": True, "restart_replay": True, "zero_cost": True, "execute_resolve_pending": True, "resolver_first": True, "planner_calls": 1, "reset_epoch_reuse": True, "receipt_epochs": {"one": 3, "two": 1}, "pool_closed": True}
     finally:
         # Close every provider-owned socket after a failed assertion or operation.
         if not pool_closed:

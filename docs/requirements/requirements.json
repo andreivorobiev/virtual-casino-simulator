@@ -14148,7 +14148,7 @@
     {
       "id": "TEST-256",
       "module": "Tests",
-      "description": "Listener-free transaction-faithful PostgreSQL game-action evidence covers paid and zero-cost execution, compatible replay, conflict-before-resources, executor-first, resolver-first and pending resolution, planner at-most-once and purity, late-receipt rollback, concurrent same-key ownership, reset phase and epoch reuse, fixed parameterized append-only SQL, and unchanged JSON and MySQL behavior. Explicit disposable PostgreSQL 16 evidence repeats paid, zero-cost, execute-versus-resolve contention, resolver-first, reset-gap, fresh-epoch reuse, immutable history, and exact cleanup.",
+      "description": "Listener-free transaction-faithful PostgreSQL game-action evidence covers paid and zero-cost execution, compatible replay, conflict-before-resources, executor-first, resolver-first and pending resolution, planner at-most-once and purity, late-receipt rollback, concurrent same-key ownership, reset phase and epoch reuse, fixed parameterized append-only SQL, and unchanged JSON and MySQL behavior. Explicit disposable PostgreSQL 16 evidence repeats paid execution, planner-zero replay and committed resolution through provider restart, zero-cost execution, execute-versus-resolve contention, resolver-first, reset-gap, fresh-epoch reuse, immutable history, and exact cleanup.",
       "status": "PASS",
       "api_tests": [
         "POSTGRES-GAME-ACTION-001",
