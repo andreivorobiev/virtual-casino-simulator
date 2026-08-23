@@ -1,6 +1,6 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Own storage and MySQL API registrations for the #727 thin-runner series."""
+"""Own provider-neutral storage API registrations for the #727 thin-runner series."""
 
 # Import environment copying for isolated disposable PostgreSQL session execution.
 import os
@@ -17,6 +17,8 @@ from tests import mysql_migration_tests
 from tests import mysql_pool_tests
 # Import the checksum-bound PostgreSQL migration-policy suite. (TEST-254)
 from tests import postgres_migration_tests
+# Import the production-safe PostgreSQL deployment boundary suite. (TEST-258)
+from tests import postgres_deployment_tests
 # Import the listener-free complete PostgreSQL provider-core suite. (TEST-255)
 from tests import postgres_provider_tests
 # Import the transaction-faithful PostgreSQL game-action lifecycle suite. (TEST-256)
@@ -167,8 +169,8 @@ def run_cases(run_case, include_live=False, include_migration_live=False, includ
 
     # Define one listener-free runner for PostgreSQL catalog and migration-state policy.
     def run_postgres_migration_policy_tests():
-        # Load only the STORAGE-022 and TEST-254 migration test class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(postgres_migration_tests.PostgreSQLMigrationTests)
+        # Combine migration policy and production deployment-boundary coverage under one gate.
+        suite = unittest.TestSuite((unittest.defaultTestLoader.loadTestsFromTestCase(postgres_migration_tests.PostgreSQLMigrationTests), unittest.defaultTestLoader.loadTestsFromTestCase(postgres_deployment_tests.PostgreSQLDeploymentTests)))
         # Execute without opening a connector, listener, or external target.
         result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
         # Fail the named central case when catalog, state, or safety evidence drifts.
@@ -250,8 +252,8 @@ def run_cases(run_case, include_live=False, include_migration_live=False, includ
     run_case("POSTGRES-CONFIG-001", ["STORAGE-001", "STORAGE-003", "STORAGE-004", "STORAGE-020", "TEST-252"], run_postgres_registration_tests)
     # Prove bounded checkout, cleanup, fork isolation, shutdown, and secret-free pool evidence.
     run_case("POSTGRES-POOL-001", ["STORAGE-010", "STORAGE-021", "TEST-253"], run_postgres_pool_tests)
-    # Prove the immutable PostgreSQL catalog, runtime verifier, and disposable-only runner policy.
-    run_case("POSTGRES-MIGRATION-001", ["STORAGE-022", "TEST-254"], run_postgres_migration_policy_tests)
+    # Prove the immutable catalog, guarded empty-target bootstrap, and runtime verifier.
+    run_case("POSTGRES-MIGRATION-001", ["STORAGE-022", "STORAGE-026", "TEST-254", "TEST-258"], run_postgres_migration_policy_tests)
     # Prove the complete ordinary PostgreSQL provider and first-class session contract.
     run_case("POSTGRES-STORAGE-001", ["STORAGE-023", "TEST-255"], run_postgres_storage_tests)
     # Prove PostgreSQL exactly-once execution, resolution, rollback, and reset semantics.

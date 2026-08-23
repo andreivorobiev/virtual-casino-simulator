@@ -1382,7 +1382,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
         # Require all six PostgreSQL registration-through-conformance lanes to add twelve accepted IDs.
-        self.assertEqual(len(requirements), 1126)
+        self.assertEqual(len(requirements), 1129)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.

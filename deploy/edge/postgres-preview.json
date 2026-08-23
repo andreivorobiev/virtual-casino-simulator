@@ -1,9 +1,9 @@
 {
   "schema": "casino.edge-policy.v1",
-  "deployment_profile": "primary-mysql",
+  "deployment_profile": "oci-postgres-preview",
   "stage": "repository-preparation-only",
-  "canonical_origin": "https://casino.tiltseven.com",
-  "canonical_host": "casino.tiltseven.com",
+  "canonical_origin": "https://preview.tiltseven.com",
+  "canonical_host": "preview.tiltseven.com",
   "upstream": {
     "scheme": "http",
     "host": "127.0.0.1",
@@ -11,7 +11,7 @@
   },
   "ingress": {
     "public_tcp_ports": [80, 443],
-    "protected_tcp_ports": [3306, 8765, 8877],
+    "protected_tcp_ports": [5432, 8765, 8877],
     "ssh_source_restricted": true
   },
   "access": {
@@ -22,7 +22,7 @@
   },
   "proxy": {
     "request_headers": {
-      "Host": "casino.tiltseven.com",
+      "Host": "preview.tiltseven.com",
       "X-Forwarded-For": "$remote_addr",
       "X-Forwarded-Proto": "https"
     },
@@ -70,7 +70,7 @@
         "path": "/readyz",
         "authenticated": true,
         "expected_status": 200,
-        "expected_json": {"ready": true, "storage_provider": "mysql"}
+        "expected_json": {"ready": true, "storage_provider": "postgres"}
       },
       {
         "name": "admin_operations",
@@ -88,7 +88,7 @@
     "post_rollback_probe_required": true
   },
   "templates": {
-    "nginx": "deploy/nginx/casino.conf.template",
+    "nginx": "deploy/nginx/casino-postgres-preview.conf.template",
     "acme_renewal_hook": "deploy/acme/casino-renewal-hook.sh.template",
     "monitor_service": "deploy/systemd/casino-edge-monitor.service.template",
     "monitor_timer": "deploy/systemd/casino-edge-monitor.timer.template",

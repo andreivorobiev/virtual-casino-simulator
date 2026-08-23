@@ -210,7 +210,7 @@ class ReleasePollerTests(unittest.TestCase):
               fi
               return 0
             }
-            check_schema_two() { printf 'schema:%s\n' "$1" >> "__TRACE__"; }
+            check_schema_compatibility() { printf 'schema:%s\n' "$1" >> "__TRACE__"; }
             current_release_root() { command cat "__SELECTOR_RECORD__"; }
             activate_release() {
               printf '%s\n' "$1" > "__SELECTOR_RECORD__"
@@ -809,8 +809,8 @@ class ReleasePollerTests(unittest.TestCase):
         # Bind the exact rejection instead of accepting an unrelated shell failure.
         self.assertIn("existing release root does not match the verified archive", result.stderr)
 
-    # Prove verification and schema gates precede selector mutation while rollback remains application-only.
-    def test_activation_order_is_fail_closed_and_schema_two_only(self):
+    # Prove verification and provider compatibility gates precede selector mutation.
+    def test_activation_order_is_fail_closed_and_provider_compatible(self):
         # Read the pull script as inert text for exact ordering assertions.
         text = POLLER.read_text(encoding="utf-8")
         # Require direct invocations to disable bytecode writes before any Python helper can execute.
@@ -819,8 +819,8 @@ class ReleasePollerTests(unittest.TestCase):
         verification = text.index('verify_assets "${work_root}" "${latest_tag}" "${latest_commit}"')
         # Locate the preflight failure alarm that covers checksum and provenance rejection.
         alarm_trap = text.index('trap "${cleanup_command}" EXIT')
-        # Locate the candidate schema-two compatibility proof.
-        schema_check = text.index('check_schema_two "${candidate_root}"')
+        # Locate the candidate provider compatibility proof.
+        schema_check = text.index('check_schema_compatibility "${candidate_root}"')
         # Locate directory traversal repair after extraction and before candidate execution.
         directory_normalization = text.index('normalize_extracted_directories "${candidate_root}"')
         # Locate the second full verification performed through candidate bytes.
@@ -853,8 +853,23 @@ class ReleasePollerTests(unittest.TestCase):
         self.assertIn('deploy_latest "rollback-drill"', text)
         # Reject migration, grant, database rollback, and global mutation authority.
         for forbidden in ("mysql_migrate.py apply", "SET GLOBAL", "GRANT ", "REVOKE ", "database rollback"):
-            # Keep the deployment bridge exact-schema-two and application-only.
+            # Keep the deployment bridge read-only and application-only.
             self.assertNotIn(forbidden, text)
+
+    # Prove the updater selects one bounded provider check and loads runtime configuration.
+    def test_provider_compatibility_check_is_bounded_and_runtime_configured(self):
+        # Read the immutable poller and service template without executing either host boundary.
+        poller = POLLER.read_text(encoding="utf-8")
+        service = POLLER_SERVICE.read_text(encoding="utf-8")
+        # Preserve MySQL as the default for the existing TiltSeven deployment.
+        self.assertIn('readonly STORAGE_PROVIDER="${CASINO_STORAGE_PROVIDER:-mysql}"', poller)
+        # Require the only additional provider to use the read-only PostgreSQL runtime checker.
+        self.assertIn('[[ "${STORAGE_PROVIDER}" =~ ^(mysql|postgres)$ ]]', poller)
+        self.assertIn('"${root}/scripts/postgres_runtime_check.py"', poller)
+        # Retain the exact MySQL schema-two compatibility gate for the existing deployment.
+        self.assertIn('"${root}/scripts/mysql_migrate.py" bridge-check-schema2', poller)
+        # Make runtime provider credentials available only to the root-owned compatibility poller.
+        self.assertIn("EnvironmentFile=/etc/casino/casino.env", service)
 
 
 # Run the focused suite directly when an operator requests it.

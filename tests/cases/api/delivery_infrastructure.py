@@ -117,7 +117,7 @@ def _run_ci_qualification_tests():
 def run_cases(run_case):
     """Register edge, release, monitor, deployment, poller, and CI policy cases."""
     # Record the listener-free edge templates, validator, observation, and rollback proof.
-    run_case("EDGE-PREPARATION-001", ["CORE-024", "TOOL-005", "TEST-050"], _run_edge_gate_tests)
+    run_case("EDGE-PREPARATION-001", ["CORE-024", "TOOL-005", "TOOL-021", "TEST-050", "TEST-258"], _run_edge_gate_tests)
     # Record the listener-free deployment provenance fragment and service-unit ordering proof.
     run_case("DEPLOY-PROVENANCE-001", ["TOOL-007", "TEST-098"], _run_release_env_tests)
     # Record exact compatibility-owned rollback selection and manifest binding.
@@ -127,6 +127,6 @@ def run_cases(run_case):
     # Record immutable publication, hosted assets, SSH boundaries, and rollback behavior.
     run_case("DEPLOY-CICD-001", ["TOOL-008", "TOOL-011", "TEST-133"], _run_cicd_deployment_tests)
     # Record listener-free pull comparison, activation order, rollback, and lag evidence.
-    run_case("DEPLOY-PULL-001", ["OPS-007", "TOOL-015", "TEST-180"], _run_release_poller_tests)
+    run_case("DEPLOY-PULL-001", ["OPS-007", "TOOL-015", "TOOL-021", "TEST-180", "TEST-258"], _run_release_poller_tests)
     # Record safe PR cancellation, exhaustive shards, audio ownership, artifacts, and gate behavior.
     run_case("CI-QUALIFICATION-001", ["TOOL-002", "TEST-036", "TEST-242"], _run_ci_qualification_tests)

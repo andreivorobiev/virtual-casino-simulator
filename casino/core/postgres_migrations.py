@@ -1,6 +1,6 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Checksum-bound PostgreSQL migrations for disposable PostgreSQL 16 targets."""
+"""Checksum-bound PostgreSQL migrations for guarded PostgreSQL 16 targets."""
 
 # Import annotations so immutable records can refer to their own types.
 from __future__ import annotations
@@ -31,17 +31,23 @@ MIGRATION_ROOT = ROOT / "migrations" / "postgres"
 CATALOG_PATH = MIGRATION_ROOT / "catalog.json"
 # Identify the PostgreSQL catalog independently of MySQL and application schema versions.
 CATALOG_SCHEMA = "casino-postgres-migration-catalog-v1"
-# Allow application only to newly created disposable targets in this lane.
-APPLY_POLICY_DISPOSABLE = "disposable-only"
+# Allow application only to explicitly authorized new empty targets.
+APPLY_POLICY_GUARDED_EMPTY = "guarded-empty-target-only"
 # Require one explicit authorization marker before any connector or DDL operation.
 DISPOSABLE_MARKER = "CASINO-POSTGRES-1057-DISPOSABLE"
+# Require a separate owner-approved marker for a new production bootstrap.
+PRODUCTION_MARKER = "CASINO-POSTGRES-1078-NEW-PRODUCTION"
 # Accept only canonical lowercase SHA-256 strings in catalog and state evidence.
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 # Accept only bounded lowercase PostgreSQL identifiers ending in this issue-owned suffix.
 DISPOSABLE_IDENTIFIER_RE = re.compile(r"^[a-z][a-z0-9_]{0,54}_1057$")
+# Accept only bounded ordinary PostgreSQL identifiers for the reviewed production target.
+PRODUCTION_IDENTIFIER_RE = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
+# Accept only an immutable exact release commit for production authorization.
+RELEASE_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 # Name the two migration-control tables separately from application storage.
 CONTROL_TABLES = frozenset({"casino_schema_migrations", "casino_schema_migration_state"})
-# Enumerate deployment-only variables without falling back to runtime PostgreSQL credentials.
+# Enumerate required deployment-only variables without falling back to runtime PostgreSQL credentials.
 MIGRATION_ENV = {
     # Require a deployment-selected loopback host.
     "host": "CASINO_POSTGRES_MIGRATION_HOST",
@@ -53,8 +59,15 @@ MIGRATION_ENV = {
     "database": "CASINO_POSTGRES_MIGRATION_DATABASE",
     # Require a separate HMAC key for non-reversible target binding.
     "target_binding_key": "CASINO_POSTGRES_MIGRATION_TARGET_BINDING_KEY",
-    # Require the exact explicit disposable authorization marker.
+}
+# Name the mutually exclusive disposable and production authorization inputs.
+MIGRATION_AUTHORIZATION_ENV = {
+    # Preserve the original issue-scoped disposable authorization marker.
     "disposable_marker": "CASINO_POSTGRES_MIGRATION_DISPOSABLE",
+    # Read the owner-approved new-production marker independently.
+    "production_marker": "CASINO_POSTGRES_MIGRATION_PRODUCTION",
+    # Bind a production bootstrap to one immutable packaged release commit.
+    "release_sha": "CASINO_POSTGRES_MIGRATION_RELEASE_SHA",
 }
 
 
@@ -105,8 +118,12 @@ class MigrationConfig:
     database: str
     # Store the external target-binding key.
     target_binding_key: str
-    # Store the explicit issue-owned disposable authorization marker.
-    disposable_marker: str
+    # Store the explicit issue-owned disposable authorization marker when selected.
+    disposable_marker: str = ""
+    # Store the distinct owner-approved production bootstrap marker when selected.
+    production_marker: str = ""
+    # Bind production bootstrap authority to one immutable release commit.
+    release_sha: str = ""
 
     # Return one fixed representation rather than dataclass fields.
     def __repr__(self) -> str:
@@ -121,7 +138,7 @@ class MigrationConfig:
     # Load only migration-prefixed variables and never read runtime CASINO_POSTGRES_* credentials.
     @classmethod
     def from_env(cls) -> MigrationConfig:
-        # Collect required values under fixed internal names without logging any value.
+        # Collect required connection values under fixed internal names without logging any value.
         values = {field: str(os.environ.get(environment, "")).strip() for field, environment in MIGRATION_ENV.items()}
         # Reject any missing deployment-only value before importing a connector.
         if any(not value for value in values.values()):
@@ -135,6 +152,18 @@ class MigrationConfig:
         if hmac.compare_digest(values["target_binding_key"], values["password"]):
             # Reject secret reuse without exposing either value.
             raise MigrationError("Deployment-only PostgreSQL target-binding key is invalid")
+        # Read mutually exclusive target authorization values without reporting any supplied value.
+        authorization = {field: str(os.environ.get(environment, "")).strip() for field, environment in MIGRATION_AUTHORIZATION_ENV.items()}
+        # Require exactly one authorization mode before connector import or target access.
+        if bool(authorization["disposable_marker"]) == bool(authorization["production_marker"]):
+            # Refuse both missing and dual-mode configurations through one fixed boundary.
+            raise MigrationError("Deployment-only PostgreSQL migration authorization is invalid")
+        # Require no release identity for disposable tests and one exact identity for production.
+        release_valid = (bool(authorization["disposable_marker"]) and not authorization["release_sha"]) or (bool(authorization["production_marker"]) and bool(RELEASE_SHA_RE.fullmatch(authorization["release_sha"])))
+        # Reject a missing, symbolic, short, or cross-mode release identity before connector access.
+        if not release_valid:
+            # Publish only the stable authorization category.
+            raise MigrationError("Deployment-only PostgreSQL migration release identity is invalid")
         # Read the migration-specific port independently of the runtime port.
         raw_port = str(os.environ.get("CASINO_POSTGRES_MIGRATION_PORT", "5432")).strip()
         # Parse the bounded network port without retaining its input in errors.
@@ -150,7 +179,7 @@ class MigrationConfig:
             # Preserve the same value-free port diagnostic.
             raise MigrationError("Deployment-only PostgreSQL migration port is invalid")
         # Return the isolated migration configuration.
-        return cls(port=port, **values)
+        return cls(port=port, **values, **authorization)
 
     # Convert only this deployment-owned record into psycopg/libpq arguments.
     def kwargs(self) -> RedactedConnectionOptions:
@@ -221,9 +250,9 @@ def load_catalog(catalog_path: Path = CATALOG_PATH) -> tuple[tuple[Migration, ..
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         # Preserve no extraction path or parser content.
         raise MigrationError("PostgreSQL migration catalog could not be loaded") from exc
-    # Require the reviewed catalog format and disposable-only apply policy.
-    if type(catalog) is not dict or catalog.get("schema") != CATALOG_SCHEMA or catalog.get("apply_policy") != APPLY_POLICY_DISPOSABLE:
-        # Refuse another provider or silently enabled policy.
+    # Require the reviewed catalog format and guarded empty-target apply policy.
+    if type(catalog) is not dict or catalog.get("schema") != CATALOG_SCHEMA or catalog.get("apply_policy") != APPLY_POLICY_GUARDED_EMPTY:
+        # Refuse another provider or an unguarded application policy.
         raise MigrationError("PostgreSQL migration catalog policy is invalid")
     # Parse the exact and minimum compatibility bounds.
     expected_version = _exact_int(catalog.get("expected_version"), "PostgreSQL migration compatibility window is invalid")
@@ -331,35 +360,75 @@ def schema_contract() -> dict:
         "catalog_sha256": catalog_sha256,
         # Bind the ordered descriptor identity chain.
         "migration_chain_sha256": migration_chain_digest(migrations),
-        # Publish the closed disposable-only application boundary.
-        "apply_policy": APPLY_POLICY_DISPOSABLE,
+        # Publish the closed guarded empty-target application boundary.
+        "apply_policy": APPLY_POLICY_GUARDED_EMPTY,
     }
+
+
+# Resolve one exact migration authorization mode without exposing supplied values.
+def migration_authorization_mode(config: MigrationConfig) -> str:
+    # Require literal IPv4 loopback rather than hostname or remote resolution.
+    host_valid = type(config.host) is str and config.host == "127.0.0.1"
+    # Require valid field shapes for directly constructed configuration objects.
+    fields_valid = type(config.port) is int and 1 <= config.port <= 65535 and type(config.password) is str and bool(config.password) and type(config.target_binding_key) is str and len(config.target_binding_key.encode("utf-8")) >= 32
+    # Require password/key separation at the final public boundary too.
+    secrets_valid = fields_valid and not hmac.compare_digest(config.password, config.target_binding_key)
+    # Require exact field types before any constant-time marker comparison.
+    authorization_types_valid = all(type(value) is str for value in (config.user, config.database, config.disposable_marker, config.production_marker, config.release_sha))
+    # Stop before marker parsing when the common target boundary is malformed.
+    if not all((host_valid, fields_valid, secrets_valid, authorization_types_valid)):
+        # Preserve one value-free authorization result.
+        raise MigrationError("PostgreSQL migration target is not authorized")
+    # Recognize only the original issue-scoped disposable tuple.
+    disposable_valid = hmac.compare_digest(config.disposable_marker, DISPOSABLE_MARKER) and not config.production_marker and not config.release_sha and bool(DISPOSABLE_IDENTIFIER_RE.fullmatch(config.user)) and bool(DISPOSABLE_IDENTIFIER_RE.fullmatch(config.database))
+    # Return the closed disposable mode without weakening its identifier suffix.
+    if disposable_valid:
+        # Allow the original temporary-target proof to proceed unchanged.
+        return "disposable"
+    # Reject built-in administrator and template identities from the production target set.
+    identifiers_safe = config.user not in {"postgres"} and config.database not in {"postgres", "template0", "template1"}
+    # Recognize only the owner-approved production marker plus immutable release identity.
+    production_valid = hmac.compare_digest(config.production_marker, PRODUCTION_MARKER) and not config.disposable_marker and identifiers_safe and bool(PRODUCTION_IDENTIFIER_RE.fullmatch(config.user)) and bool(PRODUCTION_IDENTIFIER_RE.fullmatch(config.database)) and bool(RELEASE_SHA_RE.fullmatch(config.release_sha))
+    # Return the one-time production bootstrap mode only after its complete guard passes.
+    if production_valid:
+        # Distinguish production behavior without persisting a provider or host identifier.
+        return "production"
+    # Reject every unknown marker, mixed mode, reserved identity, or malformed release.
+    raise MigrationError("PostgreSQL migration target is not authorized")
 
 
 # Hash the selected target without persisting a reversible provider identifier.
 def target_fingerprint(config: MigrationConfig) -> str:
-    # Normalize endpoint and database only; role rotation does not change target identity.
-    payload = json.dumps([config.host.strip().lower(), config.port, config.database], separators=(",", ":")).encode("utf-8")
+    # Validate and retain only the finite authorization mode.
+    mode = migration_authorization_mode(config)
+    # Bind production metadata to its authorizing release while disposable identities remain release-neutral.
+    release_identity = config.release_sha if mode == "production" else ""
+    # Normalize endpoint, database, mode, and release identity; role rotation does not change target identity.
+    payload = json.dumps([config.host.strip().lower(), config.port, config.database, mode, release_identity], separators=(",", ":")).encode("utf-8")
     # Return a deployment-keyed digest that requires the external key to reproduce.
     return hmac.new(config.target_binding_key.encode("utf-8"), payload, hashlib.sha256).hexdigest()
 
 
 # Reject every non-disposable or ambiguously named target before connector access or DDL.
 def require_disposable_target(config: MigrationConfig) -> None:
-    # Require the explicit issue-owned authorization marker.
-    marker_valid = type(config.disposable_marker) is str and hmac.compare_digest(config.disposable_marker, DISPOSABLE_MARKER)
-    # Require literal IPv4 loopback rather than hostname or remote resolution.
-    host_valid = type(config.host) is str and config.host == "127.0.0.1"
-    # Require both role and database to carry the bounded issue suffix.
-    identifiers_valid = type(config.user) is str and type(config.database) is str and bool(DISPOSABLE_IDENTIFIER_RE.fullmatch(config.user)) and bool(DISPOSABLE_IDENTIFIER_RE.fullmatch(config.database))
-    # Require valid field shapes for directly constructed configuration objects.
-    fields_valid = type(config.port) is int and 1 <= config.port <= 65535 and type(config.password) is str and bool(config.password) and type(config.target_binding_key) is str and len(config.target_binding_key.encode("utf-8")) >= 32
-    # Require password/key separation at the final public boundary too.
-    secrets_valid = fields_valid and not hmac.compare_digest(config.password, config.target_binding_key)
-    # Stop through one value-free policy diagnostic on any mismatch.
-    if not all((marker_valid, host_valid, identifiers_valid, fields_valid, secrets_valid)):
+    # Resolve the complete shared authorization boundary first.
+    try:
+        # Require the result to remain the original disposable mode.
+        disposable_valid = migration_authorization_mode(config) == "disposable"
+    # Collapse a general authorization refusal to the historical disposable diagnostic.
+    except MigrationError:
+        # Preserve the stable caller-facing category.
+        disposable_valid = False
+    # Stop through one value-free disposable-policy diagnostic on any mismatch.
+    if not disposable_valid:
         # Refuse the target before any connection, lock, or schema mutation.
         raise MigrationError("PostgreSQL migration target is not an authorized disposable target")
+
+
+# Require either the original disposable proof or the release-bound production bootstrap.
+def require_authorized_target(config: MigrationConfig) -> str:
+    # Delegate every common and mode-specific invariant to one closed resolver.
+    return migration_authorization_mode(config)
 
 
 # Normalize one exact SELECT row from tuple or psycopg dict-row results.
@@ -384,8 +453,8 @@ def _row_values(row, columns: tuple[str, ...]) -> tuple:
 def _inspect_schema(connection, catalog: tuple[Migration, ...], expected_target_hmac: str | None) -> SchemaState:
     # Open one cursor for metadata inspection.
     cursor = connection.cursor()
-    # Query only Casino-owned table names in the selected current schema.
-    cursor.execute("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = current_schema() AND tablename LIKE 'casino\\_%' ESCAPE '\\' ORDER BY tablename")
+    # Query every ordinary table in the selected current schema so foreign residue cannot look empty.
+    cursor.execute("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = current_schema() ORDER BY tablename")
     # Normalize positional or mapping driver rows into a stable set.
     table_names = {str(_row_values(row, ("tablename",))[0]) for row in cursor.fetchall()}
     # Compute which migration-control tables exist.
@@ -510,8 +579,8 @@ def verify_runtime_compatibility(connection) -> SchemaState:
 
 # Return a non-mutating pending suffix after fail-closed state validation.
 def dry_run(connection, config: MigrationConfig) -> tuple[Migration, ...]:
-    # Validate the disposable boundary even for plan authorization.
-    require_disposable_target(config)
+    # Validate one reviewed target mode even for plan authorization.
+    require_authorized_target(config)
     # Load the complete immutable plan.
     migrations = load_catalog()[0]
     # Inspect state using SELECT statements only.
@@ -617,7 +686,7 @@ def _apply_one(connection, state: SchemaState, migration: Migration, migrations:
 
 
 # Verify exact server and target identity after connection but before lock or mutation.
-def _verify_connected_target(connection, config: MigrationConfig) -> None:
+def _verify_connected_target(connection, config: MigrationConfig, authorization_mode: str) -> None:
     # Open one cursor for fixed non-secret server facts.
     cursor = connection.cursor()
     # Read the numeric PostgreSQL server version.
@@ -632,6 +701,16 @@ def _verify_connected_target(connection, config: MigrationConfig) -> None:
     if _row_values(cursor.fetchone(), ("current_database", "current_user")) != (config.database, config.user):
         # Refuse redirected connection configuration.
         raise MigrationError("PostgreSQL migration connection target is inconsistent")
+    # Apply an additional least-privilege role gate only to production bootstrap authority.
+    if authorization_mode == "production":
+        # Read only fixed cluster-level privilege booleans for the current migration role.
+        cursor.execute("SELECT rolsuper, rolcreaterole, rolcreatedb, rolreplication, rolbypassrls FROM pg_catalog.pg_roles WHERE rolname = current_user")
+        # Require one ordinary login role with no cluster-wide administrative capability.
+        role_flags = _row_values(cursor.fetchone(), ("rolsuper", "rolcreaterole", "rolcreatedb", "rolreplication", "rolbypassrls"))
+        # Refuse a superuser, role manager, database creator, replication role, or row-security bypass.
+        if role_flags != (False, False, False, False, False):
+            # Publish no observed flag or role identity.
+            raise MigrationError("PostgreSQL production migration role is overprivileged")
     # End the read-only verification transaction before session advisory locking.
     connection.rollback()
 
@@ -644,8 +723,8 @@ def _advisory_lock_key(config: MigrationConfig) -> int:
 
 # Apply all pending migrations under one target-derived session advisory lock.
 def apply_migrations(connection, config: MigrationConfig) -> SchemaState:
-    # Validate the disposable boundary before reading connection state.
-    require_disposable_target(config)
+    # Validate one exact target mode before reading connection state.
+    authorization_mode = require_authorized_target(config)
     # Load every immutable descriptor before lock or mutation.
     migrations, expected, _, _ = load_catalog()
     # Require explicit transactional operation from psycopg.
@@ -653,7 +732,7 @@ def apply_migrations(connection, config: MigrationConfig) -> SchemaState:
         # Stop before server access when DDL cannot be transactional.
         raise MigrationError("PostgreSQL migration connection must disable autocommit")
     # Verify official PostgreSQL 16 and exact target identities.
-    _verify_connected_target(connection, config)
+    _verify_connected_target(connection, config, authorization_mode)
     # Derive the non-identifying session advisory-lock key.
     lock_key = _advisory_lock_key(config)
     # Open one cursor for immediate fail-closed lock acquisition.
@@ -678,6 +757,10 @@ def apply_migrations(connection, config: MigrationConfig) -> SchemaState:
         state = inspect_schema(connection, config, migrations)
         # End the read-only inspection transaction before any state transition.
         connection.rollback()
+        # Permit production mutation only for one genuinely empty, never-initialized target.
+        if authorization_mode == "production" and (state.initialized or state.application_tables_present):
+            # Refuse reruns, upgrades, adoption, and foreign current-schema tables.
+            raise MigrationError("PostgreSQL production bootstrap requires a new empty target")
         # Refuse interrupted state and unversioned application tables.
         if state.status in {"dirty", "applying"} or (not state.initialized and state.application_tables_present):
             # Require an explicit checksum-bound forward-fix.

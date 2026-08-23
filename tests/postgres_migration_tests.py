@@ -1,6 +1,6 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Govern PostgreSQL migration immutability, hostile states, and disposable application."""
+"""Govern PostgreSQL migration immutability, hostile states, and guarded application."""
 
 # Import in-memory output capture for secret-safe CLI assertions.
 from contextlib import redirect_stdout
@@ -53,6 +53,29 @@ def synthetic_config(*, database: str = "casino_test_1057", key: str = "k" * 32)
     )
 
 
+# Build one valid release-bound production bootstrap configuration.
+def production_config(*, release_sha: str = "a" * 40) -> postgres_migrations.MigrationConfig:
+    # Return a loopback-only ordinary-role target with distinct production authorization.
+    return postgres_migrations.MigrationConfig(
+        # Keep the production database private to the application host.
+        host="127.0.0.1",
+        # Use the standard PostgreSQL port only as deterministic model data.
+        port=5432,
+        # Select the fixed least-privilege migration role planned for the host.
+        user="casino_migrate",
+        # Keep synthetic credentials distinct from the binding key.
+        password="synthetic-production-password",
+        # Select the dedicated production database identity.
+        database="virtual_casino",
+        # Use a synthetic high-entropy target-binding key.
+        target_binding_key="q" * 32,
+        # Supply the owner-approved production marker rather than the disposable marker.
+        production_marker=postgres_migrations.PRODUCTION_MARKER,
+        # Bind the authorization to one exact immutable release commit.
+        release_sha=release_sha,
+    )
+
+
 # Model enough PostgreSQL cursor behavior to exercise the complete migration state machine.
 class ModelCursor:
     # Bind the cursor to its transaction-aware connection model.
@@ -90,6 +113,12 @@ class ModelCursor:
             self.one = (self.connection.config.database, self.connection.config.user)
             # Name both selected identity columns.
             self.one_columns = ("current_database", "current_user")
+        # Return fixed cluster-level privilege facts for production migration role validation.
+        elif statement.startswith("SELECT rolsuper, rolcreaterole"):
+            # Expose the caller-selected five-boolean privilege tuple.
+            self.one = tuple(self.connection.role_flags)
+            # Name every selected privilege exactly as psycopg dict_row does.
+            self.one_columns = ("rolsuper", "rolcreaterole", "rolcreatedb", "rolreplication", "rolbypassrls")
         # Acquire the session advisory lock unless explicitly blocked.
         elif statement.startswith("SELECT pg_try_advisory_lock"):
             # Model immediate fail-closed acquisition semantics.
@@ -214,10 +243,14 @@ class ModelConnection:
         self.unlock_confirmed = True
         # Disable synthetic statement failure by default.
         self.fail_fragment = None
+        # Model one ordinary production migration role with no cluster-wide privileges.
+        self.role_flags = (False, False, False, False, False)
         # Count explicit commits.
         self.commits = 0
         # Count explicit rollbacks.
         self.rollbacks = 0
+        # Record whether the deployment runner closed this modeled connector.
+        self.closed = False
 
     # Open one cursor bound to this model.
     def cursor(self):
@@ -234,6 +267,11 @@ class ModelConnection:
         # Increment deterministic transaction evidence.
         self.rollbacks += 1
 
+    # Record deterministic connector cleanup for CLI ownership tests.
+    def close(self):
+        # Mark the model closed without altering its persisted database state.
+        self.closed = True
+
 
 # Exercise immutable catalog, guard, hostile-state, transaction, and CLI behavior.
 class PostgreSQLMigrationTests(unittest.TestCase):
@@ -247,8 +285,8 @@ class PostgreSQLMigrationTests(unittest.TestCase):
         self.assertEqual((expected, minimum), (5, 5))
         # Require one canonical catalog checksum.
         self.assertRegex(catalog_sha256, r"^[0-9a-f]{64}$")
-        # Require the published contract to remain disposable-only.
-        self.assertEqual(postgres_migrations.schema_contract()["apply_policy"], "disposable-only")
+        # Require the published contract to remain guarded and empty-target-only.
+        self.assertEqual(postgres_migrations.schema_contract()["apply_policy"], "guarded-empty-target-only")
 
     # Require reviewed PostgreSQL 16 dialect and complete storage inventory.
     def test_catalog_uses_postgres_identity_jsonb_constraints_and_separate_indexes(self):
@@ -350,6 +388,79 @@ class PostgreSQLMigrationTests(unittest.TestCase):
             with self.subTest(name=name), self.assertRaisesRegex(postgres_migrations.MigrationError, "authorized disposable"):
                 # Validate the hostile target.
                 postgres_migrations.require_disposable_target(postgres_migrations.MigrationConfig(**fields))
+
+    # Prove production configuration requires one distinct marker and exact immutable release identity.
+    def test_production_authorization_is_release_bound_and_mutually_exclusive(self):
+        # Build the complete production migration namespace without runtime fallbacks.
+        environment = {
+            # Keep the target on literal IPv4 loopback.
+            "CASINO_POSTGRES_MIGRATION_HOST": "127.0.0.1",
+            # Select the ordinary migration owner role.
+            "CASINO_POSTGRES_MIGRATION_USER": "casino_migrate",
+            # Supply a distinct synthetic migration password.
+            "CASINO_POSTGRES_MIGRATION_PASSWORD": "p" * 32,
+            # Select the dedicated application database.
+            "CASINO_POSTGRES_MIGRATION_DATABASE": "virtual_casino",
+            # Supply an independent high-entropy binding key.
+            "CASINO_POSTGRES_MIGRATION_TARGET_BINDING_KEY": "k" * 32,
+            # Supply the production-only authorization marker.
+            "CASINO_POSTGRES_MIGRATION_PRODUCTION": postgres_migrations.PRODUCTION_MARKER,
+            # Bind the request to one full immutable release commit.
+            "CASINO_POSTGRES_MIGRATION_RELEASE_SHA": "a" * 40,
+        }
+        # Load the valid environment through the public parser.
+        with mock.patch.dict(os.environ, environment, clear=True):
+            # Resolve the guarded production configuration.
+            config = postgres_migrations.MigrationConfig.from_env()
+        # Require the finite production mode rather than a disposable fallback.
+        self.assertEqual(postgres_migrations.require_authorized_target(config), "production")
+        # Build hostile authorization combinations that must fail before connector access.
+        cases = ({"CASINO_POSTGRES_MIGRATION_RELEASE_SHA": "short"}, {"CASINO_POSTGRES_MIGRATION_DISPOSABLE": postgres_migrations.DISPOSABLE_MARKER}, {"CASINO_POSTGRES_MIGRATION_PRODUCTION": "wrong"})
+        # Exercise malformed release, dual-mode, and wrong-marker inputs independently.
+        for override in cases:
+            # Load each rejected environment without retaining ambient configuration.
+            with self.subTest(override=tuple(override)), mock.patch.dict(os.environ, {**environment, **override}, clear=True):
+                # Require one fixed configuration or authorization failure.
+                with self.assertRaises(postgres_migrations.MigrationError):
+                    # Parse and validate the hostile production tuple.
+                    rejected = postgres_migrations.MigrationConfig.from_env()
+                    # Validate exact marker and identifier semantics when parsing succeeds.
+                    postgres_migrations.require_authorized_target(rejected)
+
+    # Prove production apply is one-time, empty-target-only, and rejects elevated roles.
+    def test_production_apply_requires_new_empty_target_and_least_privileged_role(self):
+        # Apply the exact catalog to one genuinely empty modeled production database.
+        accepted = ModelConnection(production_config())
+        # Run the guarded one-time bootstrap.
+        final_state = postgres_migrations.apply_migrations(accepted, accepted.config)
+        # Require exact clean schema five after all immutable descriptors.
+        self.assertEqual((final_state.current_version, final_state.status), (5, "clean"))
+        # Require the cluster-role privilege query before metadata creation.
+        self.assertTrue(any(statement.startswith("SELECT rolsuper, rolcreaterole") for statement, _params in accepted.executed))
+        # Seed an already initialized target that must never be upgraded through this production path.
+        initialized = ModelConnection(production_config(), initialized=True, version=5)
+        # Refuse a repeat production apply even when the target is clean and compatible.
+        with self.assertRaisesRegex(postgres_migrations.MigrationError, "new empty target"):
+            # Attempt the prohibited second production bootstrap.
+            postgres_migrations.apply_migrations(initialized, initialized.config)
+        # Seed a foreign current-schema table without migration metadata.
+        foreign = ModelConnection(production_config())
+        # Make the database non-empty without using a Casino-owned prefix.
+        foreign.tables.add("operator_table")
+        # Refuse implicit adoption of any pre-existing table.
+        with self.assertRaisesRegex(postgres_migrations.MigrationError, "new empty target"):
+            # Attempt to bootstrap the contaminated target.
+            postgres_migrations.apply_migrations(foreign, foreign.config)
+        # Model a migration role carrying one forbidden cluster-wide privilege.
+        elevated = ModelConnection(production_config())
+        # Grant synthetic superuser capability for the fail-closed proof.
+        elevated.role_flags = (True, False, False, False, False)
+        # Refuse the role before any schema DDL.
+        with self.assertRaisesRegex(postgres_migrations.MigrationError, "overprivileged"):
+            # Attempt bootstrap with the rejected role.
+            postgres_migrations.apply_migrations(elevated, elevated.config)
+        # Require no table creation after the privilege gate fails.
+        self.assertFalse(elevated.tables)
 
     # Prove uninitialized inspection and dry-run use SELECT statements only.
     def test_uninitialized_dry_run_is_read_only_and_returns_all_versions(self):
@@ -661,6 +772,60 @@ class PostgreSQLMigrationTests(unittest.TestCase):
         self.assertNotIn("secret-password", output.getvalue())
         # Require neither secret nor connector target text.
         self.assertNotIn("remote-target", output.getvalue())
+
+    # Prove the production CLI binds bootstrap authority to the exact verified release manifest.
+    def test_runner_requires_matching_production_release_manifest_before_connect(self):
+        # Build one complete production-only migration environment.
+        environment = {
+            # Keep the production database on literal loopback.
+            "CASINO_POSTGRES_MIGRATION_HOST": "127.0.0.1",
+            # Select the ordinary migration role.
+            "CASINO_POSTGRES_MIGRATION_USER": "casino_migrate",
+            # Supply a synthetic migration password.
+            "CASINO_POSTGRES_MIGRATION_PASSWORD": "p" * 32,
+            # Select the dedicated database.
+            "CASINO_POSTGRES_MIGRATION_DATABASE": "virtual_casino",
+            # Supply an independent target-binding key.
+            "CASINO_POSTGRES_MIGRATION_TARGET_BINDING_KEY": "k" * 32,
+            # Supply the owner-approved production marker.
+            "CASINO_POSTGRES_MIGRATION_PRODUCTION": postgres_migrations.PRODUCTION_MARKER,
+            # Bind the environment to the accepted candidate commit.
+            "CASINO_POSTGRES_MIGRATION_RELEASE_SHA": "a" * 40,
+        }
+        # Create two minimal manifest fixtures with matching and mismatched source identity.
+        with tempfile.TemporaryDirectory() as directory:
+            # Resolve the matching manifest path.
+            matching = Path(directory) / "matching.json"
+            # Persist only the source shape consumed by the guarded runner.
+            matching.write_text(json.dumps({"source": {"commit_sha": "a" * 40}}), encoding="utf-8")
+            # Resolve a distinct but structurally valid manifest path.
+            mismatched = Path(directory) / "mismatched.json"
+            # Bind the hostile fixture to another exact commit.
+            mismatched.write_text(json.dumps({"source": {"commit_sha": "b" * 40}}), encoding="utf-8")
+            # Capture the pre-connect mismatch result.
+            rejected_output = StringIO()
+            # Refuse a different release without calling the connector seam.
+            with mock.patch.dict(os.environ, environment, clear=True), mock.patch.object(postgres_migrate, "_connect") as rejected_connector, redirect_stdout(rejected_output):
+                # Run the guarded apply command with the mismatched manifest.
+                rejected = postgres_migrate.main(["apply", "--release-manifest", str(mismatched)])
+            # Require the policy failure status and zero connector access.
+            self.assertEqual(rejected, 2)
+            # Prove release mismatch is the only published category.
+            self.assertIn("release identity does not match", rejected_output.getvalue())
+            # Require the connector to remain unopened.
+            rejected_connector.assert_not_called()
+            # Build the exact modeled target expected by the accepted environment.
+            connection = ModelConnection(production_config())
+            # Capture sanitized success output from one valid production bootstrap.
+            accepted_output = StringIO()
+            # Inject the model only after release identity is proven.
+            with mock.patch.dict(os.environ, environment, clear=True), mock.patch.object(postgres_migrate, "_connect", return_value=connection), redirect_stdout(accepted_output):
+                # Apply the exact catalog under the matching immutable manifest.
+                accepted = postgres_migrate.main(["apply", "--release-manifest", str(matching)])
+            # Require successful one-time application.
+            self.assertEqual(accepted, 0)
+            # Require exact schema-five evidence without target data.
+            self.assertEqual(json.loads(accepted_output.getvalue())["current_version"], 5)
 
     # Bind direct script execution to the selected release rather than ambient modules.
     def test_runner_binds_to_repository_release_root(self):

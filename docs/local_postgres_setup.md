@@ -2,7 +2,7 @@
 
 Requirements `STORAGE-020` through `STORAGE-025` and evidence records `TEST-252` through `TEST-257` define the optional PostgreSQL source and provider-conformance boundary. PostgreSQL is never selected implicitly: JSON remains the default when `CASINO_STORAGE_PROVIDER` is absent, MySQL remains unchanged, and only the explicit value `postgres` loads the PostgreSQL provider and its optional driver.
 
-This guide is for a private loopback PostgreSQL 16 target containing synthetic local data. It does not authorize a production database, cloud service, remote listener, firewall change, migration of existing data, release, or deployment. The ordinary application and migration runner do not install PostgreSQL or provision accounts and grants.
+This guide is for a private loopback PostgreSQL 16 target containing synthetic local data. It does not authorize a production database, cloud service, remote listener, firewall change, migration of existing data, release, or deployment. The separately governed empty-target OCI preview procedure is documented in [`oci_postgres_preview.md`](oci_postgres_preview.md); ordinary application startup never installs PostgreSQL, provisions roles, or applies migrations.
 
 ## Install the optional driver
 
@@ -18,7 +18,7 @@ Install PostgreSQL 16 from its official distribution outside the repository. Bin
 
 ## Separate identities
 
-Use distinct administrator, migration, and runtime roles. The migration role and its target-binding key are transient inputs to the disposable migration runner described in [`postgres_migrations.md`](postgres_migrations.md). They must not enter the application environment.
+Use distinct administrator, migration, and runtime roles. The migration role and its target-binding key are transient inputs to the guarded migration runner described in [`postgres_migrations.md`](postgres_migrations.md). They must not enter the application environment.
 
 The runtime role should have only the DML privileges needed by the accepted schema-five tables. It should have no role-management, database-creation, schema-creation, DDL, grant-management, replication, or superuser authority. Grant design and account provisioning remain operator-owned; the repository runner does not create a production role or grant packet.
 

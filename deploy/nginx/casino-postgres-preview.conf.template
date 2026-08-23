@@ -1,0 +1,85 @@
+# Repository-only nginx template for the OCI PostgreSQL restricted preview; activation requires a reviewed deployment.
+
+# Normalize arbitrary HTTP method tokens into one bounded diagnostic family.
+map $request_method $casino_method_family {
+    default other;
+    GET get;
+    HEAD head;
+    POST post;
+    PUT put;
+    PATCH patch;
+    DELETE delete;
+    OPTIONS options;
+}
+
+# Classify requests through fixed families without retaining the normalized URI used for matching.
+map "$casino_method_family:$uri" $casino_route_family {
+    default unknown;
+    ~^[a-z_]+:/(?:healthz|readyz)$ probe;
+    ~^[a-z_]+:/\.well-known/acme-challenge/ acme;
+    ~^[a-z_]+:/(?:admin(?:\.html)?|admin\.js|web/admin\.js)$ admin;
+    ~^[a-z_]+:/api/v[0-9]+/admin(?:/|$) admin;
+    ~^[a-z_]+:/api/v[0-9]+/auth(?:/|$) auth;
+    ~^[a-z_]+:/api/v[0-9]+/games/[^/]+(?:/|$) game_api;
+    ~^[a-z_]+:/api/ api;
+    ~^(?:get|head): static;
+}
+
+# Emit only bounded edge timing fields; raw paths, queries, clients, headers, and bodies are excluded.
+log_format casino_timing escape=json
+    '{"method":"$casino_method_family","route_family":"$casino_route_family","status":$status,"request_time":$request_time,"upstream_response_time":"$upstream_response_time"}';
+
+# Keep the application upstream private to the host and reuse the supervised Gunicorn listener.
+upstream casino_restricted_preview {
+    server 127.0.0.1:8765;
+    keepalive 8;
+}
+
+# Permit only the ACME HTTP-01 path over plaintext and redirect every other request to the exact preview origin.
+server {
+    listen 80;
+    server_name preview.tiltseven.com;
+    server_tokens off;
+    access_log /var/log/nginx/casino_timing.log casino_timing;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root __ACME_CHALLENGE_ROOT__;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+
+    location / {
+        return 308 https://preview.tiltseven.com$request_uri;
+    }
+}
+
+# Terminate reviewed TLS and proxy the complete same-origin application to loopback only.
+server {
+    listen 443 ssl http2;
+    server_name preview.tiltseven.com;
+    server_tokens off;
+    access_log /var/log/nginx/casino_timing.log casino_timing;
+
+    ssl_certificate __TLS_FULLCHAIN_PATH__;
+    ssl_certificate_key __TLS_PRIVATE_KEY_PATH__;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:casino_tls:10m;
+    ssl_session_timeout 10m;
+
+    client_max_body_size 1m;
+
+    location / {
+        proxy_http_version 1.1;
+        proxy_pass http://casino_restricted_preview;
+        proxy_set_header Connection "";
+        proxy_set_header Host preview.tiltseven.com;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header Forwarded "";
+        proxy_set_header X-Forwarded-Host "";
+        proxy_set_header X-Forwarded-Port "";
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+}

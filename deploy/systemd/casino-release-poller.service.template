@@ -11,6 +11,8 @@ User=root
 Group=root
 # Preserve immutable release trees even when the poller imports candidate or current-release Python modules.
 Environment=PYTHONDONTWRITEBYTECODE=1
+# Load the selected provider and its runtime-only credentials for compatibility checks.
+EnvironmentFile=/etc/casino/casino.env
 EnvironmentFile=-/etc/casino/release-poller.env
 EnvironmentFile=/etc/casino/edge-monitor.env
 ExecStart=/usr/local/libexec/casino-release-poller poll

@@ -329,6 +329,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/mysql_connection_pool.md`](docs/mysql_connection_pool.md) — MySQL connection lifecycle
 - [`docs/mysql_migrations.md`](docs/mysql_migrations.md) — MySQL migration and DDL-free runtime gate
 - [`docs/oauth_invite_only.md`](docs/oauth_invite_only.md) — Invite-only OAuth operations boundary
+- [`docs/oci_postgres_preview.md`](docs/oci_postgres_preview.md) — OCI PostgreSQL restricted preview
 - [`docs/open_ticket_review_2026_08_10.md`](docs/open_ticket_review_2026_08_10.md) — Open-ticket review — 2026-08-10
 - [`docs/performance_payload_projections.md`](docs/performance_payload_projections.md) — Payload projection and worker-topology decision
 - [`docs/postgres_connection_pool.md`](docs/postgres_connection_pool.md) — PostgreSQL connection lifecycle

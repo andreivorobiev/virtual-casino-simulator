@@ -1,11 +1,15 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Deployment-only PostgreSQL migration runner for disposable PostgreSQL 16 targets."""
+"""Deployment-only PostgreSQL migration runner for guarded PostgreSQL 16 targets."""
 
 # Import argument parsing for explicit inspection and apply commands.
 import argparse
 # Import JSON for sanitized machine-readable output.
 import json
+# Import constant-time equality for release-provenance binding.
+import hmac
+# Import strict patterns for immutable release commit identities.
+import re
 # Import the interpreter path list for exact extracted-release binding.
 import sys
 # Import portable paths for the selected immutable release root.
@@ -19,7 +23,10 @@ if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
 # Import the checksum-bound PostgreSQL migration state machine and isolated configuration.
-from casino.core.postgres_migrations import MigrationConfig, MigrationError, apply_migrations, dry_run, inspect_schema, load_catalog, require_disposable_target, schema_contract, verify_migration_compatibility
+from casino.core.postgres_migrations import MigrationConfig, MigrationError, apply_migrations, dry_run, inspect_schema, load_catalog, require_authorized_target, schema_contract, verify_migration_compatibility
+
+# Accept only the exact immutable commit shape recorded by release packaging.
+RELEASE_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
 # Import psycopg lazily only after configuration and disposable-target validation.
@@ -56,17 +63,45 @@ def _state_payload(state) -> dict:
         "minimum_version": contract["minimum_version"],
         # Publish the packaged catalog checksum for provenance matching.
         "catalog_sha256": contract["catalog_sha256"],
-        # Publish only the closed disposable application policy.
+        # Publish only the closed guarded empty-target application policy.
         "apply_policy": contract["apply_policy"],
     }
 
 
+# Read one exact release commit without exposing other manifest content.
+def _manifest_commit(manifest_path: Path | None) -> str:
+    # Require an explicit manifest path for production authorization.
+    if manifest_path is None:
+        # Stop before any target or connector access.
+        raise MigrationError("PostgreSQL production migration release manifest is required")
+    # Protect filesystem and parser details behind one fixed provenance result.
+    try:
+        # Parse the checksum-verified deployment manifest selected by the operator.
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    # Collapse missing, unreadable, malformed, or non-UTF-8 input.
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        # Avoid reporting the path or parser content.
+        raise MigrationError("PostgreSQL production migration release manifest is invalid") from exc
+    # Read the source mapping only from the reviewed manifest shape.
+    source = manifest.get("source") if type(manifest) is dict else None
+    # Read the exact source commit without coercion.
+    commit = source.get("commit_sha") if type(source) is dict else None
+    # Require one immutable lowercase full SHA.
+    if type(commit) is not str or not RELEASE_SHA_RE.fullmatch(commit):
+        # Refuse symbolic, short, uppercase, or absent provenance.
+        raise MigrationError("PostgreSQL production migration release manifest is invalid")
+    # Return only the validated non-secret commit identity.
+    return commit
+
+
 # Parse one explicit deployment operation without repair bypasses.
 def parse_args(argv=None):
-    # Describe the read-only inspection and disposable-only apply boundary.
-    parser = argparse.ArgumentParser(description="Inspect or apply the checksum-bound Casino PostgreSQL migration catalog on an authorized disposable target.")
+    # Describe the read-only inspection and guarded empty-target apply boundary.
+    parser = argparse.ArgumentParser(description="Inspect or apply the checksum-bound Casino PostgreSQL migration catalog on an authorized guarded target.")
     # Require one explicit command so invocation never defaults to mutation.
     parser.add_argument("command", choices=("status", "check", "dry-run", "apply"))
+    # Accept the already verified release manifest required only by production authorization.
+    parser.add_argument("--release-manifest", type=Path, help="Verified release-manifest.json for production bootstrap")
     # Parse either the process arguments or a caller-owned test list.
     return parser.parse_args(argv)
 
@@ -81,8 +116,20 @@ def main(argv=None) -> int:
         migrations = load_catalog()[0]
         # Load only deployment-prefixed PostgreSQL variables.
         config = MigrationConfig.from_env()
-        # Refuse any non-disposable target before connector import or access.
-        require_disposable_target(config)
+        # Resolve one exact authorization mode before connector import or access.
+        authorization_mode = require_authorized_target(config)
+        # Bind production authority to the exact packaged commit before opening a connection.
+        if authorization_mode == "production":
+            # Read only the manifest's validated source commit.
+            release_commit = _manifest_commit(args.release_manifest)
+            # Require exact equality with the separately supplied production authorization.
+            if not hmac.compare_digest(release_commit, config.release_sha):
+                # Stop without reporting either commit value.
+                raise MigrationError("PostgreSQL production migration release identity does not match")
+        # Refuse an irrelevant manifest in disposable mode so command meaning remains explicit.
+        elif args.release_manifest is not None:
+            # Keep the original disposable lane isolated from production provenance.
+            raise MigrationError("PostgreSQL disposable migration does not accept a release manifest")
         # Open one deployment-only connection for the command duration.
         connection = _connect(config)
         # Always close the connection after success or failure.

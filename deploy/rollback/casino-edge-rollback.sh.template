@@ -6,6 +6,8 @@ set -eu
 : "$CASINO_PREVIOUS_RELEASE"
 : "$CASINO_PREVIOUS_NGINX_CONFIG"
 : "$CASINO_NGINX_PREFLIGHT_CONFIG"
+# Preserve the existing TiltSeven profile unless the reviewed deployment selects another packaged policy.
+CASINO_EDGE_POLICY_PATH=${CASINO_EDGE_POLICY_PATH:-/opt/casino/current/deploy/edge/restricted-preview.json}
 
 # Refuse rollback unless all immutable inputs exist and a complete preflight configuration validates independently.
 test -d "$CASINO_PREVIOUS_RELEASE"
@@ -26,7 +28,7 @@ ln -sfn "$CASINO_PREVIOUS_NGINX_CONFIG" /etc/nginx/sites-enabled/casino.conf.nex
 mv -Tf /etc/nginx/sites-enabled/casino.conf.next /etc/nginx/sites-enabled/casino.conf
 
 # Restart the supervised application, reload the validated edge, and require a sanitized post-rollback observation.
-if ! systemctl restart casino || ! systemctl reload nginx || ! /opt/casino/venv/bin/python /opt/casino/current/scripts/edge_gate.py observe --policy /opt/casino/current/deploy/edge/restricted-preview.json; then
+if ! systemctl restart casino || ! systemctl reload nginx || ! /opt/casino/venv/bin/python /opt/casino/current/scripts/edge_gate.py observe --policy "$CASINO_EDGE_POLICY_PATH"; then
     # Restore both prior links and processes when any post-rollback step does not pass.
     ln -sfn "$CASINO_CURRENT_RELEASE" /opt/casino/current.next
     mv -Tf /opt/casino/current.next /opt/casino/current

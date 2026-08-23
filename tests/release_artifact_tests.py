@@ -93,8 +93,15 @@ class ReleaseArtifactTests(unittest.TestCase):
             "scripts/edge_gate.py",
             # Copy the canonical inert edge policy.
             "deploy/edge/restricted-preview.json",
+            # Copy the separate PostgreSQL preview edge policy.
+            "deploy/edge/postgres-preview.json",
             # Copy the reviewed nginx source without rendering its placeholders.
             "deploy/nginx/casino.conf.template",
+            # Copy the hostname-bound PostgreSQL preview nginx source.
+            "deploy/nginx/casino-postgres-preview.conf.template",
+            # Copy the guarded target and runtime-grant PostgreSQL templates.
+            "deploy/postgres/create-target.sql",
+            "deploy/postgres/finalize-runtime-grants.sql",
             # Copy the reload-only ACME hook source.
             "deploy/acme/casino-renewal-hook.sh.template",
             # Copy the inactive monitor service source.
@@ -109,6 +116,16 @@ class ReleaseArtifactTests(unittest.TestCase):
             "deploy/systemd/casino-release-poller.timer.template",
             # Copy the application-and-edge-only rollback source.
             "deploy/rollback/casino-edge-rollback.sh.template",
+            # Copy the complete checksum-bound PostgreSQL migration catalog.
+            "migrations/postgres/0001_initial.json",
+            "migrations/postgres/0002_action_identity.json",
+            "migrations/postgres/0003_game_action_receipts.json",
+            "migrations/postgres/0004_game_action_claims.json",
+            "migrations/postgres/0005_first_class_sessions.json",
+            "migrations/postgres/catalog.json",
+            # Copy the guarded production migration and read-only runtime commands.
+            "scripts/postgres_migrate.py",
+            "scripts/postgres_runtime_check.py",
         ):
             # Read exact source text from the checkout under test.
             self.files[relative_path] = (package_app.ROOT / relative_path).read_text(encoding="utf-8")
@@ -308,6 +325,7 @@ class ReleaseArtifactTests(unittest.TestCase):
         expected_host_scripts = {
             "scripts/package_app.py",
             "scripts/mysql_migrate.py",
+            "scripts/postgres_runtime_check.py",
             "scripts/run_edge_monitor.py",
             "scripts/validate_monitor_config.py",
             "scripts/write_release_env.py",
@@ -332,6 +350,19 @@ class ReleaseArtifactTests(unittest.TestCase):
         })
         # Require the host pull executable itself to ship in the immutable archive.
         self.assertIn("deploy/pull/casino-release-poller.sh", packaged_paths)
+
+    # Prove every production PostgreSQL bootstrap and edge input survives immutable packaging. (TEST-258)
+    def test_postgres_preview_deployment_packet_is_packaged(self):
+        # Build a structurally valid candidate from the complete required fixture inventory.
+        archive_path, _ = self.build("postgres-preview-deployment")
+        # Normalize all immutable members without extracting them.
+        with zipfile.ZipFile(archive_path, "r") as archive:
+            # Remove only the fixed archive root prefix from each member.
+            packaged_paths = {member.removeprefix(f"{package_app.ARCHIVE_ROOT}/") for member in archive.namelist()}
+        # Require the manual bootstrap, runtime gate, provider edge, nginx, role, and catalog inputs.
+        required = {"scripts/postgres_migrate.py", "scripts/postgres_runtime_check.py", "deploy/edge/postgres-preview.json", "deploy/nginx/casino-postgres-preview.conf.template", "deploy/postgres/create-target.sql", "deploy/postgres/finalize-runtime-grants.sql", "migrations/postgres/catalog.json"}
+        # Reject any candidate that cannot execute the reviewed PostgreSQL deployment packet from its own bytes.
+        self.assertTrue(required <= packaged_paths, {"missing": sorted(required - packaged_paths)})
 
     # Prove untracked private content is never considered by tracked-file packaging.
     def test_untracked_private_content_is_excluded(self):
