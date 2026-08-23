@@ -14,6 +14,10 @@ supports true concurrent execution, and owns a hard total time budget. Every cas
 public `StorageProvider` contract. `supports_true_concurrency` may select the size of a real thread
 wave; it never removes a call, case, or assertion.
 
+The runner measures one complete lifecycle from before `create()` through all A–J group resets and
+cases to completed `destroy()`. The JSON lifecycle must finish in less than `10.0` seconds, and each
+reachable MySQL or PostgreSQL create+A–J+destroy lifecycle must finish in less than `60.0` seconds.
+
 The registry always contains the temporary-directory JSON harness plus disposable MySQL and
 PostgreSQL harnesses. Each database harness creates one isolated schema, resets mutable state within
 that schema between groups, and destroys the schema and generated accounts on every terminal path.
