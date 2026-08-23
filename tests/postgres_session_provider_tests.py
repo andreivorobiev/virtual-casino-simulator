@@ -331,9 +331,12 @@ class _LivePostgresSessions(PostgresSessionMixin):
 # Prove PostgreSQL sessions retain provider-neutral semantics and safe SQL ownership.
 class PostgresSessionProviderTests(unittest.TestCase):
     # Exercise native SQL, JSONB, row locks, rotation, and cleanup on disposable PostgreSQL 16.
-    @unittest.skipUnless(os.environ.get("CASINO_POSTGRES_SESSION_LIVE") == "CASINO-POSTGRES-1058-SESSION-LIVE", "PostgreSQL session live test is not authorized")
     def test_disposable_postgres_16_session_lifecycle(self) -> None:
-        # Construct one live owner only after unittest verifies the explicit marker.
+        # Evaluate authorization when the managed runner has installed its temporary marker.
+        if os.environ.get("CASINO_POSTGRES_SESSION_LIVE") != "CASINO-POSTGRES-1058-SESSION-LIVE":
+            # Preserve listener-free default execution without freezing import-time environment.
+            self.skipTest("PostgreSQL session live test is not authorized")
+        # Construct one live owner only after the runtime guard verifies explicit authorization.
         provider = _LivePostgresSessions()
         # Publish the exact completed marker through the real one-shot importer.
         provider.import_legacy_sessions("data/auth/sessions.json", lambda: {"sessions": []})

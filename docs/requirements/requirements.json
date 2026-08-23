@@ -13904,6 +13904,31 @@
       "notes": "Descriptors use PostgreSQL identity columns, JSONB, separate indexes, bound parameters, ON CONFLICT, RETURNING, and row locks without changing MySQL catalog bytes or runtime behavior. Application is held until a later provider lane; no production target, grant, deployment, or release mutation is included."
     },
     {
+      "id": "STORAGE-023",
+      "module": "Storage",
+      "description": "PostgresStorageProvider implements the complete ordinary StorageProvider contract for documents, players, cents-exact ledger entries and action-key replay, history, first-class sessions, reset, state visibility, and transaction rollback on the accepted PostgreSQL schema-five catalog. Runtime construction remains explicit and lazy, schema readiness is SELECT-only and fail-closed, wallet and mutable-row operations serialize with PostgreSQL row locks under READ COMMITTED, and every SQL value is bound while native connector and database failures cross only fixed secret-safe application boundaries.",
+      "status": "PASS",
+      "api_tests": [
+        "POSTGRES-STORAGE-001",
+        "POSTGRES-STORAGE-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/storage/postgres_provider.py",
+        "casino/core/storage/sessions_postgres.py",
+        "casino/core/storage/__init__.py",
+        "casino/core/postgres_pool.py",
+        "casino/core/postgres_migrations.py",
+        "tests/postgres_provider_tests.py",
+        "tests/postgres_session_provider_tests.py",
+        "tests/postgres_provider_live.py",
+        "tests/cases/api/storage_foundation.py"
+      ],
+      "introduced_in": "issue-1058-postgres-provider-core",
+      "changed_in": "issue-1058-postgres-provider-core",
+      "notes": "This lane adds no whole-game action executor, public API, game, MySQL, JSON, schema, workflow, deployment, or production-target change. Exactly-once game-action claims and receipts remain assigned to STORAGE-024."
+    },
+    {
       "id": "MYSQL-010",
       "module": "MySQL",
       "description": "Schema five adds casino_sessions with one binary opaque primary key, one unique lowercase token digest, user-activity and expiry indexes, finite lifecycle and generation checks, and a canonical JSON payload bound to duplicated indexed columns. The migration backfills only keyed schema-two-through-four session bridge rows, never persists plaintext bearer tokens, and removes those bridge rows after insertion; runtime session DML is table-scoped while catalog application remains held.",
@@ -14071,6 +14096,32 @@
       "introduced_in": "issue-1057-postgres-migrations",
       "changed_in": "issue-1057-postgres-migrations",
       "notes": "The live gate requires the exact issue-owned authorization marker and an explicit official PostgreSQL binary root before creating a loopback-only temporary cluster. Evidence is sanitized and all process, listener, role, database, and filesystem residue is checked after cleanup."
+    },
+    {
+      "id": "TEST-255",
+      "module": "Tests",
+      "description": "Listener-free transaction-faithful PostgreSQL provider evidence covers complete method inventory, lazy connection and readiness, dict-row session sanitation, document defaults and strict corruption, atomic mutation, player normalization and row locking, cents-exact ledger balance transitions and replay conflicts, chronological history, first-class session caps, rotation, revocation, expiry and import, reset isolation, rollback, state visibility, concurrency, fixed native-error translation, and unchanged JSON/MySQL behavior. Explicit disposable PostgreSQL 16 evidence repeats the storage, state, session, contention, restart and cleanup contract on the accepted schema-five catalog.",
+      "status": "PASS",
+      "api_tests": [
+        "POSTGRES-STORAGE-001",
+        "POSTGRES-STORAGE-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/postgres_provider_tests.py",
+        "tests/postgres_session_provider_tests.py",
+        "tests/postgres_provider_live.py",
+        "tests/storage_tests.py",
+        "tests/state_store_atomic_tests.py",
+        "tests/session_storage_tests.py",
+        "tests/storage_package_boundary_tests.py",
+        "tests/cases/api/storage_foundation.py",
+        "tests/api_case_inventory.json",
+        "tests/runner.py"
+      ],
+      "introduced_in": "issue-1058-postgres-provider-core",
+      "changed_in": "issue-1058-postgres-provider-core",
+      "notes": "Listener-free suites open no connector or listener. The live gate requires the exact disposable marker and official PostgreSQL 16 binary root, uses only synthetic target identities, and proves role, database, process, listener and filesystem cleanup on success and failure."
     },
     {
       "id": "ROU-001",
