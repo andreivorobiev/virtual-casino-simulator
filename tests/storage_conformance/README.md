@@ -15,11 +15,11 @@ public `StorageProvider` contract. `supports_true_concurrency` may select the si
 wave; it never removes a call, case, or assertion.
 
 The registry always contains the temporary-directory JSON harness plus disposable MySQL and
-PostgreSQL harnesses. Each database harness creates one isolated schema, fast-resets it between
-groups, and destroys the schema and generated account on every terminal path. A wholly absent
-reviewed reachability marker records one explicit skip; a present but incomplete or invalid marker
-fails closed before optional-driver import or network access. No harness can skip behavior after
-target creation begins.
+PostgreSQL harnesses. Each database harness creates one isolated schema, resets mutable state within
+that schema between groups, and destroys the schema and generated accounts on every terminal path.
+A wholly absent reviewed reachability marker records one explicit skip; a present but incomplete or
+invalid marker fails closed before optional-driver import or network access. No harness can skip
+behavior after target creation begins.
 
 ## Unchanged inventory
 
@@ -32,7 +32,8 @@ target creation begins.
 - E: exactly-once application, byte-equivalent replay, lookup, and changed-fingerprint conflict.
 - F: history append order, limits, filters, and schema metadata.
 - G: real threaded wallet, document, and same-key schedules with exact final state.
-- H: reset and visibility contexts plus rollback after a caller fails mid-sequence.
+- H: reset and visibility contexts, document-mutation rollback, exact caller-failure preservation,
+  and completed reset recovery visibility.
 - I: fresh-equivalent reset followed by the small group-A contract again.
 - J: declared `casino.errors` domain failures with no native target, credential, SQL, or query detail.
 
@@ -52,5 +53,5 @@ uses the accepted migration path once, and bounds its provider pool. PostgreSQL 
 `CASINO_POSTGRES_CONFORMANCE_LIVE=CASINO-POSTGRES-1060-LIVE` and the reviewed official binary root
 in `CASINO_POSTGRES_TEST_BIN`; it starts one private loopback cluster, applies the accepted migration
 catalog, and never selects a persistent service. Both relational harnesses keep credentials out of
-reports, fast-reset the accepted schema between groups, and verify target, account, process,
-listener, and filesystem cleanup before returning.
+reports, reset mutable state within the accepted schema between groups, and verify database,
+accounts, process, listener, and filesystem cleanup before returning.
