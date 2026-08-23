@@ -19,7 +19,8 @@ CONCRETE_MODULES = {
     "casino.core.storage.mysql_provider",
     "casino.core.storage.postgres_provider",
 }
-CONCRETE_NAMES = {"JsonStorageProvider", "MySQLStorageProvider", "PostgreSQLStorageProvider"}
+# Bind the public concrete class spellings so facade imports cannot evade the package gate.
+CONCRETE_NAMES = {"JsonStorageProvider", "MySQLStorageProvider", "PostgresStorageProvider"}
 CASE_PRODUCT_IMPORTS = {"casino.core.storage.base", "casino.errors"}
 
 

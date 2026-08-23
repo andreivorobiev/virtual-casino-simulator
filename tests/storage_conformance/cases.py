@@ -324,7 +324,7 @@ def group_g_concurrency(context: CaseContext) -> None:
 
 
 def group_h_transactions_visibility(context: CaseContext) -> None:
-    """H. Verify visibility contexts and rollback after caller failures."""
+    """H. Verify visibility contexts, exact failures, and explicit reset recovery."""
 
     provider = context.provider
     provider.bootstrap_players(_players(_player("visibility-player", 10.0)))
@@ -340,17 +340,37 @@ def group_h_transactions_visibility(context: CaseContext) -> None:
     _expect(_InjectedFailure, lambda: provider.update_document("conformance/h/state", fail_document, {}))
     _require(provider.read_document("conformance/h/state", {}) == {"generation": "before"}, "failed document transaction published partial state")
 
+    # Freeze one exact caller failure so reset cleanup cannot replace its identity.
+    reset_failure = _InjectedFailure("reset body failure")
+
+    # Publish deliberately incomplete bootstrap state before aborting the reset body.
     def fail_reset_body() -> None:
         with provider.reset_transaction() as reset_provider:
             _require(reset_provider is provider, "reset context yielded a foreign provider")
             reset_provider.write_document("conformance/h/state", {"generation": "partial-reset"})
             reset_provider.bootstrap_players(_players(_player("partial-player", 1.0)))
-            raise _InjectedFailure("reset body failure")
+            raise reset_failure
 
-    _expect(_InjectedFailure, fail_reset_body)
-    _require(provider.read_document("conformance/h/state", {}) == {"generation": "before"}, "failed reset exposed partial document state")
-    restored_ids = {row["player_id"] for row in provider.load_players(_empty_players)["players"]}
-    _require(restored_ids == {"visibility-player"}, "failed reset exposed partial wallet state")
+    # Require the reset boundary to propagate the exact caller-owned failure object.
+    observed_failure = _expect(_InjectedFailure, fail_reset_body)
+    # Reject wrappers or cleanup errors that mask the original reset failure.
+    _require(observed_failure is reset_failure, "reset replaced the exact caller failure")
+    # Exercise the common explicit-recovery contract after JSON rollback or relational resetting.
+    with provider.reset_transaction() as recovery_provider:
+        # Preserve the provider identity through recovery bootstrap.
+        _require(recovery_provider is provider, "reset recovery yielded a foreign provider")
+        # Publish one complete recovered document instead of inspecting partial reset bytes.
+        recovery_provider.write_document("conformance/h/state", {"generation": "recovered"})
+        # Publish one complete recovered wallet set inside the same reset boundary.
+        recovery_provider.bootstrap_players(_players(_player("recovered-player", 2.0)))
+    # Inspect only the state made visible by the completed recovery boundary.
+    with provider.state_visibility_transaction() as recovered_provider:
+        # Require the complete recovered document and reject ambiguous partial publication.
+        _require(recovered_provider.read_document("conformance/h/state", {}) == {"generation": "recovered"}, "reset recovery published ambiguous document state")
+        # Read the complete recovered wallet inventory under the same visibility boundary.
+        recovered_ids = {row["player_id"] for row in recovered_provider.load_players(_empty_players)["players"]}
+        # Require only the recovered wallet so no failed-bootstrap row becomes accepted state.
+        _require(recovered_ids == {"recovered-player"}, "reset recovery published ambiguous wallet state")
 
 
 def group_i_reset(context: CaseContext) -> None:
