@@ -4,6 +4,8 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
+The v0.9.5.86 release line retains the exact 46-game catalog, paytables, wager acceptance, entropy seams, round identities, settlement behavior, and frozen API envelopes. It packages the native PostgreSQL provider and OCI restricted-preview deployment boundary without changing game mathematics, routes, outcomes, or wallet actions; existing production remains MySQL schema two.
+
 The v0.9.5.85 release line retains the exact 46-game catalog, paytables, wager acceptance, entropy seams, round identities, settlement behavior, and frozen API envelopes. It packages complete rendered-control qualification, bounded concurrency evidence, and session-creation serialization without changing game mathematics, routes, outcomes, or wallet actions; schema-five application remains held and production stays at schema two.
 
 The v0.9.5.84 release line retains the exact 46-game catalog, paytables, wager acceptance, entropy seams, round identities, settlement behavior, and frozen API envelopes. It packages shared frontend lifecycle adoption and first-class session-storage capacity without changing game mathematics, routes, outcomes, or wallet actions; schema-five application remains held and production stays at schema two.

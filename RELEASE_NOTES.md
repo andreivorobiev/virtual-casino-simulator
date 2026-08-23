@@ -1,3 +1,20 @@
+# Virtual Casino Simulator v0.9.5.86 Release Notes
+
+## PostgreSQL provider completion and OCI restricted-preview delivery
+
+- Packages the completed PostgreSQL provider program and the governed OCI PostgreSQL preview path accepted on protected main through `8b25bedd2261a0364ff0e6ea9044c334a61eca07`.
+- Keeps JSON as the local default and the existing production deployment on native MySQL schema 2 while enabling a separate native PostgreSQL 16 preview at `preview.tiltseven.com`.
+- Adds release-bound, loopback-only, empty-target-only PostgreSQL bootstrap with separate least-privilege migration and runtime roles; initialized, non-empty, remote, malformed, or over-privileged targets fail closed.
+- Adds a DDL-free PostgreSQL runtime compatibility check plus provider-aware release polling and edge monitoring without changing the established MySQL defaults.
+- Packages the preview Nginx template, exact edge policy, PostgreSQL role/database and final-grant scripts, migration catalog, runtime checker, and operator runbook.
+- Preserves frozen API compatibility, the exact 46-game catalog, paytables, wager acceptance, settlement behavior, release channel, and manual-invite policy.
+- Adds no release-only requirement identifier; the governed total remains exactly 1129 permanent requirements.
+- Records the exact canonical deployable inventory as 868 regular files, including the new v0.9.5.86 compatibility record.
+- Advances package `0.9.5.86`, application `9.74.1`, contracts `1.63.2`, tests `1.123.1`, and docs `1.116.1`; accepted Core `10.19.0`, tooling `1.49.0`, and every content-owned module remain exact.
+- Retains exact immutable v0.9.5.85 as the application-only schema-two rollback predecessor for existing MySQL production. Database rollback and down-migration remain prohibited.
+- The first PostgreSQL preview activation uses the documented stop-and-withdraw rollback because no older PostgreSQL deployment artifact is compatible; it never restores v0.9.5.85 over the PostgreSQL target.
+- Public signup, live OAuth, billing, public database access, and paid-capacity fallback remain disabled. Rollout issue #1078 stays open until OCI, Midphase DNS, TLS, backup, isolated restore, and live identity are verified.
+
 # Virtual Casino Simulator v0.9.5.85 Release Notes
 
 ## Production concurrency and complete formal UI qualification

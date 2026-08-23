@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.85`; `0.9.6.0` remains reserved for a separately accepted product wave.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.86`; `0.9.6.0` remains reserved for a separately accepted product wave.
 
 ## What happens after a merge
 
@@ -223,6 +223,8 @@ v0.9.5.76 packages accepted complete catalog economics PR #691 and records issue
 v0.9.5.77 packages accepted repository-side pull-poller PR #736 and closes release prerequisite #735 while parent #732 remains open for owner-run installation evidence. GitHub Actions publish immutable assets only; the production host polls stable releases, verifies exact assets, provenance, inventory, schema-two compatibility, health, readiness, rollback, and alarms, then adopts the application atomically. The catalog remains minimum 2, expected 4, and apply held; no migration, grant mutation, or database rollback is authorized. Its compatibility record retains exact immutable v0.9.5.76 as the application-only predecessor.
 
 v0.9.5.78 packages the accepted post-v0.9.5.77 reliability and provider-atomic state wave and carries the same fail-closed pull-delivery boundary into the owner-authorized #732 installation. The first pull must execute the documented rollback drill, retain exact schema 2 and persistence, prove authenticated readiness at the release SHA, clear the lag alarm, and leave the timer active. Its compatibility record retains exact immutable v0.9.5.77 as the application-only predecessor; database rollback, migration application, and grant mutation remain prohibited.
+
+v0.9.5.86 packages the completed PostgreSQL provider program and governed OCI restricted-preview deployment path while preserving JSON as the local default and the existing production deployment at MySQL schema 2. Exact immutable v0.9.5.85 remains the application-only predecessor for MySQL production; database rollback remains prohibited. The first PostgreSQL preview activation uses stop-and-withdraw rollback, loopback-only PostgreSQL 16, least-privilege roles, and the exact `preview.tiltseven.com` edge policy; paid-capacity fallback and public database exposure remain prohibited.
 
 v0.9.5.85 packages accepted protected-main changes since v0.9.5.84, including bounded production concurrency, complete formal public-UI qualification, MySQL session-creation serialization, and fail-closed browser-readiness diagnostics. The schema-five migration descriptor remains packaged but held; production and application-only rollback remain exact schema 2, and no database migration, grant mutation, provider activation, or database rollback is authorized. Its compatibility record retains exact immutable v0.9.5.84 as the application-only predecessor.
 
