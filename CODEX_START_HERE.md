@@ -320,6 +320,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/legal/README.md`](docs/legal/README.md) — Legal Docs
 - [`docs/legal/terms.md`](docs/legal/terms.md) — Private Beta Toy Simulator Terms
 - [`docs/local_mysql_setup.md`](docs/local_mysql_setup.md) — Local MySQL 8.4 LTS setup
+- [`docs/local_postgres_setup.md`](docs/local_postgres_setup.md) — Local PostgreSQL 16 setup
 - [`docs/localization_foundation.md`](docs/localization_foundation.md) — Phase 0 localization foundation
 - [`docs/long_test_suites.md`](docs/long_test_suites.md) — Long Casino Test Suites
 - [`docs/marketing_customization.md`](docs/marketing_customization.md) — Marketing and brand customization
@@ -330,6 +331,8 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/oauth_invite_only.md`](docs/oauth_invite_only.md) — Invite-only OAuth operations boundary
 - [`docs/open_ticket_review_2026_08_10.md`](docs/open_ticket_review_2026_08_10.md) — Open-ticket review — 2026-08-10
 - [`docs/performance_payload_projections.md`](docs/performance_payload_projections.md) — Payload projection and worker-topology decision
+- [`docs/postgres_connection_pool.md`](docs/postgres_connection_pool.md) — PostgreSQL connection lifecycle
+- [`docs/postgres_migrations.md`](docs/postgres_migrations.md) — PostgreSQL migrations and DDL-free runtime gate
 - [`docs/production_cicd_runbook.md`](docs/production_cicd_runbook.md) — Production CI/CD runbook
 - [`docs/production_service.md`](docs/production_service.md) — Production application service
 - [`docs/pwa_foundation.md`](docs/pwa_foundation.md) — Offline-safe PWA foundation

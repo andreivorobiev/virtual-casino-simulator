@@ -4,7 +4,19 @@ Packaged application release: `0.9.5.85`
 
 Historical source baseline: `9.1.0`
 
-Local play-token browser casino simulator with a descriptor-driven catalog of isolated games (Roulette, Slots, Blackjack, Baccarat, Keno, American Bingo and many more; the canonical catalog is discovered from the `modules/*.json` descriptors), isolated game state, ledger-backed wallet accounting, authenticated private-beta users, Admin telemetry, and optional JSON or MySQL persistence.
+Local play-token browser casino simulator with a descriptor-driven catalog of isolated games (Roulette, Slots, Blackjack, Baccarat, Keno, American Bingo and many more; the canonical catalog is discovered from the `modules/*.json` descriptors), isolated game state, ledger-backed wallet accounting, authenticated private-beta users, Admin telemetry, and optional JSON, MySQL, or PostgreSQL persistence.
+
+## Persistence
+
+JSON remains the default provider when `CASINO_STORAGE_PROVIDER` is absent. MySQL and PostgreSQL are opt-in providers selected explicitly with `CASINO_STORAGE_PROVIDER=mysql` or `CASINO_STORAGE_PROVIDER=postgres`; neither is an automatic fallback. The PostgreSQL provider is imported lazily only after explicit selection and requires the optional driver installed with `python -m pip install -e ".[postgres]"`.
+
+The PostgreSQL runtime performs no schema DDL. It accepts only the exact clean checksum-bound schema version 5 prepared by the disposable-only migration runner and fails closed on missing, partial, dirty, foreign, or future state. Source configuration, bounded pooling, and migration/testing boundaries are documented in:
+
+- [`docs/local_postgres_setup.md`](docs/local_postgres_setup.md)
+- [`docs/postgres_connection_pool.md`](docs/postgres_connection_pool.md)
+- [`docs/postgres_migrations.md`](docs/postgres_migrations.md)
+
+These repository documents describe source availability and isolated validation. They do not claim a PostgreSQL production target, deployment, grant change, or migration of existing data.
 
 ## Design decisions
 

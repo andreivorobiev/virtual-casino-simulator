@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.73.0
+- application: 9.73.1
 - core: 10.18.0
 - mobile: 1.0.0
 - ledger: 9.1.2
@@ -52,7 +52,7 @@ Historical source baseline: 9.1.0
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.7
 - tests: 1.122.0
-- docs: 1.115.0
+- docs: 1.115.1
 - contracts: 1.63.1
 - tooling: 1.48.0
 - commenting_policy: 2.1.0
