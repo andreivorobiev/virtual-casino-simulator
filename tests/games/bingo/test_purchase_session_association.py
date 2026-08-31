@@ -135,6 +135,63 @@ class BingoPurchaseSessionAssociationTests(unittest.TestCase):
         # Keep the established direct session response free of the purchase identity.
         self.assertNotIn(marker["purchase_id"], json.dumps(session, sort_keys=True))
 
+    # Upgrade only an exact legacy committed marker/session pair across JSON restart. (TEST-265)
+    def test_legacy_committed_marker_restart_derives_exact_association_before_cleanup(self):
+        # Build one authoritative session retained by a legacy BINGO-028 document.
+        session = self._session("legacy-session-1")
+        # Bind the legacy transient marker to that exact session without a new association key.
+        marker = {"kind": "purchase", "status": "committed", "purchase_id": "legacy-purchase-1", "player_id": "human", "amount": 5.0, "pattern": "line", "session_id": session["session_id"]}
+        # Preserve the precise pre-BINGO-029 state shape selected for upgrade.
+        legacy = {"active_session": copy.deepcopy(session), "last_sessions": [], api.PENDING_ACTION_KEY: copy.deepcopy(marker)}
+
+        # Adapt one real provider document transaction to the Bingo state-store callback shape.
+        def provider_update(provider, key):
+            # Return one game/player-neutral update adapter over the exact test document.
+            return lambda _game_id, _player_id, mutator, default_factory: provider.update_document(key, mutator, default_factory)
+
+        # Own every restart and conflict byte inside one disposable filesystem directory.
+        with tempfile.TemporaryDirectory() as temporary:
+            # Seed the exact legacy state through the production JSON provider.
+            initial_provider = storage.JsonStorageProvider(Path(temporary))
+            initial_provider.write_document("games/bingo/legacy-association.json", legacy)
+            # Reconstruct the provider to model an application upgrade/restart before recovery.
+            restarted_provider = storage.JsonStorageProvider(Path(temporary))
+            # Let finalization derive and persist only the exact marker/session association.
+            with mock.patch.object(api, "update_player_game_state", side_effect=provider_update(restarted_provider, "games/bingo/legacy-association.json")):
+                # Recover the committed legacy purchase and release its transient marker.
+                finalized = api.finalize_purchase("human", copy.deepcopy(legacy), marker)
+            # Restart again before observing the upgraded durable state.
+            replay_provider = storage.JsonStorageProvider(Path(temporary))
+            # Read the complete post-upgrade document from durable bytes.
+            upgraded = replay_provider.read_document("games/bingo/legacy-association.json", engine.default_state)
+            # Require exact session recovery without changing public game state.
+            self.assertEqual(session, finalized)
+            self.assertEqual(session, upgraded["active_session"])
+            # Persist the one derived pair before removing the legacy owner.
+            self.assertEqual([{"purchase_id": marker["purchase_id"], "session_id": session["session_id"]}], upgraded[api.PURCHASE_ASSOCIATIONS_KEY])
+            self.assertNotIn(api.PENDING_ACTION_KEY, upgraded)
+            # Replay finalization after a second restart without reordering or duplicating state.
+            before_replay = copy.deepcopy(upgraded)
+            with mock.patch.object(api, "update_player_game_state", side_effect=provider_update(replay_provider, "games/bingo/legacy-association.json")):
+                # Use the original exact marker as a lost-finalize-response retry.
+                replayed = api.finalize_purchase("human", upgraded, marker)
+            # Return the same session and preserve byte-stable durable state.
+            self.assertEqual(session, replayed)
+            self.assertEqual(before_replay, upgraded)
+            self.assertEqual(before_replay, replay_provider.read_document("games/bingo/legacy-association.json", engine.default_state))
+
+            # Seed a separate legacy marker whose session is already owned by another purchase.
+            conflict = {**copy.deepcopy(legacy), api.PURCHASE_ASSOCIATIONS_KEY: [{"purchase_id": "different-purchase", "session_id": session["session_id"]}]}
+            replay_provider.write_document("games/bingo/legacy-conflict.json", conflict)
+            # Attempt finalization through a fresh provider object so rollback must be durable.
+            conflict_provider = storage.JsonStorageProvider(Path(temporary))
+            with mock.patch.object(api, "update_player_game_state", side_effect=provider_update(conflict_provider, "games/bingo/legacy-conflict.json")):
+                # Refuse rebinding and keep the exact recovery marker available.
+                with self.assertRaisesRegex(ConflictError, "identity changed"):
+                    api.finalize_purchase("human", copy.deepcopy(conflict), marker)
+            # Preserve the complete conflicting legacy document after transaction failure.
+            self.assertEqual(conflict, conflict_provider.read_document("games/bingo/legacy-conflict.json", engine.default_state))
+
     # Require a failed accepted-session step to refund the debit without creating a join. (TEST-265)
     def test_failed_session_creation_compensates_without_association(self):
         # Seed one prepared purchase owned by the player document.

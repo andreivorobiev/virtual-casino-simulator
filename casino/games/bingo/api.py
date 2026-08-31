@@ -428,6 +428,8 @@ def finalize_purchase(player_id: str, state: dict, marker: dict) -> dict:
             if session is None:
                 # Leave the marker intact for operator recovery.
                 raise ConflictError("Bingo committed purchase session is unavailable")
+            # Upgrade a valid legacy BINGO-028 marker from its exact authoritative session identity.
+            _retain_purchase_session_association(current, pending["purchase_id"], session["session_id"])
             # Require the private durable join before discarding the transient purchase identity.
             if _purchase_id_for_session(current, session["session_id"]) != pending["purchase_id"]:
                 # Leave the marker available for explicit repair or operator recovery.
