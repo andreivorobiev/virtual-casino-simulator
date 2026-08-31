@@ -42,8 +42,9 @@ class CiComputeTests(unittest.TestCase):
     def test_release_pr_mode_is_narrow_and_release_events_verify_hosted_assets(self):
         # Read the workflow to distinguish the optimized PR command from manual and release-event checks.
         workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-        # Require exactly one optimized command and keep every non-PR command free of the flag.
+        # Require exactly one optimized command and retain the full canonical manual candidate command.
         self.assertEqual(workflow.count("--use-pr-gate-evidence"), 1)
+        self.assertIn('python scripts/make_release.py --app-version "${{ inputs.app_version }}"', workflow)
         release_event_job = workflow.split("  publish-immutable-release:", 1)[1]
         # Bind the release event to the already-hosted tag, predecessor, checksums, and rollback package.
         self.assertIn("permissions:\n      contents: read", release_event_job)
