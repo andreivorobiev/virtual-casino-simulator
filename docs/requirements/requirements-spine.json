@@ -7307,7 +7307,7 @@
     {
       "id": "TOOL-008",
       "module": "Tooling",
-      "description": "Protected-main CI/CD publishes or reuses the immutable GitHub Release for the exact merged commit, refuses packaged-version tag reuse across different commits, resolves rollback only from the current compatibility record, verifies the exact downloaded predecessor manifest, and packages every host-required script. Production delivery is owned by the host pull poller rather than runner SSH; it downloads only hosted release assets, validates checksums, provenance, monitor configuration and schema two before cutover, writes build provenance, switches /opt/casino/current atomically, verifies authenticated live identity, and rolls back the application symlink and release fragment if post-cutover health fails.",
+      "description": "Protected-main CI/CD makes unchanged packaged versions read-only publication no-ops and grants write authority only to an exact next-patch release wrapper whose single reviewed merge, semantic identity-only diff, module revisions, compatibility-pinned predecessor, protected current-main source, first run attempt, peeled tag and GitHub Release state all pass fail-closed gates. Complete exact-head releases are verified/reused without replacement; the release-event lane independently verifies hosted assets with read permission only. Production delivery remains a host-owned pull state machine with exact provenance, schema-two, authenticated live identity and application-only rollback gates.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-CICD-001"
@@ -7315,6 +7315,9 @@
       "browser_tests": [],
       "implementation_files": [
         ".github/workflows/deploy-production.yml",
+        ".github/workflows/release.yml",
+        "scripts/release_cadence.py",
+        "scripts/release_publication.py",
         "scripts/make_release.py",
         "scripts/package_app.py",
         "scripts/resolve_release_predecessor.py",
@@ -7325,18 +7328,21 @@
         "deploy/systemd/casino-release-poller.timer.template",
         "scripts/write_release_env.py",
         "scripts/edge_gate.py",
+        "docs/production_cicd_runbook.md",
+        "docs/release_artifacts.md",
+        "docs/release_versioning.md",
         "docs/production_service.md",
         "tests/cicd_deployment_tests.py",
         "tests/release_artifact_tests.py"
       ],
       "introduced_in": "cicd-main-deploy",
-      "changed_in": "issue-732-release-poller",
-      "notes": "The publication workflow has no manual dispatch or production-connection path, never uses release-list ordering for rollback policy, never repairs root-managed monitor configuration automatically, and never shell-sources the root-managed Authorization assignment. The host needs no inbound Actions credentials. Pull delivery uses the root-managed monitor bearer for readiness rather than a browser login and keeps migration application held."
+      "changed_in": "issue-1084-three-hour-release-cadence",
+      "notes": "The pure three-hour planner has no clock, network, reservation, PR, publication, asset, scheduler or host authority. The push preflight has contents/pull-request read only; code-only no-op skips the writer. Changed identity requires one exact main-targeting release-only PR and either authoritative Release-API 404 plus absent peeled tag or complete exact-head reuse. Mutation runs only on attempt 1 and rechecks current main inside a shared queue:max/cancel-false lock. A needs-only always aggregate preserves the required context truthfully. The release-event lane has contents read and never uploads or replaces assets. The existing five-minute host poller, schema-two apply-held MySQL production, application-only rollback and no-inbound-credential boundary remain unchanged."
     },
     {
       "id": "TEST-133",
       "module": "Tests",
-      "description": "Listener-free CI/CD evidence verifies the production workflow's protected-main trigger, immutable version-conflict refusal, compatibility-declared predecessor selection, exact downloaded-manifest binding, rejection of release-list ordering, workflow-derived extracted-host script inventory, hosted-asset publication and verification, absence of runner-to-host SSH credentials or commands, secret-safe monitor pair validation and explicit atomic repair, exact non-shell Authorization handoff, generated release.env installation, post-cutover edge observation, and application rollback path.",
+      "description": "Listener-free CI/CD evidence verifies code-only publication no-op, exact release-wrapper eligibility, first-attempt and current-main rebinding, forced/nonlinear/missing history refusal, compatible next-patch and semantic path/field allowlists, predecessor checksum/schema binding, dual release/tag absence, complete exact-head reuse, failure and malformed-state holds, lightweight/annotated tags, shared non-cancellable queued publication, verify-only release events, the needs-only aggregate truth table, and pure three-hour no-change/not-due/blocked/eligible planning.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-CICD-001"
@@ -7344,10 +7350,15 @@
       "browser_tests": [],
       "implementation_files": [
         "tests/cicd_deployment_tests.py",
+        "tests/release_cadence_tests.py",
+        "tests/cases/api/delivery_infrastructure.py",
         "tests/release_predecessor_tests.py",
         "tests/monitor_config_tests.py",
         "tests/release_artifact_tests.py",
         ".github/workflows/deploy-production.yml",
+        ".github/workflows/release.yml",
+        "scripts/release_cadence.py",
+        "scripts/release_publication.py",
         "scripts/make_release.py",
         "scripts/package_app.py",
         "scripts/resolve_release_predecessor.py",
@@ -7355,8 +7366,8 @@
         "scripts/run_edge_monitor.py"
       ],
       "introduced_in": "cicd-main-deploy",
-      "changed_in": "issue-732-release-poller",
-      "notes": "This proof reads inert workflow text and isolated temporary environment fixtures only; shell-significant synthetic bearer bytes remain inert and are never executed. It does not open SSH, query GitHub, publish a release, deploy, mutate production configuration, mutate DNS, or run a browser."
+      "changed_in": "issue-1084-three-hour-release-cadence",
+      "notes": "This proof reads inert workflow text, pure explicit observation records, mocked GitHub GET results, synthetic hosted bytes and disposable local Git histories only. It exercises every aggregate result combination and rejects attempt-2 mutation, arbitrary allowlisted prose or compatibility notes, product/API/game/storage/migration/workflow changes, partial releases, ambiguous PRs and network/auth/rate failures. It does not open a listener or SSH, contact GitHub or production, create a PR/tag/release/asset, mutate a host/provider/database/DNS, run a browser or weaken a gate."
     },
     {
       "id": "STORAGE-008",

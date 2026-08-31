@@ -1,6 +1,6 @@
 # Reproducible release artifacts
 
-Requirements `TOOL-003` and `TOOL-011` define the repository-only release-artifact and rollback-provenance gate. Producing a candidate is evidence; it is not approval to deploy or expose the application.
+Requirements `TOOL-003`, `TOOL-008`, and `TOOL-011` define the repository-only release-artifact, publication-intent and rollback-provenance gates. Producing a candidate is evidence; it is not approval to deploy or expose the application.
 
 ## Candidate assets
 
@@ -28,16 +28,17 @@ The verifier then authenticates the archive checksum and complete member invento
 
 Pull requests and manual workflow runs may build a seven-day unpublished Actions artifact. A manual `app_version` must exactly match `modules/module-manifest.json`.
 
-Immutable GitHub Release publication is a separate job and remains fail closed unless all of these conditions hold:
+Ordinary protected-main pushes with an unchanged packaged version are read-only publication no-ops. Every three-hour batch uses one independently reviewed release-only wrapper; the [production CI/CD runbook](production_cicd_runbook.md#three-hour-coordinator-procedure-1084) specifies the coordinator, semantic allowlist, failure holds and live acceptance evidence. Immutable publication requires all of these conditions:
 
-1. The trigger is a published GitHub Release event for the canonical `v<version>` tag.
-2. GitHub reports the release ref as protected.
-3. Repository variable `ENABLE_IMMUTABLE_RELEASE_PUBLISH` is explicitly set to `true`.
-4. The `immutable-release` environment permits the job.
-5. A prior non-draft, non-prerelease asset supplies a valid `release-manifest.json` rollback pointer.
-6. Independent checksum, exact commit/tag, file inventory, rollback, and clean-copy smoke verification passes.
+1. The trigger is an exact protected-main push whose one merged release-only PR and semantic identity-only diff pass the read-only preflight.
+2. Inside the shared publication lock, current protected main still equals the reviewed wrapper result and the candidate is the next compatible packaged patch.
+3. The Release API authoritatively reports absence and the peeled tag is absent, or an already complete stable release binds exactly the same full source SHA and three assets. Unknown, conflicting, draft and partial states fail closed.
+4. The compatibility-declared stable predecessor binds its exact source, archive and manifest checksums and accepts schema-two application-only rollback.
+5. A new candidate passes the unchanged release-driver validations; downloaded hosted bytes pass canonical checksum, exact commit/tag, inventory, rollback and clean-copy verification.
 
-Release assets are uploaded without replacement semantics. An asset-name collision fails rather than mutating an existing immutable artifact.
+Only the conditional main-push job has normal publication write permission. It creates the three assets once; exact-head reruns download/verify existing bytes and never replace assets. The legacy `Publish exact-main release` required context is an always-running read-only aggregate and cannot hide prerequisite failure behind a skipped writer.
+
+The `release: published` lane is independent **verify-only** evidence. It retains the protected-ref, `ENABLE_IMMUTABLE_RELEASE_PUBLISH=true` and `immutable-release` environment gates, but now has only `contents: read`: it authenticates the peeled tag, full source, hosted three assets and exact predecessor, then runs checksum/archive/rollback/clean-copy verification. It does not rebuild, upload, replace, delete, or publish. This prevents sequential duplicate asset mutation after the main-push publisher. The historical one-time predecessor recovery below remains separate and unchanged apart from shared non-cancellable serialization.
 
 ## Protected v9.2.0 predecessor recovery
 
