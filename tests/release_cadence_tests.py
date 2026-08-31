@@ -229,6 +229,17 @@ class ReleaseCadenceTests(unittest.TestCase):
         with self.assertRaises(policy.PolicyError):
             policy.validate_predecessor(self.candidate, encoded(self.previous) + b" ", "d" * 40)
 
+    def test_wrapper_cannot_skip_the_packaged_version_it_replaces(self):
+        arguments = self.arguments()
+        candidate = copy.deepcopy(self.candidate)
+        candidate["predecessor"].update(app_version="0.9.5.84",
+                                        compatibility_record="contracts/compatibility/app-0.9.5.84.json")
+        arguments["candidate"] = candidate
+        arguments["changes"] = {**self.changes, "contracts/compatibility/app-0.9.5.87.json":
+                                policy.Change(None, encoded(candidate), None)}
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_predecessor_not_replaced_version"):
+            policy.publication_intent(**arguments)
+
     def test_creation_and_complete_duplicate_reuse_are_distinct(self):
         self.assertEqual(policy.release_state("0.9.5.87", "2" * 40, None, None), "create")
         self.assertEqual(policy.release_state("0.9.5.87", "2" * 40, "2" * 40, self.release()), "reuse")

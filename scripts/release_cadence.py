@@ -220,6 +220,9 @@ def validate_wrapper(before_manifest, after_manifest, changes, old_compatibility
         require(old == new, "wrapper_module_descriptor_behavior")
     require(expected_manifest == after_manifest, "wrapper_manifest_behavior")
     require(candidate.get("app_version") == new_version and candidate.get("modules") == modules_after, "wrapper_compatibility_identity")
+    require(candidate.get("predecessor", {}).get("app_version") == old_version and
+            candidate["predecessor"].get("compatibility_record") == f"contracts/compatibility/app-{old_version}.json",
+            "wrapper_predecessor_not_replaced_version")
     expected_keys = {"app_version", "source_baseline", "api_compatibility_matrix",
                      "release_provenance_requirement", "release_channel", "access_policy",
                      "predecessor", "rollback", "modules", "notes"}

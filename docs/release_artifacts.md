@@ -33,7 +33,7 @@ Ordinary protected-main pushes with an unchanged packaged version are read-only 
 1. The trigger is an exact protected-main push whose one merged release-only PR and semantic identity-only diff pass the read-only preflight.
 2. Inside the shared publication lock, current protected main still equals the reviewed wrapper result and the candidate is the next compatible packaged patch.
 3. The Release API authoritatively reports absence and the peeled tag is absent, or an already complete stable release binds exactly the same full source SHA and three assets. Unknown, conflicting, draft and partial states fail closed.
-4. The compatibility-declared stable predecessor binds its exact source, archive and manifest checksums and accepts schema-two application-only rollback.
+4. The compatibility-declared predecessor is exactly the packaged version being replaced; it binds that version's exact source, archive and manifest checksums and accepts schema-two application-only rollback.
 5. A new candidate passes the unchanged release-driver validations; downloaded hosted bytes pass canonical checksum, exact commit/tag, inventory, rollback and clean-copy verification.
 
 Only the conditional main-push job has normal publication write permission. It creates the three assets once; exact-head reruns download/verify existing bytes and never replace assets. The legacy `Publish exact-main release` required context is an always-running read-only aggregate and cannot hide prerequisite failure behind a skipped writer.
