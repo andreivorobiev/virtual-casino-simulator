@@ -11488,7 +11488,7 @@
     {
       "id": "TOOL-017",
       "module": "Tooling",
-      "description": "Ordinary pull requests classify Long Suite 100 scope fail closed, skip all four workers only for an explicitly documentation-only diff while preserving the exact required aggregate context, and build unpublished release candidates from exact-head sibling required-context evidence without repeating their validators. Manual, protected-main, and release-event candidates retain the complete canonical validation sequence. A scheduled and manually dispatchable maintenance workflow regenerates the Browser duration profile only from successful protected-main shard artifacts and publishes changed bytes through a reviewable issue-linked draft pull request.",
+      "description": "Ordinary pull requests classify Long Suite 100 scope fail closed, skip all four workers only for an explicitly documentation-only diff while preserving the exact required aggregate context, and build unpublished release candidates from exact-head sibling required-context evidence without repeating their validators. Manual and protected-main candidates retain the complete canonical validation sequence. Published release events use read-only authority to verify exact hosted current and predecessor assets, checksums, predecessor metadata, package provenance, and application-only rollback evidence without rebuilding, uploading, or mutating a release. A scheduled and manually dispatchable maintenance workflow regenerates the Browser duration profile only from successful protected-main shard artifacts and publishes changed bytes through a reviewable issue-linked draft pull request.",
       "status": "PASS",
       "api_tests": [
         "CI-COMPUTE-001"
@@ -11514,13 +11514,13 @@
         "docs/ci_compute.md"
       ],
       "introduced_in": "issue-710-ci-compute-redundancy",
-      "changed_in": "issue-721-test-harness-knobs",
-      "notes": "Changed-file API failure, empty output, malformed decisions, unknown paths, and non-PR events all run the full matrix. The PR evidence mode is rejected outside GitHub pull-request Actions and cannot carry a tag, manual version, or rollback manifest. The documentation-only closure workflow and its exact issue-evidence boundary are recorded in docs/ci_compute.md. Issue #721 adds a serialized weekly/on-demand profile refresh that writes only tests/browser_case_durations.json, refuses duplicate branches or PRs, files a maintenance issue, opens a draft PR, and never pushes main or auto-merges. Because the workflow token suppresses recursive pull-request events, it explicitly dispatches all nine unchanged qualification workflows against the exact generated branch; the unpublished release-candidate lane receives the canonical packaged version and cannot publish."
+      "changed_in": "issue-1084-three-hour-release-cadence",
+      "notes": "Changed-file API failure, empty output, malformed decisions, unknown paths, and non-PR events all run the full matrix. The PR evidence mode is rejected outside GitHub pull-request Actions and cannot carry a tag, manual version, or rollback manifest. Issue #1084 keeps the published release-event lane read-only and verifies already-hosted current and predecessor evidence instead of rebuilding or mutating a release. The documentation-only closure workflow and its exact issue-evidence boundary are recorded in docs/ci_compute.md. Issue #721 adds a serialized weekly/on-demand profile refresh that writes only tests/browser_case_durations.json, refuses duplicate branches or PRs, files a maintenance issue, opens a draft PR, and never pushes main or auto-merges. Because the workflow token suppresses recursive pull-request events, it explicitly dispatches all nine unchanged qualification workflows against the exact generated branch; the unpublished release-candidate lane receives the canonical packaged version and cannot publish."
     },
     {
       "id": "TEST-183",
       "module": "Tests",
-      "description": "Listener-free tests prove the documentation-only classifier, behavior-bearing fail-closed paths, exact long_suite_100 gate identity, successful-or-explicit-skip dependency contract, one PR-only optimized release command, full manual and release commands, rejection of local optimized-mode use before subprocess execution, and the bounded issue-linked Browser duration-profile refresh policy.",
+      "description": "Listener-free tests prove the documentation-only classifier, behavior-bearing fail-closed paths, exact long_suite_100 gate identity, successful-or-explicit-skip dependency contract, one PR-only optimized release command, the full manual candidate command, exact read-only hosted release-event verification commands with mutation paths absent, rejection of local optimized-mode use before subprocess execution, and the bounded issue-linked Browser duration-profile refresh policy.",
       "status": "PASS",
       "api_tests": [
         "CI-COMPUTE-001"
@@ -11532,8 +11532,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-710-ci-compute-redundancy",
-      "changed_in": "issue-721-test-harness-knobs",
-      "notes": "The suite reads workflow and source text and exercises pure argument guards only; it opens no listener, browser, GitHub, database, provider, credential, or production connection. Hosted closure evidence is accepted only when the documentation-only pull request skips every Long Suite worker while the unchanged aggregate context and unpublished candidate both succeed. Issue #721 proves protected-main successful-run selection, exact shard artifact download, strict regeneration, no-change suppression, one-path staging, issue linkage, draft PR creation, and absence of direct-main push or auto-merge."
+      "changed_in": "issue-1084-three-hour-release-cadence",
+      "notes": "The suite reads workflow and source text and exercises pure argument guards only; it opens no listener, browser, GitHub, database, provider, credential, or production connection. Issue #1084 binds release-event verification to exact hosted current and predecessor assets while rejecting rebuild, upload, release mutation, tag, and push commands in that job. Hosted closure evidence is accepted only when the documentation-only pull request skips every Long Suite worker while the unchanged aggregate context and unpublished candidate both succeed. Issue #721 proves protected-main successful-run selection, exact shard artifact download, strict regeneration, no-change suppression, one-path staging, issue linkage, draft PR creation, and absence of direct-main push or auto-merge."
     },
     {
       "id": "TOOL-018",
