@@ -10,7 +10,7 @@ When the decision is `SKIP`, all four shard jobs remain skipped and the exact `l
 
 ## Unpublished release candidates
 
-An unpublished candidate built for a GitHub pull request consumes exact-head results from the sibling `ci`, `contract_tests`, `module_boundaries`, and `docs` required contexts. It still packages the candidate and runs copied-release smoke coverage. The optimized mode rejects local, manual, protected-main, release-event, tagged, and rollback-manifest invocations; those paths retain the complete canonical validation sequence.
+An unpublished candidate built for a GitHub pull request consumes exact-head results from the sibling `ci`, `contract_tests`, `module_boundaries`, and `docs` required contexts. It still packages the candidate and runs copied-release smoke coverage. The optimized mode rejects local, manual, protected-main, release-event, tagged, and rollback-manifest invocations. Manual and protected-main candidates retain the complete canonical validation sequence. A published release event does not rebuild or upload a candidate; with read-only authority, it independently verifies the exact hosted release and predecessor assets, checksums, predecessor metadata, package provenance, and application-only rollback evidence.
 
 ## Acceptance evidence
 

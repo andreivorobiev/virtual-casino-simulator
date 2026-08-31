@@ -91,18 +91,63 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         # Reject pull-request deployment so drafts can never cut production over.
         self.assertNotIn("pull_request:", text)
 
-    # Prove immutable package-version reuse fails instead of deploying stale assets.
-    def test_workflow_refuses_tag_reuse_at_another_commit(self):
+    # Ordinary code merges have no publication authority; only a verified wrapper reaches the writer.
+    def test_workflow_separates_read_only_intent_from_publication_authority(self):
         # Read the workflow source as inert text.
         text = self.workflow_text()
-        # Require tag identity to be resolved from canonical module metadata.
-        self.assertIn("modules/module-manifest.json", text)
-        # Require remote tag lookup before publication.
-        self.assertIn('git ls-remote --tags origin "refs/tags/${RELEASE_TAG}"', text)
-        # Require mismatched tag targets to fail clearly.
-        self.assertIn("already points to another commit", text)
+        read_job, writer_job = text.split("  publish-release:", 1)
+        self.assertIn("contents: read", read_job)
+        self.assertNotIn("contents: write", read_job)
+        self.assertNotIn("pip install", read_job)
+        self.assertIn("needs: release-intent", writer_job)
+        self.assertIn("if: needs.release-intent.outputs.decision == 'publish'", writer_job)
+        self.assertIn("contents: write", writer_job)
+        self.assertEqual(text.count("python scripts/release_publication.py inspect"), 2)
+        self.assertIn("python scripts/release_publication.py inspect --under-lock", writer_job)
+        self.assertIn("group: production-deploy-main", writer_job)
+        self.assertIn("queue: max", writer_job)
+        self.assertNotIn("schedule:", text)
         # Require release candidates to be built with a predecessor manifest for rollback eligibility.
         self.assertIn('python scripts/make_release.py --release-tag "${RELEASE_TAG}" --previous-manifest previous/release-manifest.json', text)
+        self.assertIn("if: steps.release_identity.outputs.release_state == 'create'", text)
+
+    def test_all_publication_paths_share_one_non_cancellable_lock(self):
+        text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        for job in ("bootstrap-v9-2-predecessor:", "publish-immutable-release:"):
+            section = text.split(job, 1)[1].split("    steps:", 1)[0]
+            self.assertIn("group: production-deploy-main", section)
+            self.assertIn("cancel-in-progress: false", section)
+            self.assertIn("queue: max", section)
+        self.assertIn("group: release-candidate-${{ github.ref }}", text)
+        top_concurrency = text.split("jobs:", 1)[0].split("concurrency:", 1)[1]
+        self.assertIn("cancel-in-progress: false", top_concurrency)
+        self.assertIn("queue: max", top_concurrency)
+        event_lane = text.split("  publish-immutable-release:", 1)[1]
+        self.assertIn("contents: read", event_lane)
+        self.assertNotIn("contents: write", event_lane)
+        self.assertNotIn("gh release upload", event_lane)
+        self.assertNotIn("gh release create", event_lane)
+        self.assertNotIn("gh release edit", event_lane)
+        self.assertNotIn("actions/download-artifact", event_lane)
+        self.assertIn("scripts/release_publication.py inspect-hosted", event_lane)
+        self.assertIn("scripts/release_publication.py verify-checksums", event_lane)
+        self.assertIn("--verify-manifest previous/release-manifest.json", event_lane)
+
+    def test_legacy_context_is_an_always_read_only_aggregate(self):
+        text = self.workflow_text()
+        aggregate = text.split("  publication-result:", 1)[1]
+        self.assertEqual(text.count("name: Publish exact-main release"), 1)
+        self.assertIn("name: Publish exact-main release", aggregate)
+        self.assertIn("if: always()", aggregate)
+        self.assertIn("needs: [release-intent, publish-release]", aggregate)
+        self.assertIn("contents: read", aggregate)
+        self.assertNotIn("contents: write", aggregate)
+        self.assertNotIn("uses:", aggregate)
+        self.assertNotIn("actions/checkout", aggregate)
+        self.assertNotIn("actions/setup", aggregate)
+        self.assertNotIn("scripts/release_publication.py", aggregate)
+        self.assertIn("success:noop:skipped|success:publish:success", aggregate)
+        self.assertIn("*) exit 1", aggregate)
 
     # Prove rollback selection follows repository compatibility policy instead of release ordering.
     def test_workflow_uses_compatibility_declared_predecessor(self):
@@ -127,6 +172,8 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         self.assertIn('gh release download "${RELEASE_TAG}" --pattern virtual_casino_simulator_package.zip --pattern release-manifest.json --pattern checksums.txt --dir published --clobber', text)
         # Require hosted assets to be verified against exact commit, tag, and rollback provenance.
         self.assertIn('python scripts/package_app.py --verify-only --archive published/virtual_casino_simulator_package.zip --manifest published/release-manifest.json --expected-commit "${GITHUB_SHA}" --expected-tag "${RELEASE_TAG}" --require-rollback', text)
+        self.assertIn("python scripts/release_publication.py verify-checksums --directory published", text)
+        self.assertNotIn("2>/dev/null", text)
         # Preserve the existing bounded Actions artifact as publication evidence.
         self.assertIn("name: production-release-assets", text)
         # Reject any consumer job because the host downloads the immutable public Release directly.

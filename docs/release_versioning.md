@@ -54,3 +54,11 @@ Do not spend `0.9.6.0` on a small fix, docs-only change, release-retry, or mecha
 Independent module versions still use normal three-part module revisions such as `1.60.37` or `9.51.21`.
 
 Do not read a module version as the product release. The product release comes only from the top-level `application` field in `modules/module-manifest.json`.
+
+## Three-hour batch identities
+
+Ordinary accepted code-only merges keep the packaged identity unchanged and do not publish. Root prepares one release-only wrapper for new accepted changes at each governed three-hour window, after confirming no active or failed publication/rollout and no competing wrapper. No-change windows produce no release. See [the cadence procedure](production_cicd_runbook.md#three-hour-coordinator-procedure-1084).
+
+The generic wrapper gate accepts only the next patch in the same four-part line. A skipped/burned identity, major/platform/wave change, incompatible predecessor or failed publication requires a separately reviewed decision; it cannot be hidden by reusing tags, replacing assets, or spending `0.9.6.0`.
+
+Release identity changes do not waive module-version rules. The PWA/package identity, enumerated release documentation and new compatibility record require exact matching compatible patch bumps for application, docs and contracts. Optional literal-only release-test alignment requires a tests patch bump. Descriptor ownership/dependency fields, unrelated module revisions and executable behavior remain unchanged. Product changes, including What's New activation or copy, must be accepted outside the generic wrapper.

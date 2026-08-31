@@ -73,8 +73,12 @@ def _run_cicd_deployment_tests():
     """Run immutable-publication and rollback workflow policy evidence."""
     # Import the workflow suite only when its mapped API case runs.
     from tests import cicd_deployment_tests
-    # Load only the focused protected-main workflow policy class.
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(cicd_deployment_tests.CicdDeploymentWorkflowTests)
+    from tests import release_cadence_tests
+    # Keep the existing case identity while adding executable no-op/wrapper/batch evidence.
+    suite = unittest.TestSuite([
+        unittest.defaultTestLoader.loadTestsFromTestCase(cicd_deployment_tests.CicdDeploymentWorkflowTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(release_cadence_tests.ReleaseCadenceTests),
+    ])
     # Execute the suite with concise in-process reporting.
     result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
     # Fail the mapped gate when any workflow assertion failed or errored.

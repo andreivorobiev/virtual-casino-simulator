@@ -4,7 +4,7 @@ This is the plain-English operating note for Casino production deploys.
 
 ## Goal
 
-Every protected `main` merge should automatically become the production release. A human should not have to rebuild a package on a laptop, copy files by hand, or log into the browser just to prove the site is healthy.
+Accepted protected `main` changes accumulate for one reviewed immutable release every three hours. Ordinary code-only merges are successful publication no-ops. Only a separate release-only wrapper publishes; the existing host poller delivers that release. A laptop build, inbound upload, or alternate host route is not part of the cadence.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
@@ -12,12 +12,12 @@ Packaged release numbers use the four-part scheme documented in [the release ver
 
 ## What happens after a merge
 
-1. A push to protected `main` starts `.github/workflows/deploy-production.yml`.
-2. The workflow reads the packaged application version from `modules/module-manifest.json`.
-3. It builds the exact `v<version>` release from the protected-main commit.
-4. It refuses to overwrite an existing tag that points at a different commit.
+1. A push to protected `main` starts `.github/workflows/deploy-production.yml`. A separate read-only job validates exact before/head ancestry and reads `modules/module-manifest.json` from those Git objects.
+2. An unchanged packaged version produces a successful no-op without dependency installation, a release build, or a write-capable job. Missing/forced/nonlinear history and malformed identities fail closed.
+3. A changed version must be the next compatible patch and the exact result of one merged, main-targeting `Release-only: yes` PR on its canonical release branch. The semantic wrapper allowlist rejects unrelated source, API, provider, migration, test behavior, descriptor topology, or policy changes.
+4. The conditional publisher rechecks exact current main and remote release state inside the shared publication lock. Creation requires both an authoritative Release API 404 and an absent peeled tag. A complete exact-head release can be verified and reused; tag conflicts, drafts, partial uploads, authentication/rate-limit/network ambiguity, or malformed responses stop publication.
 5. It resolves the exact predecessor from the current compatibility record, downloads only that immutable release manifest, and verifies the manifest's version, tag, and full source commit before packaging.
-6. It publishes or reuses the matching GitHub Release assets.
+6. It builds a new exact-head candidate through the existing complete release driver and publishes its three immutable assets once, or downloads the already complete exact-head release without uploading replacements. Canonical checksums, archive, manifest, inventory, predecessor and clean-copy verification remain mandatory.
 7. The workflow stops after hosted-asset verification. It owns publication and never opens an inbound production connection.
 8. `casino-release-poller.timer` runs on the production host every five minutes and queries the public GitHub Releases API.
 9. The poller compares the installed four-part version with the newest stable release and never downgrades.
@@ -31,6 +31,29 @@ Packaged release numbers use the four-part scheme documented in [the release ver
 17. The existing edge-monitor timer runs `check-lag`; a published release that remains newer than production for more than three poll intervals fails loudly and records `release_delivery_lag`.
 
 The pull bridge invokes no migration command and changes no database schema, data, grant, account, provider, or server global. MySQL remains the default and retains its exact schema-two compatibility command. A host explicitly configured with `CASINO_STORAGE_PROVIDER=postgres` instead runs the packaged SELECT-only PostgreSQL runtime checker; any other provider value fails closed. Each host may select only an absolute reviewed `CASINO_EDGE_POLICY_PATH`, with the current TiltSeven profile remaining the default. Candidate, activated, and rolled-back compatibility checks import `casino` and `scripts` from the exact selected immutable release. The direct poller and both systemd observation paths set `PYTHONDONTWRITEBYTECODE=1` before those imports, so a rollback drill cannot add `__pycache__` or `.pyc` entries that make the same verified release fail the immediately following first pull. Exact-root comparison remains strict for changed, missing, symlinked, or unrelated extra entries. The retired GitHub-runner SSH leg is not an emergency fallback; issue #450 documents the unrevived self-hosted-runner alternative.
+
+The required context `Publish exact-main release` is a separate read-only `always()` aggregate. It passes only for a successful no-op with a skipped writer or a successful eligible publication/reuse. A failed, cancelled, missing or inconsistent prerequisite cannot report green. The independent `release: published` lane in `release.yml` verifies already hosted assets with read permission only; it never uploads them a second time.
+
+## Three-hour coordinator procedure (#1084)
+
+The owner-authorized first window is **2026-08-31 15:00 America/Los_Angeles**, then every three hours. The root coordinator owns the recurring wakeup, window claim, release-only branch/PR, independent acceptance, protected merge, and rollout decision. This repository adds no scheduler, writer service, credential, host route, or timer installation. The host's existing five-minute polling interval is unchanged.
+
+1. Refresh exact protected main, the latest immutable release and its hosted manifest, the accepted live MySQL identity, active publication/rollout state, and any open release-only PR. Publication metadata or a public version string alone is not fresh authenticated live-state evidence.
+2. Run the pure planner against explicit sanitized observations with `python scripts/release_publication.py batch-plan --input <observations.json>`. Its typed `not-due`, `no-change`, `blocked`, or `eligible` decision includes the one current window and a SHA-256-bound evidence record. It has no clock, network, reservation, PR, release or host authority. The required input fields are `main_sha`, `released_sha`, `live_sha`, `app_version`, `predecessor_manifest_sha256`, `first_window`, `now`, `last_claimed_window`, `publication`, `rollout`, and `open_wrapper`. Times carry explicit UTC offsets; publication/rollout are exactly `idle`, `active`, or `failed`.
+3. Stop for an active/failed publication or rollout, an open wrapper, a claimed window, or a published release not yet accepted live. Skip a window with no new accepted main changes. Missed windows do not create catch-up releases. Record the decision durably in the coordination issue before mutation.
+4. Immediately rebind all observations, claim this window once, and open one `codex/release-v<version>` release-only PR from accepted main. Allocate the next unused compatible patch; a burned or failed identity requires explicit classification and a newly reviewed release scope, never tag/asset replacement or an unexamined retry. A mutation-capable push run is valid only on attempt 1; manually rerunning a failed publication is held. Preserve `0.9.6.0` for its separately accepted product wave.
+5. Follow the strict identity-only wrapper rules below, complete the normal exact-head checks and independent review, then have root perform the protected merge. Hold additional merges while that wrapper's publication/rollout is active; a moved main is not silently published from a stale plan.
+6. Let the existing trusted host poller deliver the immutable hosted release. Root must bind exact live build/version and MySQL provider, schema `2`/apply held, required Browser/PWA/readiness/Admin/security/monitor evidence, before/after persistence, application-only rollback readiness/proof, and cleanup before recording deployment complete. Preserve the last-good release and stop on any failed or unknown gate; no alternate delivery route, blind rerun, provider activation or database rollback is authorized.
+
+All publication-related jobs share `production-deploy-main` with `cancel-in-progress: false` and `queue: max`. GitHub bounds that queue to 100 waiting jobs; queue exhaustion or unexpected ordering is an operational hold, not proof that every release was delivered. The root single-wrapper rule, locked current-main check and exact immutable rechecks remain necessary. See [GitHub concurrency semantics](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
+
+### Strict release-wrapper contents
+
+`scripts/release_cadence.py` owns the closed path/field allowlist. A wrapper changes the canonical packaged version, only the `pyproject.toml` version and `PWA_APP_VERSION` literal, and exactly one new compatibility record with exact retained predecessor hashes/source and unchanged admission/API/schema-two/application-only policy. Prior compatibility records stay byte-identical.
+
+Only enumerated release documentation and deterministic generated version rows may change. Application/docs/contracts receive matching patch increments in the aggregate manifest and their descriptors; every other descriptor field and unrelated module stays unchanged. If the optional release tests change, only exact version/predecessor literal substitutions are allowed and tests also receives its matching patch increment. Assertions and control flow cannot change. Requirement IDs, meaning, status and test mappings cannot change inside a wrapper; optional TOOL-003/TOOL-011 edits are limited to mechanically aligned release provenance. What's New activation/copy, localization, product source, workflow changes and new test behavior must already be accepted as ordinary product/engineering work or receive a separate explicit release scope.
+
+This is the cadence implementation, not proof of any new production rollout. Issue #435 has separate acceptance; the historical host-poller installation evidence is recorded in [#732](https://github.com/andreivorobiev/virtual-casino-simulator/issues/732#issuecomment-5304668365).
 
 This runbook's numbered host steps describe the existing MySQL deployment at `casino.tiltseven.com`. The separate OCI PostgreSQL preview uses the same immutable publication and poller controls but follows the target, edge-profile, DNS, backup, and stop/rollback boundaries in [`oci_postgres_preview.md`](oci_postgres_preview.md).
 
