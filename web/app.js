@@ -37,7 +37,7 @@ import { createLoginView } from './views/login.js';
 // Import the catalog router so app.js remains shell and view composition. (CORE-007, SESSION-013)
 import { createAppRouter } from './core/app_router.js';
 // Import browser lifecycle startup and compatible session normalization. (PWA-002, UX-026)
-import { currentTokenBalance, normalizeCurrentUser, startApplication } from './core/app_bootstrap.js';
+import { createSessionWarningController, currentTokenBalance, normalizeCurrentUser, startApplication } from './core/app_bootstrap.js';
 // Import the event-backed PWA boundary so routing never depends on lagging navigator state. (PWA-002)
 import { isPwaOffline } from './core/pwa.js';
 
@@ -53,8 +53,6 @@ let shellConnected = false;
 let currentSession = null;
 // Own every asynchronous shell route so public-account navigation can invalidate stale game work. (SESSION-013)
 const shellNavigationOwnership = createNavigationOwnership();
-// Hold the current pre-expiration warning timer so session replacement cannot leave a stale alert. (SESSION-012)
-let sessionWarningTimer = null;
 // Own BFCache-safe wallet controller replacement for the complete application module lifetime.
 const walletCelebrationLifecycle = createWalletCelebrationLifecycle({
   // Bind pagehide and pageshow to the current browser document.
@@ -74,6 +72,13 @@ let appRouter = null;
 const wellnessController = createWellnessController({ apiClient: api, documentRef: document, windowRef: window, translate: (key, values) => t(key, values, 'shell'), formatTokens: tokens });
 // Bind one document-lifetime tour controller to the existing self-only API and installed locale fallback.
 const whatsNewController = createWhatsNewController({ apiClient: api, documentRef: document, windowRef: window, translate: key => t(key, {}, 'shell') });
+// Keep server-authored warning timing outside application composition and identity state. (SESSION-012)
+const sessionWarningController = createSessionWarningController({
+  clearTimer: timer => clearTimeout(timer),
+  now: () => Date.now(),
+  notify: minutes => toast(t('session.expiryWarning', { minutes }, 'shell')),
+  setTimer: (callback, delay) => setTimeout(callback, delay),
+});
 // Bind login, guest entry, OAuth completion, and provider account controls to shell composition seams.
 const { beginOAuth, oauthCompletionCopy, renderLoginGate, renderOAuthAccountControls } = createLoginView({
   api,
@@ -267,10 +272,8 @@ function isGuestSession() {
 function clearAuthenticatedShellState(options = {}) {
   // Invalidate every pending route operation unless a public-route caller already advanced ownership.
   if (options.invalidateNavigation !== false) shellNavigationOwnership.invalidate();
-  // Cancel any warning owned by the session being discarded.
-  clearTimeout(sessionWarningTimer);
-  // Clear the handle so a later session can schedule independently.
-  sessionWarningTimer = null;
+  // Cancel warning ownership before clearing identity or authenticated UI.
+  sessionWarningController.dispose();
   // Dispose reminders before clearing identity so late API responses cannot reopen authenticated UI.
   wellnessController.dispose();
   // Retire optional release-copy reads before an old subject can repaint the logged-out shell.
@@ -291,20 +294,6 @@ function clearAuthenticatedShellState(options = {}) {
   gameDescriptors = [];
   // Hide registered-user reporting whenever authenticated identity has been discarded.
   syncFeedbackReporter(null);
-}
-
-// Schedule one localized pre-expiration warning from the server-authored session descriptor. (SESSION-012)
-function scheduleSessionWarning() {
-  // Cancel the prior session's or prior refresh's timer before deriving a new deadline.
-  clearTimeout(sessionWarningTimer);
-  // Read only the safe descriptor returned by the current-user API.
-  const descriptor = currentSession?.session_status || {};
-  // Stop when warning is disabled, absent, or already terminal.
-  if (!descriptor.warn_at || Number(descriptor.warning_seconds || 0) <= 0 || Number(descriptor.expires_in_seconds || 0) <= 0) { sessionWarningTimer = null; return; }
-  // Compute a bounded client delay from the server-owned UTC instant.
-  const delay = Math.max(0, Math.min(Date.parse(descriptor.warn_at) - Date.now(), 2147483647));
-  // Schedule informational copy only; the next API remains the authoritative expiry decision.
-  sessionWarningTimer = setTimeout(() => toast(t('session.expiryWarning', { minutes: Math.max(1, Math.ceil(Number(descriptor.warning_seconds) / 60)) }, 'shell')), delay);
 }
 
 // Clear every shell-owned authenticated cache before showing the logged-out session-expired gate.
@@ -436,6 +425,8 @@ function transientRouteBearer(path) {
 
 // Enter the authenticated casino shell after login and terms are complete.
 async function enterAuthenticated(session) {
+  // Cancel the prior session's warning before adopting replacement identity.
+  sessionWarningController.dispose();
   // Clear any prior account's optional tour before terms or replacement-session work begins.
   whatsNewController.dispose();
   // Dispose any prior session generation before adopting a login, reconnect, or guest identity.
@@ -467,7 +458,7 @@ async function enterAuthenticated(session) {
   // Start optional reload-stable wellness reminders from this exact server session.
   await wellnessController.start(currentSession);
   // Schedule the server-authored warning only after the complete authenticated shell is visible.
-  scheduleSessionWarning();
+  sessionWarningController.schedule(currentSession.session_status);
   // Bind one controller to the persistent wallet nodes and this exact authenticated session.
   walletCelebrationLifecycle.mount(initialBalance);
   // Load casino state for status rail and initial lobby counts.

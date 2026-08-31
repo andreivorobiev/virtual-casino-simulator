@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 // Supply the one browser global published by the shared locale module during import.
 globalThis.window = {};
 // Import compatible session helpers after the browser-global seam exists.
-const { currentTokenBalance, normalizeCurrentUser } = await import("../../web/core/app_bootstrap.js");
+const { createSessionWarningController, currentTokenBalance, normalizeCurrentUser } = await import("../../web/core/app_bootstrap.js");
 // Import the extracted catalog router after the shared UI graph is initialized.
 const { createAppRouter } = await import("../../web/core/app_router.js");
 
@@ -118,4 +118,46 @@ test("CORE-007 keeps application composition under the series target", () => {
   // Bind navigation ownership and authoritative startup to their extracted modules.
   assert.ok(ROUTER_SOURCE.includes("navigationOwnership.claim()"));
   assert.ok(BOOTSTRAP_SOURCE.includes("await refreshCurrentSession()"));
+  // Keep pre-expiration timing in the extracted application lifecycle boundary.
+  assert.equal(APP_SOURCE.includes("function scheduleSessionWarning("), false);
+  assert.match(APP_SOURCE, /createSessionWarningController/);
+  assert.match(BOOTSTRAP_SOURCE, /export function createSessionWarningController/);
+});
+
+// Prove replacement, disabled descriptors, clamping, and disposal through an injected fake clock.
+test("SESSION-012 warning controller cancels stale generations and preserves bounded timing", () => {
+  // Retain fake host callbacks even after cancellation so generation fencing is independently proven.
+  const callbacks = new Map(), cleared = [], notices = [];
+  let nextHandle = 0;
+  // Build the production controller around deterministic timer and notification seams.
+  const controller = createSessionWarningController({
+    clearTimer: handle => { cleared.push(handle); },
+    now: () => 1_000,
+    notify: minutes => { notices.push(minutes); },
+    setTimer: (callback, delay) => { const handle = ++nextHandle; callbacks.set(handle, { callback, delay }); return handle; },
+  });
+  // Schedule one server-authored warning and preserve its minute rounding.
+  assert.equal(controller.schedule({ warn_at: new Date(61_000).toISOString(), warning_seconds: 61, expires_in_seconds: 120 }), true);
+  assert.deepEqual(callbacks.get(1).delay, 60_000);
+  // Replacement cancels the prior handle and clamps an unbounded future deadline.
+  assert.equal(controller.schedule({ warn_at: '9999-12-31T23:59:59.999Z', warning_seconds: 120, expires_in_seconds: 180 }), true);
+  assert.deepEqual(cleared, [1]);
+  assert.equal(callbacks.get(2).delay, 2147483647);
+  // A canceled callback cannot surface stale copy even if a host had already queued it.
+  callbacks.get(1).callback();
+  assert.deepEqual(notices, []);
+  // The owned generation publishes only the bounded display value.
+  callbacks.get(2).callback();
+  assert.deepEqual(notices, [2]);
+  // A disabled or terminal descriptor cancels the current generation and schedules nothing.
+  assert.equal(controller.schedule({ warn_at: new Date(2_000).toISOString(), warning_seconds: 0, expires_in_seconds: 1 }), false);
+  assert.deepEqual(cleared, [1, 2]);
+  assert.equal(nextHandle, 2);
+  // Disposal remains idempotent and fences an already-queued accepted callback.
+  assert.equal(controller.schedule({ warn_at: new Date(3_000).toISOString(), warning_seconds: 60, expires_in_seconds: 60 }), true);
+  controller.dispose();
+  controller.dispose();
+  callbacks.get(3).callback();
+  assert.deepEqual(notices, [2]);
+  assert.deepEqual(cleared, [1, 2, 3]);
 });
