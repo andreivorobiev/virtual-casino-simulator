@@ -71,7 +71,7 @@ def _validated_purchase_session_associations(state: dict) -> list[dict]:
     # Inspect every bounded record before trusting any one match.
     for record in records:
         # Require the two exact non-empty durable identifiers.
-        if not isinstance(record, dict) or not isinstance(record.get("purchase_id"), str) or not record["purchase_id"] or not isinstance(record.get("session_id"), str) or not record["session_id"]:
+        if not isinstance(record, dict) or set(record) != {"purchase_id", "session_id"} or not isinstance(record.get("purchase_id"), str) or not record["purchase_id"] or not isinstance(record.get("session_id"), str) or not record["session_id"]:
             # Reject partial or type-confused private metadata.
             raise ConflictError("Bingo purchase association state is invalid")
         # Read the immutable pair once for duplicate checks.
