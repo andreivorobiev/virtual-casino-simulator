@@ -59,6 +59,10 @@ Do not read a module version as the product release. The product release comes o
 
 Ordinary accepted code-only merges keep the packaged identity unchanged and do not publish. Root prepares one release-only wrapper for new accepted changes at each governed three-hour window, after confirming no active or failed publication/rollout and no competing wrapper. No-change windows produce no release. See [the cadence procedure](production_cicd_runbook.md#three-hour-coordinator-procedure-1084).
 
+The cadence is currently **HOLD** until an exact non-owner human reviewer and the required branch-protection, tag-ruleset, and supplemental-verifier environment settings are applied and independently accepted. A source or documentation correction does not authorize those provider changes, spend a packaged version, publish a release, or deploy it.
+
 The generic wrapper gate accepts only the next patch in the same four-part line. A skipped/burned identity, major/platform/wave change, incompatible predecessor or failed publication requires a separately reviewed decision; it cannot be hidden by reusing tags, replacing assets, or spending `0.9.6.0`.
 
 Release identity changes do not waive module-version rules. The PWA/package identity, enumerated release documentation and new compatibility record require exact matching compatible patch bumps for application, docs and contracts. Optional literal-only release-test alignment requires a tests patch bump. Descriptor ownership/dependency fields, unrelated module revisions and executable behavior remain unchanged. Product changes, including What's New activation or copy, must be accepted outside the generic wrapper.
+
+These rules classify packaged identity only. They do not change `/api/v1` or `/api/v2`, broaden any compatibility record, activate a storage provider, migrate a database, or authorize a release or production action.

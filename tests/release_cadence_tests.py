@@ -79,9 +79,21 @@ class ReleaseCadenceTests(unittest.TestCase):
             new = {**old, "version": self.after["modules"][name]}
             self.changes[f"modules/{name}.json"] = policy.Change(encoded(old), encoded(new))
         self.changes[policy.GENERATED_REQUIREMENTS] = policy.Change(self.generated(self.before), self.generated(self.after))
-        self.pull = {"merge_commit_sha": "2" * 40, "merged_at": "2026-08-31T22:00:00Z",
-                     "base": {"ref": "main"}, "head": {"ref": "codex/release-v0.9.5.87"},
-                     "title": "Release v0.9.5.87", "body": "Release-only: yes\n"}
+        self.wrapper_sha = "3" * 40
+        self.tree_sha = "4" * 40
+        self.pull = {
+            "number": 1096, "merge_commit_sha": "2" * 40,
+            "merged_at": "2026-08-31T22:00:00Z",
+            "base": {"ref": "main", "sha": "1" * 40,
+                     "repo": {"full_name": policy.REPOSITORY,
+                              "owner": {"login": policy.REPOSITORY_OWNER, "id": 100,
+                                        "type": "User"}}},
+            "head": {"ref": "codex/release-v0.9.5.87", "sha": self.wrapper_sha,
+                     "repo": {"full_name": policy.REPOSITORY}},
+            "user": {"login": policy.REPOSITORY_OWNER, "id": 100, "type": "User"},
+            "title": "Release v0.9.5.87", "body": "Release-only: yes\n",
+            "updated_at": "2026-08-31T21:57:00Z",
+        }
 
     def generated(self, manifest):
         rows = [f"Packaged application release: {manifest['application']}", "## Independent module revisions"]
@@ -89,10 +101,74 @@ class ReleaseCadenceTests(unittest.TestCase):
         return ("\n".join(rows) + "\n## Requirements\n- TOOL-008 remains governed.\n").encode()
 
     def arguments(self):
+        evidence = self.admission_evidence(self.wrapper_sha, self.tree_sha, self.pull)
         return dict(before_sha="1" * 40, head_sha="2" * 40, first_parent="1" * 40,
                     forced=False, protected=True, before_manifest=self.before, after_manifest=self.after,
                     changes=self.changes, old_compatibility=self.old_compatibility, candidate=self.candidate,
-                    catalog=self.catalog, pull_request=self.pull)
+                    catalog=self.catalog, pull_request=self.pull, second_parent=self.wrapper_sha,
+                    head_tree=self.tree_sha, wrapper_tree=self.tree_sha, **evidence)
+
+    def admission_evidence(self, wrapper_sha, tree_sha, pull):
+        """Build complete synthetic provider evidence for one immutable PR head."""
+        reviews = [{
+            "id": 501, "state": "APPROVED", "commit_id": wrapper_sha,
+            "user": {"login": "release-reviewer", "id": 200, "type": "User"},
+            "author_association": "COLLABORATOR",
+            "submitted_at": "2026-08-31T21:55:00Z",
+        }]
+        comments = []
+        metadata_sha256 = policy.wrapper_premerge_metadata_sha256(pull, tree_sha)
+        for index, role in enumerate(policy.OPERATIONAL_ACCEPTANCE_ROLES, start=1):
+            comments.append({
+                "id": 600 + index,
+                "body": policy.operational_receipt(role, wrapper_sha, tree_sha, metadata_sha256),
+                "created_at": "2026-08-31T21:56:00Z", "updated_at": "2026-08-31T21:56:00Z",
+                "author_association": "OWNER",
+                "user": {"login": policy.REPOSITORY_OWNER, "id": 100, "type": "User"},
+            })
+        runs, jobs, checks, suites = [], {}, {}, {}
+        for index, (path, gate_name) in enumerate(policy.REQUIRED_WORKFLOW_GATES.items(), start=1):
+            run_id, job_id, suite_id = 700 + index, 800 + index, 900 + index
+            runs.append({
+                "id": run_id, "path": path, "event": "pull_request", "run_attempt": 1,
+                "status": "completed", "conclusion": "success", "head_sha": wrapper_sha,
+                "updated_at": "2026-08-31T21:54:00Z",
+                "head_branch": pull["head"]["ref"], "check_suite_id": suite_id,
+                "head_commit": {"id": wrapper_sha, "tree_id": tree_sha},
+                "repository": {"full_name": policy.REPOSITORY},
+                "head_repository": {"full_name": policy.REPOSITORY}, "pull_requests": [],
+            })
+            job = {
+                "id": job_id, "name": gate_name, "run_id": run_id, "run_attempt": 1,
+                "head_sha": wrapper_sha, "status": "completed", "conclusion": "success",
+                "completed_at": "2026-08-31T21:54:00Z",
+                "check_run_url": f"https://api.github.com/repos/{policy.REPOSITORY}/check-runs/{job_id}",
+            }
+            jobs[run_id] = {"total_count": 1, "jobs": [job]}
+            checks[job_id] = {
+                "id": job_id, "name": gate_name, "head_sha": wrapper_sha,
+                "status": "completed", "conclusion": "success",
+                "completed_at": "2026-08-31T21:54:00Z",
+                "check_suite": {"id": suite_id},
+                "app": {"id": policy.GITHUB_ACTIONS_APP_ID, "slug": "github-actions"},
+            }
+            suites[suite_id] = {
+                "id": suite_id, "head_sha": wrapper_sha, "head_branch": pull["head"]["ref"],
+                "status": "completed", "conclusion": "success",
+                "updated_at": "2026-08-31T21:54:00Z",
+                "app": {"id": policy.GITHUB_ACTIONS_APP_ID, "slug": "github-actions"},
+            }
+        return {
+            "reviews": reviews, "comments": comments,
+            "reviewer_permissions": {200: {
+                "permission": "write", "role_name": "write",
+                "user": {"login": "release-reviewer", "id": 200, "type": "User"},
+            }},
+            "merge_pull": copy.deepcopy(pull),
+            "head_pulls": [copy.deepcopy(pull)],
+            "workflow_runs": {"total_count": len(runs), "workflow_runs": runs},
+            "workflow_jobs": jobs, "check_runs": checks, "check_suites": suites,
+        }
 
     def release(self, version="0.9.5.87", head="2" * 40):
         return {"tag_name": f"v{version}", "target_commitish": head, "draft": False, "prerelease": False,
@@ -107,7 +183,60 @@ class ReleaseCadenceTests(unittest.TestCase):
     def test_complete_semantic_wrapper_is_eligible(self):
         plan = policy.publication_intent(**self.arguments())
         self.assertEqual((plan.decision, plan.release_tag, plan.predecessor_tag), ("publish", "v0.9.5.87", "v0.9.5.86"))
+        self.assertRegex(plan.admission_sha256, r"^[0-9a-f]{64}$")
         self.assertEqual(policy.validate_predecessor(self.candidate, encoded(self.previous), "d" * 40), "v0.9.5.86")
+
+    def test_premerge_receipt_digest_survives_only_legitimate_merge_fields(self):
+        open_pull = copy.deepcopy(self.pull)
+        open_pull.update(merge_commit_sha="5" * 40, merged_at=None)
+        before_merge = policy.wrapper_premerge_metadata_sha256(open_pull, self.tree_sha)
+        after_merge = policy.wrapper_premerge_metadata_sha256(self.pull, self.tree_sha)
+        self.assertEqual(before_merge, after_merge)
+        arguments = self.arguments()
+        for comment, role in zip(arguments["comments"], policy.OPERATIONAL_ACCEPTANCE_ROLES):
+            comment["body"] = policy.operational_receipt(
+                role, self.wrapper_sha, self.tree_sha, before_merge)
+        self.assertEqual(policy.publication_intent(**arguments).decision, "publish")
+        arguments["pull_request"]["title"] += " changed"
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_receipt_inventory"):
+            policy.publication_intent(**arguments)
+
+    def test_digest_only_outputs_do_not_expose_wrapper_or_unrelated_comment_text(self):
+        title_sentinel = "synthetic-title-token-4f6e3a9c@example.invalid"
+        body_sentinel = "synthetic-body-token-07d4c1a2"
+        comment_sentinel = "synthetic-unrelated-comment-8ac09f"
+        arguments = self.arguments()
+        arguments["pull_request"].update(title=f"Release v0.9.5.87 {title_sentinel}",
+                                         body=f"Release-only: yes\n{body_sentinel}\n")
+        metadata = policy.wrapper_premerge_metadata_sha256(arguments["pull_request"], self.tree_sha)
+        for comment, role in zip(arguments["comments"], policy.OPERATIONAL_ACCEPTANCE_ROLES):
+            comment["body"] = policy.operational_receipt(role, self.wrapper_sha, self.tree_sha, metadata)
+        arguments["comments"].append({"id": 699, "body": comment_sentinel})
+        plan = policy.publication_intent(**arguments)
+        serialized = json.dumps(plan.__dict__, sort_keys=True)
+        receipt_text = "\n".join(comment["body"] for comment in arguments["comments"][:2])
+        for sentinel in (title_sentinel, body_sentinel, comment_sentinel):
+            self.assertNotIn(sentinel, serialized)
+            self.assertNotIn(sentinel, receipt_text)
+        arguments["pull_request"]["body"] += "x"
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_receipt_inventory") as error:
+            policy.publication_intent(**arguments)
+        self.assertNotIn(body_sentinel, str(error.exception))
+
+    def test_admission_hash_detects_valid_provider_evidence_replacement(self):
+        original = policy.publication_intent(**self.arguments()).admission_sha256
+        arguments = self.arguments()
+        arguments["reviews"][0].update(id=504)
+        arguments["reviews"][0]["user"].update(login="replacement-reviewer", id=201)
+        arguments["reviewer_permissions"] = {201: copy.deepcopy(arguments["reviewer_permissions"][200])}
+        arguments["reviewer_permissions"][201]["user"].update(login="replacement-reviewer", id=201)
+        replaced_review = policy.publication_intent(**arguments).admission_sha256
+        self.assertNotEqual(replaced_review, original)
+        arguments = self.arguments()
+        arguments["comments"][0].update(id=699, created_at="2026-08-31T21:58:00Z",
+                                        updated_at="2026-08-31T21:58:00Z")
+        replaced_receipt = policy.publication_intent(**arguments).admission_sha256
+        self.assertNotEqual(replaced_receipt, original)
 
     def test_missing_forced_unprotected_nonlinear_history_fails_even_for_noop(self):
         for field, value in (("before_sha", "0" * 40), ("before_sha", "main"), ("head_sha", "short"),
@@ -210,12 +339,351 @@ class ReleaseCadenceTests(unittest.TestCase):
 
     def test_review_identity_and_release_declaration_are_mandatory(self):
         for change in ({"merge_commit_sha": "9" * 40}, {"merged_at": None}, {"base": {"ref": "feature"}},
+                       {"base": {"ref": "main", "sha": "9" * 40}},
                        {"head": {"ref": "codex/product-change"}}, {"title": "Release v0.9.5.88"},
                        {"body": "Release-only: yes\nRelease-only: yes\n"}, {"body": "Release-only: no"}):
             arguments = self.arguments()
             arguments["pull_request"] = {**self.pull, **change}
             with self.subTest(change=change), self.assertRaises(policy.PolicyError):
                 policy.publication_intent(**arguments)
+
+    def test_distinct_current_head_provider_approval_is_mandatory(self):
+        mutations = [("missing", [])]
+        author = copy.deepcopy(self.arguments()["reviews"])
+        author[0]["user"]["login"] = policy.REPOSITORY_OWNER
+        mutations.append(("author", author))
+        stale = copy.deepcopy(self.arguments()["reviews"])
+        stale[0]["commit_id"] = "5" * 40
+        mutations.append(("stale", stale))
+        requested = copy.deepcopy(self.arguments()["reviews"])
+        requested.append({**copy.deepcopy(requested[0]), "id": 503, "state": "CHANGES_REQUESTED",
+                          "submitted_at": "2026-08-31T21:56:00Z"})
+        mutations.append(("requested", requested))
+        dismissed = copy.deepcopy(self.arguments()["reviews"])
+        dismissed.append({**copy.deepcopy(dismissed[0]), "id": 504, "state": "DISMISSED",
+                          "submitted_at": "2026-08-31T21:56:00Z"})
+        mutations.append(("dismissed", dismissed))
+        bot = copy.deepcopy(self.arguments()["reviews"])
+        bot[0]["user"].update(login="github-actions[bot]", type="Bot")
+        mutations.append(("bot", bot))
+        for label, reviews in mutations:
+            arguments = self.arguments()
+            arguments["reviews"] = reviews
+            with self.subTest(case=label), self.assertRaises(policy.PolicyError):
+                policy.publication_intent(**arguments)
+        for permission in ("read", "triage", "none", None):
+            arguments = self.arguments()
+            arguments["reviewer_permissions"][200]["permission"] = permission
+            with self.subTest(permission=permission), self.assertRaisesRegex(
+                    policy.PolicyError, "wrapper_reviewer_permission"):
+                policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        arguments["reviewer_permissions"][200]["user"]["login"] = "wrong-reviewer"
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_reviewer_permission_identity"):
+            policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        arguments["reviewer_permissions"][200]["user"]["id"] = 201
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_reviewer_permission_identity"):
+            policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        arguments["reviews"][0]["user"].pop("type")
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_approval_invalid"):
+            policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        arguments["reviewer_permissions"][200]["user"].pop("type")
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_reviewer_permission_identity"):
+            policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        arguments["pull_request"]["user"] = {"login": "release-author", "id": 101, "type": "User"}
+        arguments["merge_pull"]["user"] = copy.deepcopy(arguments["pull_request"]["user"])
+        arguments["head_pulls"][0]["user"] = copy.deepcopy(arguments["pull_request"]["user"])
+        arguments["reviews"][0]["user"] = {
+            "login": policy.REPOSITORY_OWNER, "id": 100, "type": "User",
+        }
+        arguments["reviewer_permissions"] = {
+            100: {"permission": "write", "user": copy.deepcopy(arguments["reviews"][0]["user"])}
+        }
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_approval_missing"):
+            policy.publication_intent(**arguments)
+
+    def test_latest_review_per_human_and_multiple_approvers_are_supported(self):
+        arguments = self.arguments()
+        old_request = copy.deepcopy(arguments["reviews"][0])
+        old_request.update(id=500, state="CHANGES_REQUESTED", submitted_at="2026-08-31T21:54:00Z")
+        arguments["reviews"].insert(0, old_request)
+        self.assertEqual(policy.publication_intent(**arguments).decision, "publish")
+        arguments = self.arguments()
+        second = copy.deepcopy(arguments["reviews"][0])
+        second.update(id=502)
+        second["user"].update(login="second-reviewer", id=201)
+        arguments["reviews"].append(second)
+        arguments["reviewer_permissions"][201] = {
+            "permission": "admin", "user": {"login": "second-reviewer", "id": 201, "type": "User"},
+        }
+        self.assertEqual(policy.publication_intent(**arguments).decision, "publish")
+
+    def test_extra_nonqualifying_approvals_do_not_displace_a_valid_human(self):
+        extras = (
+            ("bot", {"login": "review-bot[bot]", "id": 201, "type": "Bot"}, "CONTRIBUTOR"),
+            ("author", copy.deepcopy(self.pull["user"]), "OWNER"),
+            ("owner", {"login": policy.REPOSITORY_OWNER, "id": 100, "type": "User"}, "OWNER"),
+            ("non-collaborator", {"login": "outside-reviewer", "id": 202, "type": "User"}, "CONTRIBUTOR"),
+        )
+        for label, user, association in extras:
+            arguments = self.arguments()
+            extra = copy.deepcopy(arguments["reviews"][0])
+            extra.update(id=550, user=user, author_association=association,
+                         submitted_at="2026-08-31T21:56:00Z")
+            arguments["reviews"].append(extra)
+            with self.subTest(case=label):
+                self.assertEqual(policy.publication_intent(**arguments).decision, "publish")
+        for label, user, association in extras[:3]:
+            arguments = self.arguments()
+            arguments["reviews"][0].update(user=user, author_association=association)
+            arguments["reviewer_permissions"] = {}
+            with self.subTest(case=f"sole-{label}"), \
+                 self.assertRaisesRegex(policy.PolicyError, "wrapper_approval_missing"):
+                policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        conflict = copy.deepcopy(arguments["reviews"][0])
+        conflict.update(id=551, state="CHANGES_REQUESTED",
+                        user={"login": "review-bot[bot]", "id": 201, "type": "Bot"},
+                        author_association="CONTRIBUTOR",
+                        submitted_at="2026-08-31T21:56:00Z")
+        arguments["reviews"].append(conflict)
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_review_conflict"):
+            policy.publication_intent(**arguments)
+
+    def test_operational_receipts_are_strict_supplemental_evidence(self):
+        mutations = []
+        missing = copy.deepcopy(self.arguments()["comments"])
+        missing.pop()
+        mutations.append(("missing", missing))
+        edited = copy.deepcopy(self.arguments()["comments"])
+        edited[0]["updated_at"] = "2026-08-31T21:57:00Z"
+        mutations.append(("edited", edited))
+        wrong_head = copy.deepcopy(self.arguments()["comments"])
+        wrong_head[0]["body"] = wrong_head[0]["body"].replace(self.wrapper_sha, "5" * 40)
+        mutations.append(("wrong-head", wrong_head))
+        duplicate = copy.deepcopy(self.arguments()["comments"])
+        duplicate[1]["body"] = duplicate[0]["body"]
+        mutations.append(("duplicate-role", duplicate))
+        for label, mutate in (
+                ("trailing", lambda body: body + "\nextra"),
+                ("crlf", lambda body: body.replace("\n", "\r\n")),
+                ("leading", lambda body: " " + body),
+                ("verdict", lambda body: body.replace("Verdict: ACCEPT", "Verdict: HOLD")),
+                ("digest", lambda body: body[:-1] + ("0" if body[-1] != "0" else "1"))):
+            comments = copy.deepcopy(self.arguments()["comments"])
+            comments[0]["body"] = mutate(comments[0]["body"])
+            mutations.append((label, comments))
+        duplicate_id = copy.deepcopy(self.arguments()["comments"])
+        duplicate_id[1]["id"] = duplicate_id[0]["id"]
+        mutations.append(("duplicate-id", duplicate_id))
+        third = copy.deepcopy(self.arguments()["comments"])
+        third.append({**copy.deepcopy(third[0]), "id": 699})
+        mutations.append(("third-receipt", third))
+        late = copy.deepcopy(self.arguments()["comments"])
+        late[0].update(created_at="2026-08-31T22:00:01Z", updated_at="2026-08-31T22:00:01Z")
+        mutations.append(("late", late))
+        naive = copy.deepcopy(self.arguments()["comments"])
+        naive[0].update(created_at="2026-08-31T21:56:00", updated_at="2026-08-31T21:56:00")
+        mutations.append(("naive-time", naive))
+        missing_time = copy.deepcopy(self.arguments()["comments"])
+        missing_time[0].pop("created_at")
+        mutations.append(("missing-time", missing_time))
+        for label, body in (("none-body", None), ("int-body", 7),
+                            ("list-body", ["receipt"]), ("dict-body", {"receipt": True})):
+            comments = copy.deepcopy(self.arguments()["comments"])
+            comments[0]["body"] = body
+            mutations.append((label, comments))
+        for label, comments in mutations:
+            arguments = self.arguments()
+            arguments["comments"] = comments
+            with self.subTest(case=label), self.assertRaises(policy.PolicyError):
+                policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        arguments["comments"][0].update(created_at=self.pull["merged_at"],
+                                        updated_at=self.pull["merged_at"])
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_receipt_after_merge"):
+            policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        arguments["comments"].append({"id": 700, "body": 99})
+        self.assertEqual(policy.publication_intent(**arguments).decision, "publish")
+
+    def test_workflow_inventory_binds_exact_head_tree_suite_app_and_pull(self):
+        # Empty run-level PR arrays are legitimate only because commit-to-PR association is mandatory.
+        self.assertEqual(policy.publication_intent(**self.arguments()).decision, "publish")
+        for field, value in (("run_attempt", 2), ("conclusion", "failure"),
+                             ("head_sha", "5" * 40)):
+            arguments = self.arguments()
+            arguments["workflow_runs"]["workflow_runs"][0][field] = value
+            with self.subTest(field=field), self.assertRaises(policy.PolicyError):
+                policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        arguments["workflow_runs"]["workflow_runs"][0]["head_commit"]["tree_id"] = "5" * 40
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_workflow_tree"):
+            policy.publication_intent(**arguments)
+        for mutation in ("missing", "ambiguous"):
+            arguments = self.arguments()
+            arguments["head_pulls"] = ([] if mutation == "missing" else
+                                        [copy.deepcopy(self.pull), copy.deepcopy(self.pull)])
+            with self.subTest(mutation=mutation), self.assertRaisesRegex(
+                    policy.PolicyError, "wrapper_head_pull_association"):
+                policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        arguments["workflow_runs"]["workflow_runs"][0]["pull_requests"] = [{
+            "number": 999, "head": {"sha": self.wrapper_sha}, "base": {"ref": "main"},
+        }]
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_workflow_pull"):
+            policy.publication_intent(**arguments)
+        for field, value in (("head_sha", "5" * 40), ("head_branch", "wrong-branch")):
+            arguments = self.arguments()
+            suite_id = arguments["workflow_runs"]["workflow_runs"][0]["check_suite_id"]
+            arguments["check_suites"][suite_id][field] = value
+            with self.subTest(suite_field=field), self.assertRaisesRegex(
+                    policy.PolicyError, "wrapper_suite_identity"):
+                policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        suite_id = arguments["workflow_runs"]["workflow_runs"][0]["check_suite_id"]
+        arguments["check_suites"][suite_id]["app"]["id"] = 1
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_suite_app"):
+            policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        check_id = next(iter(arguments["check_runs"]))
+        arguments["check_runs"][check_id]["app"]["slug"] = "untrusted-app"
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_check_app"):
+            policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        run_id = arguments["workflow_runs"]["workflow_runs"][0]["id"]
+        arguments["workflow_jobs"][run_id]["jobs"][0]["conclusion"] = "skipped"
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_gate_not_successful"):
+            policy.publication_intent(**arguments)
+
+    def test_commit_associations_bind_canonical_repository_author_and_merge_identity(self):
+        expected = {
+            "number": self.pull["number"], "merge_commit_sha": self.pull["merge_commit_sha"],
+            "merged_at": self.pull["merged_at"],
+            "base": {"ref": "main", "sha": self.pull["base"]["sha"],
+                     "repo": policy.REPOSITORY},
+            "head": {"ref": self.pull["head"]["ref"], "sha": self.pull["head"]["sha"],
+                     "repo": policy.REPOSITORY},
+            "author": {"login": policy.REPOSITORY_OWNER, "id": 100, "type": "User"},
+        }
+        self.assertEqual(policy.pull_association_record(self.pull), expected)
+        mutations = (
+            ("merge-time", lambda row: row.update(merged_at="2026-08-31T21:59:59Z")),
+            ("base-repository", lambda row: row["base"]["repo"].update(full_name="other/repo")),
+            ("head-repository", lambda row: row["head"]["repo"].update(full_name="other/repo")),
+            ("author-login", lambda row: row["user"].update(login="other-author")),
+            ("author-id", lambda row: row["user"].update(id=101)),
+            ("author-type", lambda row: row["user"].update(type="Bot")),
+        )
+        for association_name in ("merge_pull", "head_pulls"):
+            for label, mutate in mutations:
+                arguments = self.arguments()
+                association = (arguments[association_name] if association_name == "merge_pull"
+                               else arguments[association_name][0])
+                mutate(association)
+                with self.subTest(association=association_name, case=label), \
+                     self.assertRaisesRegex(policy.PolicyError, "wrapper_pull_canonical_drift"):
+                    policy.publication_intent(**arguments)
+
+    def test_workflow_path_forms_are_canonical(self):
+        baseline = policy.publication_intent(**self.arguments()).admission_sha256
+        for suffix in ("@main", "@refs/heads/main", "@refs/pull/1096/merge"):
+            arguments = self.arguments()
+            arguments["workflow_runs"]["workflow_runs"][0]["path"] += suffix
+            with self.subTest(case=suffix):
+                self.assertEqual(policy.publication_intent(**arguments).admission_sha256, baseline)
+        base_path = next(iter(policy.REQUIRED_WORKFLOW_GATES))
+        for label, value in (("feature", base_path + "@feature"),
+                             ("multiple-at", base_path + "@main@other"),
+                             ("foreign-pr", base_path + "@refs/pull/1095/merge"),
+                             ("zero-pr", base_path + "@refs/pull/0/merge"), ("empty", "")):
+            arguments = self.arguments()
+            arguments["workflow_runs"]["workflow_runs"][0]["path"] = value
+            with self.subTest(case=label), self.assertRaisesRegex(
+                    policy.PolicyError, "wrapper_workflow_path"):
+                policy.publication_intent(**arguments)
+
+    def test_parent_and_gate_attempt_binding_is_fail_closed(self):
+        for label, value in (("missing", None), ("bool", True), ("zero", 0), ("two", 2),
+                             ("string", "1")):
+            arguments = self.arguments()
+            if label == "missing":
+                arguments["workflow_runs"]["workflow_runs"][0].pop("run_attempt")
+            else:
+                arguments["workflow_runs"]["workflow_runs"][0]["run_attempt"] = value
+            with self.subTest(case="run-" + label), self.assertRaises(policy.PolicyError):
+                policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        run_id = arguments["workflow_runs"]["workflow_runs"][0]["id"]
+        arguments["workflow_jobs"][run_id]["jobs"][0].pop("run_attempt")
+        self.assertEqual(policy.publication_intent(**arguments).decision, "publish")
+        for label, value in (("null", None), ("bool", True), ("zero", 0), ("two", 2),
+                             ("string", "1")):
+            arguments = self.arguments()
+            run_id = arguments["workflow_runs"]["workflow_runs"][0]["id"]
+            arguments["workflow_jobs"][run_id]["jobs"][0]["run_attempt"] = value
+            with self.subTest(case="job-" + label), self.assertRaises(policy.PolicyError):
+                policy.publication_intent(**arguments)
+
+    def test_provider_inventory_caps_and_partial_pages_fail_closed(self):
+        cases = []
+        reviews = copy.deepcopy(self.arguments())
+        reviews["reviews"] = [{**copy.deepcopy(reviews["reviews"][0]), "id": 1000 + index}
+                              for index in range(100)]
+        cases.append(("reviews-100", reviews))
+        comments = copy.deepcopy(self.arguments())
+        comments["comments"].extend({"id": 1000 + index, "body": "unrelated"}
+                                    for index in range(98))
+        cases.append(("comments-100", comments))
+        runs = copy.deepcopy(self.arguments())
+        runs["workflow_runs"]["total_count"] += 1
+        cases.append(("runs-partial", runs))
+        jobs = copy.deepcopy(self.arguments())
+        run_id = jobs["workflow_runs"]["workflow_runs"][0]["id"]
+        jobs["workflow_jobs"][run_id]["total_count"] += 1
+        cases.append(("jobs-partial", jobs))
+        for label, arguments in cases:
+            with self.subTest(case=label), self.assertRaises(policy.PolicyError):
+                policy.publication_intent(**arguments)
+
+    def test_all_admission_evidence_must_be_terminal_before_merge(self):
+        cases = []
+        approval = self.arguments()
+        approval["reviews"][0]["submitted_at"] = "2026-08-31T22:00:01Z"
+        cases.append(("approval", approval))
+        receipt = self.arguments()
+        receipt["comments"][0].update(created_at="2026-08-31T22:00:01Z",
+                                      updated_at="2026-08-31T22:00:01Z")
+        cases.append(("receipt", receipt))
+        run = self.arguments()
+        run["workflow_runs"]["workflow_runs"][0]["updated_at"] = "2026-08-31T22:00:01Z"
+        cases.append(("run", run))
+        suite = self.arguments()
+        suite_id = suite["workflow_runs"]["workflow_runs"][0]["check_suite_id"]
+        suite["check_suites"][suite_id]["updated_at"] = "2026-08-31T22:00:01Z"
+        cases.append(("suite", suite))
+        job = self.arguments()
+        run_id = job["workflow_runs"]["workflow_runs"][0]["id"]
+        job["workflow_jobs"][run_id]["jobs"][0]["completed_at"] = "2026-08-31T22:00:01Z"
+        cases.append(("job", job))
+        check = self.arguments()
+        check_id = next(iter(check["check_runs"]))
+        check["check_runs"][check_id]["completed_at"] = "2026-08-31T22:00:01Z"
+        cases.append(("check", check))
+        for label, arguments in cases:
+            with self.subTest(case=label), self.assertRaises(policy.PolicyError):
+                policy.publication_intent(**arguments)
+
+    def test_additive_provider_owner_fields_do_not_change_admission_digest(self):
+        baseline = policy.publication_intent(**self.arguments()).admission_sha256
+        arguments = self.arguments()
+        arguments["pull_request"]["base"]["repo"]["owner"].update(
+            avatar_url="synthetic-private-avatar", extra={"untrusted": True})
+        self.assertEqual(policy.publication_intent(**arguments).admission_sha256, baseline)
 
     def test_predecessor_corruption_source_archive_and_schema_fail(self):
         for mutate in (lambda row: row["source"].update(commit_sha="f" * 40),
@@ -251,6 +719,9 @@ class ReleaseCadenceTests(unittest.TestCase):
     def test_partial_draft_failed_upload_and_wrong_identity_never_reuse(self):
         for mutate in (lambda row: row.update(draft=True), lambda row: row.update(prerelease=True),
                        lambda row: row.update(target_commitish="main"), lambda row: row.update(published_at=None),
+                       lambda row: row.update(published_at=""),
+                       lambda row: row.update(published_at="not-a-timestamp"),
+                       lambda row: row.update(published_at="2026-08-31T22:00:00"),
                        lambda row: row["assets"].pop(), lambda row: row["assets"][0].update(state="new"),
                        lambda row: row["assets"][0].update(size=0)):
             release = self.release()
@@ -279,12 +750,53 @@ class ReleaseCadenceTests(unittest.TestCase):
             boundary.peel_tag_output(raw + raw, tag)
 
     def test_api_transport_and_auth_failures_cannot_reach_creation(self):
-        for error in (URLError("synthetic-private-detail"), HTTPError("https://api.github.com", 403, "private", {}, None)):
+        errors = [URLError("synthetic-private-detail")]
+        errors.extend(HTTPError("https://api.github.com", status, "private", {}, None)
+                      for status in (401, 403, 429, 500, 503))
+        for error in errors:
             with mock.patch.dict("os.environ", {"GH_TOKEN": "synthetic-not-a-token"}), \
                  mock.patch.object(boundary, "build_opener") as opener:
                 opener.return_value.open.side_effect = error
                 with self.assertRaisesRegex(policy.PolicyError, "github_observation_failed"):
                     boundary.github_get(f"repos/{boundary.REPOSITORY}/releases/tags/v0.9.5.87", allow_absent=True)
+
+    def test_only_release_tag_404_can_mean_api_absence(self):
+        error = HTTPError("https://api.github.com", 404, "missing", {}, None)
+        with mock.patch.dict("os.environ", {"GH_TOKEN": "synthetic-not-a-token"}), \
+             mock.patch.object(boundary, "build_opener") as opener:
+            opener.return_value.open.side_effect = error
+            self.assertIsNone(boundary.github_get(
+                f"repos/{boundary.REPOSITORY}/releases/tags/v0.9.5.87", allow_absent=True))
+            with self.assertRaisesRegex(policy.PolicyError, "github_observation_failed"):
+                boundary.github_get(
+                    f"repos/{boundary.REPOSITORY}/collaborators/release-reviewer/permission")
+            with self.assertRaisesRegex(policy.PolicyError, "github_absence_scope"):
+                boundary.github_get(
+                    f"repos/{boundary.REPOSITORY}/collaborators/release-reviewer/permission",
+                    allow_absent=True)
+
+    def test_malformed_oversized_duplicate_json_and_redirects_fail_closed(self):
+        for raw in (b"", b"not-json", b"[] trailing", b"{" + b"x" * boundary.MAX_RECORD_BYTES + b"}"):
+            response = mock.MagicMock()
+            response.__enter__.return_value.status = 200
+            response.__enter__.return_value.read.return_value = raw
+            with mock.patch.dict("os.environ", {"GH_TOKEN": "synthetic-not-a-token"}), \
+                 mock.patch.object(boundary, "build_opener") as opener:
+                opener.return_value.open.return_value = response
+                with self.subTest(size=len(raw)), self.assertRaises(policy.PolicyError):
+                    boundary.github_get(f"repos/{boundary.REPOSITORY}/pulls/1096")
+        response = mock.MagicMock()
+        response.__enter__.return_value.status = 200
+        response.__enter__.return_value.read.return_value = b'{"id":1,"id":2}'
+        with mock.patch.dict("os.environ", {"GH_TOKEN": "synthetic-not-a-token"}), \
+             mock.patch.object(boundary, "build_opener") as opener:
+            opener.return_value.open.return_value = response
+            with self.assertRaisesRegex(policy.PolicyError, "duplicate_json_key"):
+                boundary.github_get(f"repos/{boundary.REPOSITORY}/pulls/1096")
+        request = boundary.Request("https://api.github.com/example", headers={"Authorization": "Bearer secret"})
+        with self.assertRaisesRegex(policy.PolicyError, "github_redirect_refused"):
+            boundary.SafeRedirect().redirect_request(
+                request, None, 302, "redirect", {}, "https://example.invalid/asset")
 
     def test_checksum_inventory_and_bytes_fail_closed(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -301,6 +813,25 @@ class ReleaseCadenceTests(unittest.TestCase):
             (root / "checksums.txt").write_text(rows[0] + "\n" + rows[0] + "\n", encoding="ascii")
             with self.assertRaises(policy.PolicyError):
                 boundary.verify_checksums(root)
+
+    def test_hosted_fingerprint_ignores_download_count_but_detects_replacement(self):
+        metadata = self.release()
+        for index, asset in enumerate(metadata["assets"], start=1):
+            asset.update(id=index, node_id=f"asset-{index}", label=None,
+                         content_type="application/octet-stream",
+                         created_at="2026-08-31T22:00:00Z", updated_at="2026-08-31T22:00:00Z",
+                         digest=f"sha256:{index:064x}", download_count=0)
+        raw = encoded(self.previous)
+        baseline = boundary.hosted_release_fingerprint(metadata, "2" * 40, raw)
+        downloaded = copy.deepcopy(metadata)
+        downloaded["assets"][0]["download_count"] = 99
+        self.assertEqual(boundary.hosted_release_fingerprint(downloaded, "2" * 40, raw), baseline)
+        for field, value in (("id", 999), ("size", 999), ("updated_at", "2026-09-01T00:00:00Z"),
+                             ("digest", "sha256:" + "f" * 64)):
+            replaced = copy.deepcopy(metadata)
+            replaced["assets"][0][field] = value
+            with self.subTest(field=field):
+                self.assertNotEqual(boundary.hosted_release_fingerprint(replaced, "2" * 40, raw), baseline)
 
     def test_duplicate_json_keys_do_not_shadow_release_policy(self):
         with self.assertRaises(policy.PolicyError):
@@ -341,15 +872,19 @@ class ReleaseCadenceTests(unittest.TestCase):
             with self.subTest(change=change), self.assertRaises(policy.PolicyError):
                 policy.batch_plan({**self.batch_observation(), **change})
 
-    def test_legacy_publication_aggregate_exhaustive_truth_table(self):
+    def test_post_merge_publication_aggregate_exhaustive_truth_table(self):
         states = ("success", "failure", "cancelled", "skipped", "")
-        for intent, decision, writer in itertools.product(states, ("noop", "publish", ""), states):
-            expected = (intent, decision, writer) in {("success", "noop", "skipped"), ("success", "publish", "success")}
-            with self.subTest(intent=intent, decision=decision, writer=writer):
-                self.assertEqual(policy.publication_result(intent, decision, writer), expected)
+        decisions = ("noop", "publish", "unknown", "not-due", "")
+        accepted = {("success", "noop", "skipped", "skipped"),
+                    ("success", "publish", "success", "success")}
+        for intent, decision, writer, verifier in itertools.product(states, decisions, states, states):
+            expected = (intent, decision, writer, verifier) in accepted
+            with self.subTest(intent=intent, decision=decision, writer=writer, verifier=verifier):
+                self.assertEqual(policy.publication_result(intent, decision, writer, verifier), expected)
                 with mock.patch("sys.stdout", new=io.StringIO()), mock.patch("sys.stderr", new=io.StringIO()):
                     self.assertEqual(boundary.main(["result", "--intent-result", intent, "--decision", decision,
-                                                    "--writer-result", writer]), 0 if expected else 1)
+                                                    "--writer-result", writer,
+                                                    "--verifier-result", verifier]), 0 if expected else 1)
 
     def test_real_git_wrapper_observation_requires_unique_pr_and_locked_main(self):
         with tempfile.TemporaryDirectory(prefix="casino-cadence-wrapper-") as temporary:
@@ -363,30 +898,157 @@ class ReleaseCadenceTests(unittest.TestCase):
             self.git(root, "add", ".")
             self.git(root, "commit", "-m", "synthetic accepted source")
             before = self.git(root, "rev-parse", "HEAD")
+            self.git(root, "switch", "-c", "codex/release-v0.9.5.87")
             for path, change in self.changes.items():
                 self.write_fixture(root, path, change.after)
             self.git(root, "add", ".")
             self.git(root, "commit", "-m", "synthetic release wrapper")
+            wrapper = self.git(root, "rev-parse", "HEAD")
+            wrapper_tree = self.git(root, "rev-parse", "HEAD^{tree}")
+            self.git(root, "switch", "main")
+            self.git(root, "merge", "--no-ff", "--no-edit", "codex/release-v0.9.5.87")
             head = self.git(root, "rev-parse", "HEAD")
             event = {"ref": "refs/heads/main", "before": before, "after": head, "forced": False}
             environment = {"GITHUB_EVENT_NAME": "push", "GITHUB_REPOSITORY": boundary.REPOSITORY,
                            "GITHUB_REF": "refs/heads/main", "GITHUB_REF_PROTECTED": "true", "GITHUB_SHA": head,
                            "GITHUB_RUN_ATTEMPT": "1"}
-            pull = {**self.pull, "merge_commit_sha": head}
+            pull = copy.deepcopy(self.pull)
+            pull.update(merge_commit_sha=head)
+            pull["base"]["sha"] = before
+            pull["head"].update(sha=wrapper)
+            evidence = self.admission_evidence(wrapper, wrapper_tree, pull)
             responses = {
                 f"repos/{boundary.REPOSITORY}/commits/{head}/pulls?per_page=100": [pull],
+                f"repos/{boundary.REPOSITORY}/commits/{wrapper}/pulls?per_page=100": evidence["head_pulls"],
+                f"repos/{boundary.REPOSITORY}/pulls/{pull['number']}": pull,
+                f"repos/{boundary.REPOSITORY}/pulls/{pull['number']}/reviews?per_page=100": evidence["reviews"],
+                f"repos/{boundary.REPOSITORY}/collaborators/release-reviewer/permission":
+                    evidence["reviewer_permissions"][200],
+                f"repos/{boundary.REPOSITORY}/issues/{pull['number']}/comments?per_page=100": evidence["comments"],
+                f"repos/{boundary.REPOSITORY}/actions/runs?head_sha={wrapper}&per_page=100": evidence["workflow_runs"],
                 f"repos/{boundary.REPOSITORY}/git/ref/heads/main": {"object": {"type": "commit", "sha": head}},
                 f"repos/{boundary.REPOSITORY}/releases/tags/v0.9.5.86": self.release("0.9.5.86", "d" * 40),
                 f"repos/{boundary.REPOSITORY}/releases/tags/v0.9.5.87": None,
             }
-            with mock.patch.object(boundary, "github_get", side_effect=lambda path, **_kwargs: responses[path]), \
+            for run_id, jobs in evidence["workflow_jobs"].items():
+                responses[f"repos/{boundary.REPOSITORY}/actions/runs/{run_id}/attempts/1/jobs?per_page=100"] = jobs
+            for check_id, check in evidence["check_runs"].items():
+                responses[f"repos/{boundary.REPOSITORY}/check-runs/{check_id}"] = check
+            for suite_id, suite in evidence["check_suites"].items():
+                responses[f"repos/{boundary.REPOSITORY}/check-suites/{suite_id}"] = suite
+            with mock.patch.object(boundary, "github_get",
+                                   side_effect=lambda path, **_kwargs: copy.deepcopy(responses[path])) as getter, \
                  mock.patch.object(boundary, "tag_commit", side_effect=lambda _root, tag: "d" * 40 if tag.endswith(".86") else None), \
                  mock.patch.object(boundary, "manifest_bytes", return_value=encoded(self.previous)):
                 plan = boundary.inspect_publication(event, environment, root, under_lock=True)
                 self.assertEqual((plan["decision"], plan["release_state"], plan["source_sha"]), ("publish", "create", head))
+                calls = [call.args[0] for call in getter.call_args_list]
+                repeated = [
+                    f"repos/{boundary.REPOSITORY}/commits/{head}/pulls?per_page=100",
+                    f"repos/{boundary.REPOSITORY}/pulls/{pull['number']}",
+                    f"repos/{boundary.REPOSITORY}/pulls/{pull['number']}/reviews?per_page=100",
+                    f"repos/{boundary.REPOSITORY}/issues/{pull['number']}/comments?per_page=100",
+                    f"repos/{boundary.REPOSITORY}/commits/{wrapper}/pulls?per_page=100",
+                    f"repos/{boundary.REPOSITORY}/actions/runs?head_sha={wrapper}&per_page=100",
+                    f"repos/{boundary.REPOSITORY}/collaborators/release-reviewer/permission",
+                ]
+                repeated.extend(
+                    f"repos/{boundary.REPOSITORY}/actions/runs/{run_id}/attempts/1/jobs?per_page=100"
+                    for run_id in evidence["workflow_jobs"])
+                repeated.extend(f"repos/{boundary.REPOSITORY}/check-runs/{check_id}"
+                                for check_id in evidence["check_runs"])
+                repeated.extend(f"repos/{boundary.REPOSITORY}/check-suites/{suite_id}"
+                                for suite_id in evidence["check_suites"])
+                self.assertTrue(all(calls.count(path) == 2 for path in repeated))
+                self.assertEqual(calls[-1], f"repos/{boundary.REPOSITORY}/git/ref/heads/main")
+
+                baseline = copy.deepcopy(responses)
+
+                def require_final_failure(label, path, mutate, reason):
+                    counts = {}
+
+                    def sequenced(observed_path, **_kwargs):
+                        counts[observed_path] = counts.get(observed_path, 0) + 1
+                        value = copy.deepcopy(baseline[observed_path])
+                        if observed_path == path and counts[observed_path] == 2:
+                            mutate(value)
+                        return value
+
+                    getter.side_effect = sequenced
+                    with self.subTest(case=label), self.assertRaisesRegex(policy.PolicyError, reason):
+                        boundary.inspect_publication(event, environment, root, under_lock=True)
+                    self.assertEqual(counts.get(path), 2)
+                    self.assertEqual(
+                        counts.get(f"repos/{boundary.REPOSITORY}/git/ref/heads/main", 0), 0)
+
+                reviews_path = f"repos/{boundary.REPOSITORY}/pulls/{pull['number']}/reviews?per_page=100"
+                require_final_failure(
+                    "replacement-approval", reviews_path,
+                    lambda value: value[0].update(id=504, submitted_at="2026-08-31T21:56:00Z"),
+                    "publication_admission_drift")
+                comments_path = f"repos/{boundary.REPOSITORY}/issues/{pull['number']}/comments?per_page=100"
+                require_final_failure(
+                    "replacement-receipt", comments_path,
+                    lambda value: value[0].update(id=699, created_at="2026-08-31T21:58:00Z",
+                                                  updated_at="2026-08-31T21:58:00Z"),
+                    "publication_admission_drift")
+                runs_path = f"repos/{boundary.REPOSITORY}/actions/runs?head_sha={wrapper}&per_page=100"
+                require_final_failure(
+                    "replacement-run", runs_path,
+                    lambda value: value["workflow_runs"][0].update(updated_at="2026-08-31T21:55:00Z"),
+                    "publication_admission_drift")
+                permission_path = f"repos/{boundary.REPOSITORY}/collaborators/release-reviewer/permission"
+                require_final_failure(
+                    "permission-removed", permission_path,
+                    lambda value: value.update(permission="read"), "wrapper_reviewer_permission")
+                require_final_failure(
+                    "permission-id-drift", permission_path,
+                    lambda value: value["user"].update(id=201),
+                    "wrapper_reviewer_permission_identity")
+                require_final_failure(
+                    "permission-type-drift", permission_path,
+                    lambda value: value["user"].update(type="Bot"),
+                    "wrapper_reviewer_permission_identity")
+
+                def fail_terminal_observation(_value):
+                    raise policy.PolicyError("github_observation_failed")
+
+                require_final_failure(
+                    "permission-observation-error", permission_path,
+                    fail_terminal_observation, "github_observation_failed")
+                require_final_failure(
+                    "approval-dismissed", reviews_path,
+                    lambda value: value[0].update(state="DISMISSED"), "wrapper_approval_missing")
+                require_final_failure(
+                    "approval-changes-requested", reviews_path,
+                    lambda value: value[0].update(state="CHANGES_REQUESTED"),
+                    "wrapper_review_conflict")
+                require_final_failure(
+                    "approval-moved-commit", reviews_path,
+                    lambda value: value[0].update(commit_id="f" * 40), "wrapper_approval_missing")
+                pull_path = f"repos/{boundary.REPOSITORY}/pulls/{pull['number']}"
+                require_final_failure(
+                    "canonical-title-drift", pull_path,
+                    lambda value: value.update(title=value["title"] + " changed"),
+                    "wrapper_receipt_inventory")
+                require_final_failure(
+                    "canonical-body-drift", pull_path,
+                    lambda value: value.update(body=value["body"] + "changed\n"),
+                    "wrapper_receipt_inventory")
+                require_final_failure(
+                    "canonical-head-drift", pull_path,
+                    lambda value: value["head"].update(sha="f" * 40),
+                    "wrapper_pull_canonical_drift")
+                require_final_failure(
+                    "canonical-base-drift", pull_path,
+                    lambda value: value["base"].update(sha="f" * 40),
+                    "wrapper_pull_canonical_drift")
+
+                getter.side_effect = lambda path, **_kwargs: copy.deepcopy(responses[path])
                 responses[f"repos/{boundary.REPOSITORY}/git/ref/heads/main"]["object"]["sha"] = "f" * 40
                 with self.assertRaisesRegex(policy.PolicyError, "protected_main_moved"):
                     boundary.inspect_publication(event, environment, root, under_lock=True)
+                responses[f"repos/{boundary.REPOSITORY}/git/ref/heads/main"]["object"]["sha"] = head
                 responses[f"repos/{boundary.REPOSITORY}/commits/{head}/pulls?per_page=100"] = [pull, pull]
                 with self.assertRaisesRegex(policy.PolicyError, "wrapper_pull_ambiguous"):
                     boundary.inspect_publication(event, environment, root)
@@ -394,6 +1056,10 @@ class ReleaseCadenceTests(unittest.TestCase):
                     boundary.inspect_publication(event, {**environment, "GITHUB_RUN_ATTEMPT": "2"}, root)
                 responses[f"repos/{boundary.REPOSITORY}/commits/{head}/pulls?per_page=100"] = []
                 with self.assertRaisesRegex(policy.PolicyError, "wrapper_pull_ambiguous"):
+                    boundary.inspect_publication(event, environment, root)
+                responses[f"repos/{boundary.REPOSITORY}/commits/{head}/pulls?per_page=100"] = [pull]
+                responses[f"repos/{boundary.REPOSITORY}/commits/{wrapper}/pulls?per_page=100"] = [pull, pull]
+                with self.assertRaisesRegex(policy.PolicyError, "wrapper_head_pull_association"):
                     boundary.inspect_publication(event, environment, root)
 
     def write_fixture(self, root, path, raw):

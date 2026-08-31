@@ -1,6 +1,6 @@
 name: Release Candidate
 
-# Validate unpublished PR/manual candidates; release events independently verify hosted assets.
+# Validate unpublished candidates; external release events may supplement direct hosted verification.
 on:
   pull_request:
   workflow_dispatch:
@@ -208,21 +208,21 @@ jobs:
           jq -e --arg tag "${PREDECESSOR_TAG}" --arg commit "${PREDECESSOR_COMMIT}" '.tagName == $tag and .targetCommitish == $commit and .isDraft == false and .isPrerelease == false and ([.assets[].name] | sort) == (["checksums.txt", "predecessor-recovery.json", "release-manifest.json", "virtual_casino_simulator_package.zip"] | sort)' predecessor-release.json
           test "$(git -C successor ls-remote --tags origin "refs/tags/${PREDECESSOR_TAG}" | awk '{print $1}')" = "${PREDECESSOR_COMMIT}"
 
-  publish-immutable-release:
-    name: Verify immutable release assets
-    # Serialize independent evidence with the publisher without creating a second writer.
+  supplemental-release-verification:
+    name: Supplement hosted release verification
+    # Serialize supplemental read-only evidence without creating a second writer.
     concurrency:
       group: production-deploy-main
       cancel-in-progress: false
       queue: max
-    # Retain the protected release-event/environment gate; the legacy switch permits verification only.
+    # This external-event lane is not evidence for the repository-token automated publisher.
     if: github.event_name == 'release' && github.event.action == 'published' && github.ref_protected == true && vars.ENABLE_IMMUTABLE_RELEASE_PUBLISH == 'true'
     runs-on: ubuntu-latest
     environment: immutable-release
     permissions:
       contents: read
     steps:
-      # Check out the exact protected version tag for independent publication verification.
+      # Check out the exact protected version tag for supplemental publication verification.
       - name: Check out protected release tag
         uses: actions/checkout@v4
         with:
@@ -246,7 +246,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/release_publication.py inspect-hosted --tag "${RELEASE_TAG}" --commit "$(git rev-parse HEAD)" | tee -a "${GITHUB_OUTPUT}"
+          python scripts/release_publication.py inspect-hosted --tag "${RELEASE_TAG}" --commit "$(git rev-parse HEAD)" | tee hosted-before.txt | tee -a "${GITHUB_OUTPUT}"
       - name: Download hosted assets and exact predecessor
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
@@ -257,15 +257,32 @@ jobs:
           set -euo pipefail
           mkdir published previous
           gh release download "${RELEASE_TAG}" --pattern virtual_casino_simulator_package.zip --pattern release-manifest.json --pattern checksums.txt --dir published
-          gh release download "${PREVIOUS_TAG}" --pattern release-manifest.json --dir previous
+          gh release download "${PREVIOUS_TAG}" --pattern virtual_casino_simulator_package.zip --pattern release-manifest.json --pattern checksums.txt --dir previous
       # The release-event lane is GET/verification only: no asset upload, tag, or release mutation.
       - name: Verify immutable hosted artifact evidence
         env:
           APP_VERSION: ${{ steps.hosted_identity.outputs.app_version }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          PREVIOUS_TAG: ${{ steps.hosted_identity.outputs.predecessor_tag }}
+          PREVIOUS_SHA: ${{ steps.hosted_identity.outputs.predecessor_sha }}
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/release_publication.py verify-checksums --directory published
-          python scripts/resolve_release_predecessor.py --app-version "${APP_VERSION}" --verify-manifest previous/release-manifest.json
-          python scripts/package_app.py --verify-only --archive published/virtual_casino_simulator_package.zip --manifest published/release-manifest.json --expected-commit "$(git rev-parse HEAD)" --expected-tag "${RELEASE_TAG}" --require-rollback
+          python scripts/release_publication.py verify-checksums --directory published > /dev/null
+          python scripts/release_publication.py verify-checksums --directory previous > /dev/null
+          test "$(python scripts/resolve_release_predecessor.py --app-version "${APP_VERSION}" --verify-manifest previous/release-manifest.json)" = "${{ steps.hosted_identity.outputs.predecessor_tag }}"
+          python scripts/package_app.py --verify-only --archive previous/virtual_casino_simulator_package.zip --manifest previous/release-manifest.json --expected-commit "${PREVIOUS_SHA}" --expected-tag "${PREVIOUS_TAG}" > /dev/null
+          python scripts/package_app.py --verify-only --archive published/virtual_casino_simulator_package.zip --manifest published/release-manifest.json --expected-commit "$(git rev-parse HEAD)" --expected-tag "${RELEASE_TAG}" --require-rollback > /dev/null
+      - name: Reinspect stable hosted identity
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/release_publication.py inspect-hosted --tag "${RELEASE_TAG}" --commit "$(git rev-parse HEAD)" > hosted-after.txt
+          cmp hosted-before.txt hosted-after.txt
+      - name: Clean downloaded supplemental asset directories
+        if: always()
+        shell: bash
+        run: rm -rf -- published previous
