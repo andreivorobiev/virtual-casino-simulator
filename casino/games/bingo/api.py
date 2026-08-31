@@ -31,6 +31,10 @@ COMPETITOR_CARDS = 3
 HOUSE_COMPETITOR_ID = "bingo_house"
 # Reserve one private action slot so money and history work never runs under the provider document lock. (BINGO-028)
 PENDING_ACTION_KEY = "_bingo_pending_action"
+# Retain the private debit-to-session join after the transient purchase marker is released. (BINGO-029)
+PURCHASE_ASSOCIATIONS_KEY = "_bingo_purchase_session_associations"
+# Bound associations for sessions no longer present in active or archived game state. (BINGO-029)
+PURCHASE_ASSOCIATION_HISTORY_LIMIT = 1000
 
 
 # Replace a stale caller snapshot with the complete provider-authoritative document. (BINGO-028)
@@ -41,14 +45,105 @@ def _refresh_state(state: dict, authoritative: dict) -> None:
     state.update(authoritative)
 
 
-# Return a detached v1 state without exposing private recovery metadata. (BINGO-028)
+# Return a detached v1 state without exposing private recovery or association metadata. (BINGO-028, BINGO-029)
 def _public_state(state: dict) -> dict:
     # Deep-copy because private marker snapshots contain nested cards and sessions.
     public = copy.deepcopy(state)
     # Remove the one private action owner while preserving every established public field.
     public.pop(PENDING_ACTION_KEY, None)
+    # Remove the server-only debit-to-session join from every public state payload.
+    public.pop(PURCHASE_ASSOCIATIONS_KEY, None)
     # Return the frozen public state shape.
     return public
+
+
+# Validate the private association index before it can authorize replay or retention. (BINGO-029)
+def _validated_purchase_session_associations(state: dict) -> list[dict]:
+    # Treat an older document without the private index as an empty compatible state.
+    records = state.get(PURCHASE_ASSOCIATIONS_KEY, [])
+    # Refuse malformed durable metadata rather than guessing a debit/session relationship.
+    if not isinstance(records, list):
+        # Keep corruption operator-visible and prevent a false authoritative join.
+        raise ConflictError("Bingo purchase association state is invalid")
+    # Detect duplicate or conflicting identities while preserving insertion order.
+    purchases = {}
+    sessions = {}
+    # Inspect every bounded record before trusting any one match.
+    for record in records:
+        # Require the two exact non-empty durable identifiers.
+        if not isinstance(record, dict) or not isinstance(record.get("purchase_id"), str) or not record["purchase_id"] or not isinstance(record.get("session_id"), str) or not record["session_id"]:
+            # Reject partial or type-confused private metadata.
+            raise ConflictError("Bingo purchase association state is invalid")
+        # Read the immutable pair once for duplicate checks.
+        purchase_id = record["purchase_id"]
+        session_id = record["session_id"]
+        # Refuse duplicate purchase or session ownership, including duplicate exact rows.
+        if purchase_id in purchases or session_id in sessions:
+            # Preserve the one-to-one association invariant.
+            raise ConflictError("Bingo purchase association state is invalid")
+        # Index the validated pair for the remaining rows.
+        purchases[purchase_id] = session_id
+        sessions[session_id] = purchase_id
+    # Return the provider-owned list after complete validation.
+    return records
+
+
+# Retain one immutable purchase/session join inside the session publication transaction. (BINGO-029)
+def _retain_purchase_session_association(state: dict, purchase_id: str, session_id: str) -> None:
+    # Require exact non-empty identities before any private state mutation.
+    if not isinstance(purchase_id, str) or not purchase_id or not isinstance(session_id, str) or not session_id:
+        # Reject missing recovery identity instead of publishing an ambiguous join.
+        raise ConflictError("Bingo purchase association identity is invalid")
+    # Validate all existing records before checking replay or conflict semantics.
+    records = _validated_purchase_session_associations(state)
+    # Compare the requested pair with each retained immutable association.
+    for record in records:
+        # Make an exact replay a stable no-op that does not reorder retention.
+        if record["purchase_id"] == purchase_id and record["session_id"] == session_id:
+            # Preserve byte-stable provider state across a lost-response replay.
+            return
+        # Prevent either durable identity from being rebound to another action.
+        if record["purchase_id"] == purchase_id or record["session_id"] == session_id:
+            # Fail closed on a one-to-one association conflict.
+            raise ConflictError("Bingo purchase association identity changed")
+    # Append the newly accepted relationship in provider transaction order.
+    updated = [*records, {"purchase_id": purchase_id, "session_id": session_id}]
+    # Pin every association whose session remains in the public active/archive state.
+    retained_session_ids = set()
+    # Preserve the active session join for its complete visible lifetime.
+    active = state.get("active_session")
+    # Add only one structured non-empty identity.
+    if isinstance(active, dict) and isinstance(active.get("session_id"), str) and active["session_id"]:
+        # Keep its debit association regardless of later reset history volume.
+        retained_session_ids.add(active["session_id"])
+    # Preserve all terminal sessions still retained by the engine archive.
+    for session in state.get("last_sessions", []):
+        # Ignore unrelated malformed archive entries here; engine validation owns public state.
+        if isinstance(session, dict) and isinstance(session.get("session_id"), str) and session["session_id"]:
+            # Pin the exact terminal session identity.
+            retained_session_ids.add(session["session_id"])
+    # Select bounded historical rows whose sessions are no longer retained by game state.
+    historical_indexes = [index for index, record in enumerate(updated) if record["session_id"] not in retained_session_ids]
+    # Keep only the newest bounded historical associations while never evicting pinned sessions.
+    historical_indexes = set(historical_indexes[-PURCHASE_ASSOCIATION_HISTORY_LIMIT:])
+    # Preserve original transaction order for every retained pair.
+    state[PURCHASE_ASSOCIATIONS_KEY] = [record for index, record in enumerate(updated) if record["session_id"] in retained_session_ids or index in historical_indexes]
+
+
+# Resolve the private purchase identity for one exact session without exposing the index. (BINGO-029)
+def _purchase_id_for_session(state: dict, session_id: str) -> str | None:
+    # Reject missing session identity before consulting durable metadata.
+    if not isinstance(session_id, str) or not session_id:
+        # Report no association for an absent lookup key.
+        return None
+    # Validate the complete index before returning one authoritative relationship.
+    for record in _validated_purchase_session_associations(state):
+        # Return only the exact session match.
+        if record["session_id"] == session_id:
+            # Preserve the raw internal purchase identity for server-only consumers.
+            return record["purchase_id"]
+    # Report absence without synthesizing an association.
+    return None
 
 
 # Locate an active or archived session by its durable identity. (BINGO-028)
@@ -269,7 +364,7 @@ def prepare_purchase(player_id: str, state: dict, amount: float, pattern: str) -
     return selected
 
 
-# Publish the funded session while retaining a committed marker for lost-response recovery. (BINGO-028)
+# Publish the funded session and durable private debit association atomically. (BINGO-028, BINGO-029)
 def commit_purchase(player_id: str, state: dict, marker: dict, bot_players: list[dict]) -> dict:
     # Capture the exact provider-owned session selected or replayed by the callback.
     selected = {}
@@ -297,6 +392,8 @@ def commit_purchase(player_id: str, state: dict, marker: dict, bot_players: list
             pending["status"] = "committed"
             # Preserve the session identity for response-loss reconciliation.
             pending["session_id"] = session["session_id"]
+        # Persist the debit purchase identity beside the accepted session in this same transaction.
+        _retain_purchase_session_association(current, pending["purchase_id"], session["session_id"])
         # Return detached session evidence after provider publication.
         selected.update(copy.deepcopy(session))
         # Publish the complete state atomically.
@@ -310,7 +407,7 @@ def commit_purchase(player_id: str, state: dict, marker: dict, bot_players: list
     return selected
 
 
-# Clear only the exact committed purchase marker after the session is durable. (BINGO-028)
+# Clear only the exact committed purchase marker after its durable association exists. (BINGO-028, BINGO-029)
 def finalize_purchase(player_id: str, state: dict, marker: dict) -> dict:
     # Capture the provider-current session returned after marker release.
     selected = {}
@@ -331,6 +428,10 @@ def finalize_purchase(player_id: str, state: dict, marker: dict) -> dict:
             if session is None:
                 # Leave the marker intact for operator recovery.
                 raise ConflictError("Bingo committed purchase session is unavailable")
+            # Require the private durable join before discarding the transient purchase identity.
+            if _purchase_id_for_session(current, session["session_id"]) != pending["purchase_id"]:
+                # Leave the marker available for explicit repair or operator recovery.
+                raise ConflictError("Bingo committed purchase association is unavailable")
             # Retain detached response evidence.
             selected.update(copy.deepcopy(session))
             # Release only this action slot.
@@ -340,6 +441,10 @@ def finalize_purchase(player_id: str, state: dict, marker: dict) -> dict:
             session = _find_session(current, marker.get("session_id")) if marker.get("session_id") else None
             # Retain it only when a sibling already completed this action.
             if session is not None:
+                # Require the same private association before accepting an already-finalized replay.
+                if _purchase_id_for_session(current, session["session_id"]) != marker.get("purchase_id"):
+                    # Refuse a coincidental session identifier without the exact debit join.
+                    raise ConflictError("Bingo committed purchase association is unavailable")
                 # Return the same authoritative session without further mutation.
                 selected.update(copy.deepcopy(session))
         # Publish or replay the complete document.
