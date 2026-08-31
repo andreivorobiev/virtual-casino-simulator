@@ -5,13 +5,37 @@
 // Link only the reviewed repository changelog, never an arbitrary URL supplied by an API response.
 const CHANGELOG_URL = 'https://github.com/andreivorobiev/virtual-casino-simulator/blob/main/RELEASE_NOTES.md';
 
+// Resolve the complete dialog chrome as one bounded unit so a missing fallback never exposes a key.
+const CHROME_COPY = Object.freeze({
+  title: ['whatsNew.title', 200],
+  intro: ['whatsNew.intro', 500],
+  dismiss: ['whatsNew.dismiss', 200],
+  later: ['whatsNew.later', 200],
+  saving: ['whatsNew.saving', 200],
+  changelog: ['whatsNew.changelog', 200],
+  saveError: ['whatsNew.saveError', 500]
+});
+
+// Reject the whole optional surface when any fixed chrome string is absent, unresolved, or unbounded.
+function localizedChrome(translate) {
+  const copy = {};
+  for (const [name, [key, limit]] of Object.entries(CHROME_COPY)) {
+    const value = translate(key);
+    if (typeof value !== 'string' || !value.trim() || value === key || value.length > limit) return null;
+    copy[name] = value;
+  }
+  return copy;
+}
+
 // Convert the bounded server contract to text-only copy; missing translations must not leak keys.
 export function localizedTour(payload, translate) {
   // Require explicit persistent-account eligibility and the complete bounded merged collection.
   if (payload?.show !== true || payload.persisted !== true || !Array.isArray(payload.entries)
       || payload.entries.length < 1 || payload.entries.length > 3
       || payload.merged_count !== payload.entries.length) return null;
-  // Resolve every entry atomically so acknowledging a partial translation cannot hide unseen copy.
+  // Resolve the fixed chrome and every entry atomically so partial copy can never become visible.
+  const chrome = localizedChrome(translate);
+  if (!chrome) return null;
   const entries = [];
   // Use only release-coordinator keys from the reviewed shell domain.
   for (const entry of payload.entries) {
@@ -29,7 +53,7 @@ export function localizedTour(payload, translate) {
     entries.push({ title, body });
   }
   // Accept only the existing canonical repository-relative changelog location.
-  return { entries, changelog: payload.changelog_path === 'RELEASE_NOTES.md' ? CHANGELOG_URL : null };
+  return { entries, chrome, changelog: payload.changelog_path === 'RELEASE_NOTES.md' ? CHANGELOG_URL : null };
 }
 
 // Own one optional dialog per authenticated shell generation, independent of game rendering.
@@ -38,6 +62,29 @@ export function createWhatsNewController({ apiClient, documentRef, windowRef, tr
   let generation = 0;
   // Retain only this controller's mounted dialog and localized presentation nodes.
   let mounted = null;
+  // Keep durable acknowledgement behind the PWA's authoritative connectivity boundary.
+  let serverActionBlocked = false;
+
+  // Apply busy and connectivity ownership without disabling local deferral or Escape.
+  function synchronizeDismissControl() {
+    // Stop when no optional dialog owns a server action.
+    if (!mounted) return;
+    // Respect both controller state and a PWA-owned disable applied before its event was delivered.
+    const blocked = mounted.busy || serverActionBlocked || mounted.save.dataset.pwaOfflineDisabled === 'true';
+    // Use native disabled behavior for pointer, keyboard, and scripted form submission.
+    mounted.save.disabled = blocked;
+    // Mirror only the current effective state for assistive technologies.
+    if (blocked) mounted.save.setAttribute('aria-disabled', 'true');
+    else mounted.save.removeAttribute('aria-disabled');
+  }
+
+  // Accept only authoritative online terminals; every transitional or malformed state fails closed.
+  function handleConnectivity(event) {
+    // Online browser transport alone is insufficient until session and route restoration completes.
+    serverActionBlocked = !(event.detail?.online === true && ['online', 'route-restored'].includes(event.detail?.state));
+    // Update an already-mounted action without changing local deferral controls.
+    synchronizeDismissControl();
+  }
 
   // Create semantic nodes using textContent so curated copy can never execute as HTML.
   function element(tag, text, testId) {
@@ -78,17 +125,17 @@ export function createWhatsNewController({ apiClient, documentRef, windowRef, tr
   }
 
   // Repaint copy in place so a locale transition cannot reset keyboard focus or duplicate the dialog.
-  function localize() {
+  function localize(prevalidatedTour = null) {
     // Ignore locale events when no optional tour is visible.
     if (!mounted) return;
     // Resolve the entire catalog again through installed fallback dictionaries.
-    const tour = localizedTour(mounted.payload, translate);
+    const tour = prevalidatedTour || localizedTour(mounted.payload, translate);
     // Hide unavailable copy without acknowledging it on the server.
     if (!tour) { removeDialog(true); return; }
     // Keep the dialog heading and introduction synchronized with the shell locale.
-    mounted.title.textContent = translate('whatsNew.title');
+    mounted.title.textContent = tour.chrome.title;
     // Explain that one merged collection represents meaningful changes since the last acknowledgement.
-    mounted.intro.textContent = translate('whatsNew.intro');
+    mounted.intro.textContent = tour.chrome.intro;
     // Update each entry's existing semantic heading and paragraph without replacing focused controls.
     tour.entries.forEach((entry, index) => {
       // Localize the title independently from the body.
@@ -97,19 +144,21 @@ export function createWhatsNewController({ apiClient, documentRef, windowRef, tr
       mounted.rows[index].body.textContent = entry.body;
     });
     // Localize durable acknowledgement independently from session-local deferral.
-    mounted.save.textContent = translate(mounted.busy ? 'whatsNew.saving' : 'whatsNew.dismiss');
+    mounted.save.textContent = tour.chrome[mounted.busy ? 'saving' : 'dismiss'];
     // Escape and this secondary control never claim a saved dismissal.
-    mounted.later.textContent = translate('whatsNew.later');
+    mounted.later.textContent = tour.chrome.later;
     // Keep the full changelog link accessible in the active language.
-    mounted.link.textContent = translate('whatsNew.changelog');
+    mounted.link.textContent = tour.chrome.changelog;
     // Show a fixed localized failure, never a raw transport error.
-    mounted.error.textContent = mounted.failed ? translate('whatsNew.saveError') : '';
+    mounted.error.textContent = mounted.failed ? tour.chrome.saveError : '';
+    // Let state transitions stop before performing an action when copy has failed closed.
+    return true;
   }
 
   // Confirm acknowledgement through the existing self-only, empty-body API before closing.
   async function acknowledge(ticket) {
     // Prevent double clicks or a stale control from issuing duplicate work.
-    if (!mounted || mounted.busy || ticket !== generation) return;
+    if (!mounted || mounted.busy || mounted.save.disabled || serverActionBlocked || ticket !== generation) return;
     // Mark this dialog busy while leaving Not now available during a network failure.
     mounted.busy = true;
     // Clear a previous explicit-attempt failure without retrying automatically.
@@ -117,9 +166,9 @@ export function createWhatsNewController({ apiClient, documentRef, windowRef, tr
     // Preserve a live in-dialog focus owner before disabling the active submit control.
     if (documentRef.activeElement === mounted.save) mounted.later.focus();
     // Disable only durable acknowledgement while its response is outstanding.
-    mounted.save.disabled = true;
+    synchronizeDismissControl();
     // Announce current progress with localized copy.
-    localize();
+    if (!localize()) return;
     // Keep optional tour failures out of login and gameplay control flow.
     try {
       // Send no caller-authored subject, version, session, or consent field.
@@ -141,7 +190,7 @@ export function createWhatsNewController({ apiClient, documentRef, windowRef, tr
         // Restore acknowledgement after the single request completes.
         mounted.busy = false;
         // Permit a deliberate user retry without an automatic replay loop.
-        mounted.save.disabled = false;
+        synchronizeDismissControl();
         // Repaint failure or idle text in the current locale.
         localize();
       }
@@ -262,13 +311,15 @@ export function createWhatsNewController({ apiClient, documentRef, windowRef, tr
       // Bind one explicit durable action to this generation.
       save.onclick = () => acknowledge(ticket);
       // Localize all nodes before the native top layer becomes visible.
-      localize();
+      localize(tour);
+      // Apply an offline or reconnecting boundary that began before this optional surface mounted.
+      synchronizeDismissControl();
       // Attach outside route outlets so game and locale rerenders cannot recreate the tour.
       documentRef.body.append(dialog);
       // Delegate keyboard focus containment to the native modal implementation.
       dialog.showModal();
       // Start keyboard users at the explicit saved-dismissal action.
-      save.focus();
+      (serverActionBlocked ? later : save).focus();
       // Report a visible eligible tour to deterministic tests.
       return true;
     } catch (_) {
@@ -281,6 +332,8 @@ export function createWhatsNewController({ apiClient, documentRef, windowRef, tr
 
   // Update text only after the installed locale's dictionaries are ready.
   windowRef.addEventListener('casino-locale-changed', localize);
+  // Track the same authoritative connectivity events that govern every other server action.
+  windowRef.addEventListener('casino-connectivity', handleConnectivity);
   // Prevent a frozen page from retaining an old account's optional modal.
   windowRef.addEventListener('pagehide', dispose);
   // Expose only lifecycle operations; no browser-side version or persistence authority exists.

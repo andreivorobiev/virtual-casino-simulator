@@ -9,6 +9,8 @@ import test from 'node:test';
 const banner = { dataset: {}, replaceChildren() {} };
 // Track one representative server-owned control through failure and success.
 const control = { disabled: false, dataset: {}, setAttribute() {}, removeAttribute() {} };
+// Track the optional tour's durable action separately from local Not now/Escape behavior.
+const dismiss = { disabled: false, dataset: {}, setAttribute() {}, removeAttribute() {} };
 // Retain only event names and handlers, never browser identity or payloads.
 const listeners = new Map();
 // Provide an explicitly online browser shape without Node's read-only navigator property.
@@ -18,7 +20,15 @@ globalThis.CustomEvent = class { constructor(type, options) { this.type = type; 
 // Keep steady-state timers inert so the tests assert the exact terminal state immediately.
 globalThis.window = { addEventListener: (name, callback) => listeners.set(name, callback), dispatchEvent() {}, setTimeout: () => 1 };
 // Supply only the document surfaces the actual PWA implementation consumes.
-globalThis.document = { body: { setAttribute() {} }, documentElement: { dataset: {} }, getElementById: () => banner, querySelectorAll: selector => selector.startsWith('[data-pwa-offline-disabled') ? (control.dataset.pwaOfflineDisabled ? [control] : []) : [control] };
+globalThis.document = {
+  body: { setAttribute() {} }, documentElement: { dataset: {} }, getElementById: () => banner,
+  querySelectorAll: selector => {
+    // Return only controls actually tagged by the production boundary during restoration.
+    if (selector.startsWith('[data-pwa-offline-disabled')) return [control, dismiss].filter(item => item.dataset.pwaOfflineDisabled);
+    // The durable tour action participates only when the exact selector is present in production.
+    return selector.includes('[data-testid="whats-new-dismiss"]') ? [control, dismiss] : [control];
+  }
+};
 // Keep warm-start bookkeeping inside a disposable in-memory seam.
 globalThis.sessionStorage = { getItem: () => null, setItem() {} };
 // Import the production implementation after installing browser-shaped dependencies.
@@ -40,6 +50,8 @@ test('concurrent reconnect callers share one restore and keep controls disabled'
   assert.equal(calls, 1);
   // Keep server-required actions unavailable before authority completes.
   assert.equal(control.disabled, true);
+  // Govern the optional tour's POST by the same server-action boundary.
+  assert.equal(dismiss.disabled, true);
   // Simulate an additional native online notification during the same operation.
   listeners.get('online')();
   // Still own exactly one backend refresh.
@@ -50,6 +62,8 @@ test('concurrent reconnect callers share one restore and keep controls disabled'
   assert.deepEqual(await first, { status: 'route-restored' });
   // Release only the PWA-owned disable after success.
   assert.equal(control.disabled, false);
+  // Release Got it only with the same authoritative success.
+  assert.equal(dismiss.disabled, false);
   // Preserve route-restored rather than overwriting it with a competing online result.
   assert.equal(banner.dataset.state, 'route-restored');
 });
@@ -64,6 +78,8 @@ test('failure releases single-flight ownership but never retries automatically',
   assert.deepEqual(await pwa.reconnectAuthoritatively(), { status: 'reconnect-failed' });
   // Keep server-required controls blocked after failure.
   assert.equal(control.disabled, true);
+  // Keep the tour acknowledgement unavailable after failed authority.
+  assert.equal(dismiss.disabled, true);
   // No timer or hidden replay can call the handler again.
   assert.equal(calls, 1);
   // Register a succeeding authority for a new explicit connectivity attempt.
@@ -74,4 +90,6 @@ test('failure releases single-flight ownership but never retries automatically',
   assert.equal(calls, 2);
   // Restore only after that independent successful operation.
   assert.equal(control.disabled, false);
+  // Restore the tour action with the independently requested successful cohort.
+  assert.equal(dismiss.disabled, false);
 });

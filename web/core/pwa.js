@@ -17,6 +17,7 @@ const SERVER_CONTROL_SELECTOR = [
   '.game-screen button', '.game-screen input', '.game-screen select', '.game-screen textarea',
   '.wallet-menu button', '.wallet-menu input', '#feedback-dialog button', '#feedback-dialog input', '#feedback-dialog select', '#feedback-dialog textarea',
   '#wellness-dialog button', '#wellness-dialog input',
+  '[data-testid="whats-new-dismiss"]',
 ].join(',');
 // Enumerate display-only lifecycle states accepted by the bounded shell status renderer.
 const DISPLAY_STATES = new Set(['cold-start', 'warm-start', 'offline', 'reconnecting', 'online', 'route-restored', 'update', 'update-failed', 'stale-client', 'expired-session', 'reconnect-failed']);
