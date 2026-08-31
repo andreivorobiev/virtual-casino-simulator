@@ -9,7 +9,6 @@ scheduler, repository writer, publication, or deployment operation.
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-import ast
 import hashlib
 import json
 import re
@@ -156,19 +155,12 @@ def _replace_identities(text, replacements):
 
 
 def _test_identity_only(change, replacements):
-    """Compare executable ASTs; assertions, calls, numbers and flow stay exact."""
-    class ReplaceIdentity(ast.NodeTransformer):
-        def visit_Constant(self, node):
-            if isinstance(node.value, str) and node.value in replacements:
-                return ast.copy_location(ast.Constant(replacements[node.value]), node)
-            return node
-
+    """Permit only simultaneous literal substitutions; every other byte stays exact."""
     try:
-        before = ReplaceIdentity().visit(ast.parse(change.before))
-        after = ast.parse(change.after)
-    except (SyntaxError, ValueError, TypeError) as error:
+        expected = _replace_identities(change.before.decode("utf-8"), replacements).encode()
+    except (UnicodeError, ValueError, TypeError) as error:
         raise PolicyError("wrapper_test_syntax") from error
-    require(ast.dump(before) == ast.dump(after), "wrapper_test_behavior")
+    require(expected == change.after, "wrapper_test_behavior")
 
 
 def _registry_provenance_only(change, candidate, replacements):

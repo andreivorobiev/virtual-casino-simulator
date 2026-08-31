@@ -29,6 +29,7 @@ on:
 concurrency:
   group: release-candidate-${{ github.ref }}
   cancel-in-progress: false
+  queue: max
 
 jobs:
   build-candidate:

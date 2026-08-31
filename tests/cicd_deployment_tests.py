@@ -119,6 +119,9 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
             self.assertIn("cancel-in-progress: false", section)
             self.assertIn("queue: max", section)
         self.assertIn("group: release-candidate-${{ github.ref }}", text)
+        top_concurrency = text.split("jobs:", 1)[0].split("concurrency:", 1)[1]
+        self.assertIn("cancel-in-progress: false", top_concurrency)
+        self.assertIn("queue: max", top_concurrency)
         event_lane = text.split("  publish-immutable-release:", 1)[1]
         self.assertIn("contents: read", event_lane)
         self.assertNotIn("contents: write", event_lane)

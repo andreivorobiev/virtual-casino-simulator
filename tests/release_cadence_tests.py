@@ -200,9 +200,13 @@ class ReleaseCadenceTests(unittest.TestCase):
         changes["modules/tests.json"] = policy.Change(encoded({"module": "tests", "version": "1.123.2"}),
                                                        encoded({"module": "tests", "version": "1.123.3"}))
         self.assertEqual(policy.publication_intent(**arguments).decision, "publish")
-        changes["tests/release_artifact_tests.py"] = policy.Change(old, new.replace(b"assertEqual", b"assertNotEqual"))
-        with self.assertRaisesRegex(policy.PolicyError, "wrapper_test_behavior"):
-            policy.publication_intent(**arguments)
+        for hostile in (new.replace(b"assertEqual", b"assertNotEqual"),
+                        new + b"# ARBITRARY RELEASE CLAIM\n",
+                        new + b"value = 1  # type: ignore[assignment]\n",
+                        new.replace(b"    self.assertEqual", b"        self.assertEqual")):
+            changes["tests/release_artifact_tests.py"] = policy.Change(old, hostile)
+            with self.subTest(hostile=hostile), self.assertRaisesRegex(policy.PolicyError, "wrapper_test_behavior"):
+                policy.publication_intent(**arguments)
 
     def test_review_identity_and_release_declaration_are_mandatory(self):
         for change in ({"merge_commit_sha": "9" * 40}, {"merged_at": None}, {"base": {"ref": "feature"}},
