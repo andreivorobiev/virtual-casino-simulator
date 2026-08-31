@@ -4,8 +4,10 @@
 
 # Import detached copies for provider-faithful state boundaries.
 import copy
-# Import cleanup registration that still runs remaining guards when one cleanup raises.
-from contextlib import ExitStack
+# Import cleanup ownership and captured output for terminal-evidence ordering tests.
+from contextlib import ExitStack, redirect_stdout
+# Import an in-memory text sink so failed cleanup can prove no PASS was emitted.
+from io import StringIO
 # Import JSON encoding for recursive public-omission assertions.
 import json
 # Import environment access for disposable-target guards and selector restoration.
@@ -404,8 +406,8 @@ def run_bingo_purchase_session_association_live() -> None:
         # Re-query to prove replay appended no rows.
         replay_ledger = storage.get_storage_provider().read_ledger_recent(rollback_player["player_id"], 100)
         assert len([row for row in replay_ledger if row.get("round_id") == rollback_marker["purchase_id"] and row.get("transaction_type") in {"BINGO_CARD_PURCHASED", "BINGO_CARD_REFUND_AFTER_ERROR"}]) == 2
-        # Emit only bounded value-free evidence.
-        print("BINGO-PURCHASE-SESSION-MYSQL-LIVE PASS transaction=1 replay=1 restart=1 reset=1 legacy=1 rollback=1 compensation=1 ledger=1 privacy=1")
+    # Emit bounded value-free evidence only after every ExitStack cleanup succeeds.
+    print("BINGO-PURCHASE-SESSION-MYSQL-LIVE PASS transaction=1 replay=1 restart=1 reset=1 legacy=1 rollback=1 compensation=1 ledger=1 privacy=1")
 
 
 # Prove the private authoritative association across lifecycle and provider boundaries. (BINGO-029, TEST-265)
@@ -523,13 +525,17 @@ class BingoPurchaseSessionAssociationTests(unittest.TestCase):
                     provider.close_pool.side_effect = RuntimeError("synthetic pool cleanup failure")
                 # Keep each failure/selector pair independently attributable.
                 with self.subTest(failure=failure, previous=previous_selector), mock.patch.dict(os.environ, environment, clear=True), mock.patch.object(storage, "MySQLStorageProvider", return_value=provider) as constructor, mock.patch.object(storage, "set_provider_for_tests", side_effect=inject):
+                    # Capture value-free callback output to prove cleanup failures cannot precede PASS.
+                    output = StringIO()
                     # Fail construction only after selector restoration was registered.
                     if failure == "constructor":
                         # No provider object becomes callback-owned in this case.
                         constructor.side_effect = RuntimeError("synthetic constructor failure")
                     # Preserve a failure while still requiring all applicable cleanup guards.
-                    with self.assertRaises(RuntimeError):
+                    with redirect_stdout(output), self.assertRaises(RuntimeError):
                         run_bingo_purchase_session_association_live()
+                    # Never emit terminal acceptance before constructor, body, or cleanup convergence.
+                    self.assertNotIn("BINGO-PURCHASE-SESSION-MYSQL-LIVE PASS", output.getvalue())
                     # Restore the exact inherited value or absence despite any cleanup exception.
                     self.assertEqual(previous_selector, os.environ.get("CASINO_STORAGE_PROVIDER"))
                     # Constructor failure must still attempt cache clearing without closing an unconstructed pool.
