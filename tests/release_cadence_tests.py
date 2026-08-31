@@ -550,9 +550,32 @@ class ReleaseCadenceTests(unittest.TestCase):
         with self.assertRaisesRegex(policy.PolicyError, "wrapper_suite_app"):
             policy.publication_intent(**arguments)
         arguments = self.arguments()
+        runs = arguments["workflow_runs"]["workflow_runs"]
+        first_run = runs[0]
+        duplicate_suite = first_run["check_suite_id"]
+        for run in runs[1:]:
+            arguments["check_suites"].pop(run["check_suite_id"])
+            run["check_suite_id"] = duplicate_suite
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_suite_ambiguous"):
+            policy.publication_intent(**arguments)
+        arguments = self.arguments()
         check_id = next(iter(arguments["check_runs"]))
         arguments["check_runs"][check_id]["app"]["slug"] = "untrusted-app"
         with self.assertRaisesRegex(policy.PolicyError, "wrapper_check_app"):
+            policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        runs = arguments["workflow_runs"]["workflow_runs"]
+        duplicate_job = arguments["workflow_jobs"][runs[0]["id"]]["jobs"][0]["id"]
+        for run in runs[1:]:
+            job = arguments["workflow_jobs"][run["id"]]["jobs"][0]
+            arguments["check_runs"].pop(job["id"])
+            job["id"] = duplicate_job
+            job["check_run_url"] = (
+                f"https://api.github.com/repos/{policy.REPOSITORY}/check-runs/{duplicate_job}")
+        last_job = arguments["workflow_jobs"][runs[-1]["id"]]["jobs"][0]
+        arguments["check_runs"][duplicate_job]["name"] = last_job["name"]
+        arguments["check_runs"][duplicate_job]["check_suite"]["id"] = runs[-1]["check_suite_id"]
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_gate_ambiguous"):
             policy.publication_intent(**arguments)
         arguments = self.arguments()
         run_id = arguments["workflow_runs"]["workflow_runs"][0]["id"]
@@ -997,6 +1020,38 @@ class ReleaseCadenceTests(unittest.TestCase):
                     "replacement-run", runs_path,
                     lambda value: value["workflow_runs"][0].update(updated_at="2026-08-31T21:55:00Z"),
                     "publication_admission_drift")
+                require_final_failure(
+                    "duplicate-suite-final-snapshot", runs_path,
+                    lambda value: [run.update(
+                        check_suite_id=value["workflow_runs"][0]["check_suite_id"])
+                        for run in value["workflow_runs"]],
+                    "wrapper_suite_ambiguous")
+
+                job_paths = {
+                    f"repos/{boundary.REPOSITORY}/actions/runs/{run_id}/attempts/1/jobs?per_page=100"
+                    for run_id in evidence["workflow_jobs"]
+                }
+                duplicate_job = next(iter(evidence["check_runs"]))
+                duplicate_check_path = (
+                    f"repos/{boundary.REPOSITORY}/check-runs/{duplicate_job}")
+                counts = {}
+
+                def duplicate_final_gate_jobs(observed_path, **_kwargs):
+                    counts[observed_path] = counts.get(observed_path, 0) + 1
+                    value = copy.deepcopy(baseline[observed_path])
+                    if observed_path in job_paths and counts[observed_path] == 2:
+                        value["jobs"][0]["id"] = duplicate_job
+                        value["jobs"][0]["check_run_url"] = duplicate_check_path.replace(
+                            "repos/", "https://api.github.com/repos/", 1)
+                    return value
+
+                getter.side_effect = duplicate_final_gate_jobs
+                with self.subTest(case="duplicate-gate-final-snapshot"), \
+                     self.assertRaisesRegex(policy.PolicyError, "wrapper_gate_ambiguous"):
+                    boundary.inspect_publication(event, environment, root, under_lock=True)
+                self.assertTrue(all(counts.get(path) == 2 for path in job_paths))
+                self.assertEqual(
+                    counts.get(f"repos/{boundary.REPOSITORY}/git/ref/heads/main", 0), 0)
                 permission_path = f"repos/{boundary.REPOSITORY}/collaborators/release-reviewer/permission"
                 require_final_failure(
                     "permission-removed", permission_path,

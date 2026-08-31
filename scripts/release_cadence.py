@@ -568,7 +568,13 @@ def validate_workflow_evidence(pull_request, head_pulls, runs_page, jobs_by_run,
     require(set(by_path) == set(REQUIRED_WORKFLOW_GATES) and
             isinstance(jobs_by_run, dict) and set(jobs_by_run) == run_ids,
             "wrapper_workflow_inventory")
-    suite_ids = {run["check_suite_id"] for run in by_path.values()}
+    suite_id_list = [run["check_suite_id"] for run in by_path.values()]
+    require(len(suite_id_list) == len(REQUIRED_WORKFLOW_GATES) and
+            all(type(suite_id) is int and suite_id > 0 for suite_id in suite_id_list),
+            "wrapper_suite_identity")
+    suite_ids = set(suite_id_list)
+    require(len(suite_ids) == len(suite_id_list),
+            "wrapper_suite_ambiguous")
     require(isinstance(check_suites, dict) and set(check_suites) == suite_ids,
             "wrapper_suite_inventory")
     for run in by_path.values():
@@ -594,6 +600,9 @@ def validate_workflow_evidence(pull_request, head_pulls, runs_page, jobs_by_run,
                  job.get("name") == REQUIRED_WORKFLOW_GATES[path]]
         require(len(gates) == 1, "wrapper_gate_ambiguous")
         gate = gates[0]
+        require(type(gate.get("id")) is int and gate["id"] > 0,
+                "wrapper_gate_identity")
+        require(gate["id"] not in gate_jobs, "wrapper_gate_ambiguous")
         require(gate.get("run_id") == run["id"] and
                 ("run_attempt" not in gate or
                  (type(gate["run_attempt"]) is int and gate["run_attempt"] == 1)) and
@@ -606,6 +615,8 @@ def validate_workflow_evidence(pull_request, head_pulls, runs_page, jobs_by_run,
                 f"https://api.github.com/repos/{REPOSITORY}/check-runs/{gate.get('id')}",
                 "wrapper_gate_check_url")
         gate_jobs[gate["id"]] = (gate, run)
+    require(len(gate_jobs) == len(REQUIRED_WORKFLOW_GATES),
+            "wrapper_gate_ambiguous")
     require(isinstance(check_runs_by_job, dict) and set(check_runs_by_job) == set(gate_jobs),
             "wrapper_check_inventory")
     for job_id, (gate, run) in gate_jobs.items():
