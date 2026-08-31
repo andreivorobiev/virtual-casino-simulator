@@ -1,4 +1,11 @@
 {
+  "whatsNew.title": "What’s new",
+  "whatsNew.intro": "A few meaningful improvements since your last visit. Your play tokens still have no cash value.",
+  "whatsNew.dismiss": "Got it",
+  "whatsNew.later": "Not now",
+  "whatsNew.saving": "Saving…",
+  "whatsNew.changelog": "Read the full changelog",
+  "whatsNew.saveError": "Your acknowledgement could not be saved. Try again, or choose Not now; these updates may appear on your next visit.",
   "invitation.eyebrow": "Private invitation",
   "invitation.title": "Create your restricted-preview account",
   "invitation.copy": "Use the invited email, choose a strong password, and explicitly accept the current toy-simulator terms. Play tokens have no cash value.",

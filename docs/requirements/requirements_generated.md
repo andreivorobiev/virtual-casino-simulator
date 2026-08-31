@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.74.1
+- application: 9.75.0
 - core: 10.19.0
 - mobile: 1.0.0
 - ledger: 9.1.2
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.5
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.7
-- tests: 1.123.1
-- docs: 1.116.1
+- tests: 1.124.0
+- docs: 1.117.0
 - contracts: 1.63.2
 - tooling: 1.49.0
 - commenting_policy: 2.1.0
@@ -485,6 +485,7 @@ Historical source baseline: 9.1.0
 - **TEST-105** (Tests) - PASS: Listener-free Python and dependency-free Node evidence verifies opt-in defaults, durable registered-user configuration, disposable guest non-persistence, cadence bounds, optimistic conflicts, reward-free acknowledgement, neutral self-only totals, malformed-state recovery, prohibited-framing scans, EN/RU placeholder parity, exact additive-v2 contract pinning, absolute server-session cadence, hidden-tab deferral, same-session reload deduplication, focus restoration, locale rerendering, session-local pause, durable stop, and teardown cancellation. Hosted Browser evidence exercises the real persistent control on a game route, native dialog focus and Escape restoration, neutral summary, pause/reload/resume/stop behavior, reduced motion, no horizontal overflow, and complete EN/RU by four-viewport visual evidence.
 - **TOUR-001** (Core) - PASS: The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.86 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.
 - **TOUR-002** (Core) - PASS: An authenticated registered subject receives at most one capped newest-first merged set of explicitly enabled curated entries and a changelog path. Published entries carry localization keys only, never raw release identifiers. Acknowledgement is atomically persisted per server-derived subject, stamped only from the canonical running application version, and retry-idempotent for that release; one subject cannot dismiss another subject's tour. Disposable guest trials receive an empty non-persisted eligibility response and a non-persisted acknowledgement, creating no durable What's New document.
+- **TOUR-003** (Core) - PASS: After terms-complete registered-account entry, the browser may present one native modal containing at most three server-selected curated updates. It resolves all copy through installed shell dictionaries and fallback before display; unresolved or excessive copy fails closed, raw release keys are never rendered, and only the fixed repository changelog is linkable. Got it closes only after a confirmed self-only empty-body durable acknowledgement. Not now and Escape defer locally without claiming persistence. Optional failures, guests, another open dialog, logout, replacement sessions, and late responses cannot block or repaint the authenticated shell. Locale changes preserve focused controls; all four governed viewports and reduced motion retain semantic keyboard access and containment. Release-coordinator catalog activation remains separately held.
 - **TEST-106** (Tests) - PASS: Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.86 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.
 - **MARKETING-001** (Marketing Site) - PASS: The repository contains an independently owned static TiltSeven landing-page scaffold in English and Russian. Each locale provides semantic header, navigation, main, and footer landmarks; a single top-level heading; keyboard skip navigation; stable accessible names; local-only runtime assets; and responsive containment at every governed viewport. The scaffold uses no JavaScript, forms, trackers, payment controls, or third-party runtime dependency.
 - **MARKETING-002** (Marketing Site) - PASS: Every locale presents TiltSeven as a play-token casino simulator with no cash value and explicit absence of deposits, purchases, withdrawals, redemption, prizes, transfer, sale, exchange, or conversion. The only absolute hyperlink is the separately governed canonical Casino origin, and acceptance never activates that link or changes the Casino deployment.

@@ -466,6 +466,15 @@
       ]
     },
     {
+      "id": "whats_new",
+      "route": "/",
+      "selector": "[data-testid='whats-new-dialog']",
+      "states": ["merged_updates", "keyboard_focus", "reduced_motion", "save_error", "dismissed_refresh", "next_release"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-003", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-TOUCH-001"]
+    },
+    {
       "id": "session_wellness",
       "route": "/games/roulette",
       "selector": "[data-testid='wellness-open'], [data-testid='wellness-dialog']",

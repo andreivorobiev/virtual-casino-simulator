@@ -39,6 +39,7 @@ const SHELL_ASSETS = Object.freeze([
   '/views/signup.js',
   '/views/terms.js',
   '/views/verification.js',
+  '/views/whats_new.js',
   '/i18n/en-US/feedback.json',
   '/i18n/en-US/shell.json',
   '/i18n/ru-RU/feedback.json',

@@ -16,6 +16,8 @@ import { loadVoiceSettings, setPersonalSoundEnabled } from './core/voice.js';
 import { syncFeedbackReporter } from './core/feedback.js';
 // Import the persistent every-game wellness controller for opt-in session reminders. (WELL-001, WELL-002)
 import { createWellnessController } from './core/wellness.js';
+// Import the optional curated release tour without changing consent or game lifecycle authority. (TOUR-003)
+import { createWhatsNewController } from './views/whats_new.js';
 // Import the terms gate so required consent leaves the application monolith. (AUTH-011)
 import { createTermsView } from './views/terms.js';
 // Import invitation redemption so bearer handling leaves the application monolith. (INVITE-003, INVITE-005)
@@ -70,6 +72,8 @@ const walletCelebrationLifecycle = createWalletCelebrationLifecycle({
 let appRouter = null;
 // Own one document-lifetime wellness controller while authenticated sessions replace its timer generation.
 const wellnessController = createWellnessController({ apiClient: api, documentRef: document, windowRef: window, translate: (key, values) => t(key, values, 'shell'), formatTokens: tokens });
+// Bind one document-lifetime tour controller to the existing self-only API and installed locale fallback.
+const whatsNewController = createWhatsNewController({ apiClient: api, documentRef: document, windowRef: window, translate: key => t(key, {}, 'shell') });
 // Bind login, guest entry, OAuth completion, and provider account controls to shell composition seams.
 const { beginOAuth, oauthCompletionCopy, renderLoginGate, renderOAuthAccountControls } = createLoginView({
   api,
@@ -269,6 +273,8 @@ function clearAuthenticatedShellState(options = {}) {
   sessionWarningTimer = null;
   // Dispose reminders before clearing identity so late API responses cannot reopen authenticated UI.
   wellnessController.dispose();
+  // Retire optional release-copy reads before an old subject can repaint the logged-out shell.
+  whatsNewController.dispose();
   // Dispose the session-owned celebration before a game or logged-out surface can remount.
   walletCelebrationLifecycle.unmount('session-cleared');
   // Unmount the active game when its lifecycle hook exists so stale rerenders cannot survive sign-out.
@@ -430,6 +436,8 @@ function transientRouteBearer(path) {
 
 // Enter the authenticated casino shell after login and terms are complete.
 async function enterAuthenticated(session) {
+  // Clear any prior account's optional tour before terms or replacement-session work begins.
+  whatsNewController.dispose();
   // Dispose any prior session generation before adopting a login, reconnect, or guest identity.
   walletCelebrationLifecycle.unmount('session-replaced');
   // Store the normalized current user for shell rendering.
@@ -468,6 +476,8 @@ async function enterAuthenticated(session) {
   const initialRoute = active || routeFromLocation();
   // Render the restored route while replacing invalid or legacy location state.
   await navigate(initialRoute, { history: 'replace' });
+  // Read optional release copy only after navigation; an unavailable tour must never block readiness.
+  void whatsNewController.start(currentSession);
 }
 
 // Refresh the current-user session and choose the correct first screen.
