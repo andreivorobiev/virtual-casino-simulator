@@ -331,7 +331,7 @@ export function createWhatsNewController({ apiClient, documentRef, windowRef, tr
   }
 
   // Update text only after the installed locale's dictionaries are ready.
-  windowRef.addEventListener('casino-locale-changed', localize);
+  windowRef.addEventListener('casino-locale-changed', () => localize());
   // Track the same authoritative connectivity events that govern every other server action.
   windowRef.addEventListener('casino-connectivity', handleConnectivity);
   // Prevent a frozen page from retaining an old account's optional modal.

@@ -72,7 +72,7 @@ function fixture(handler = async (_path, options) => options ? { dismissed: true
   return {
     controller, calls, document, nav, events,
     node: id => document.querySelector(`[data-testid="${id}"]`),
-    locale: value => { locale = value; events['casino-locale-changed'](); },
+    locale: value => { locale = value; events['casino-locale-changed']({ type: 'casino-locale-changed' }); },
     connectivity: (state, online = ['online', 'route-restored'].includes(state)) => events['casino-connectivity']({ detail: { online, state } })
   };
 }
