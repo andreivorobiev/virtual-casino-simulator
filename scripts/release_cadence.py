@@ -49,6 +49,15 @@ REQUIREMENT_REGISTRIES = frozenset({
 })
 RELEASE_TESTS = frozenset({"tests/release_artifact_tests.py", "tests/release_predecessor_tests.py"})
 WRAPPER_MODULES = frozenset({"application", "docs", "contracts", "tests"})
+SOURCE_FACTS_SCHEMA = "release-source-facts/v1"
+SOURCE_FACT_FIELDS = frozenset({
+    "schema", "source_sha", "tree_sha", "modules",
+    "permanent_requirement_count", "deployable_file_count",
+})
+ACCEPTED_DELTA_FIELDS = frozenset({"pull_request", "merge_sha"})
+MAX_ACCEPTED_DELTAS = 64
+MAX_RELEASE_FACT_TEXT_BYTES = 16 * 1024
+RELEASE_NOTES_PATH = "RELEASE_NOTES.md"
 ROLLBACK = {
     "scope": "application-only", "database_rollback": "prohibited",
     "mysql_expected_schema_version": 2, "requires_retained_predecessor_manifest": True,
@@ -113,6 +122,108 @@ def timestamp(value, reason):
         return result.astimezone(timezone.utc)
     except (ValueError, TypeError, AttributeError) as error:
         raise PolicyError(reason) from error
+
+
+def canonical_sha256(value):
+    """Hash one closed JSON value without accepting representation-dependent bytes."""
+    try:
+        raw = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    except (TypeError, ValueError, UnicodeError) as error:
+        raise PolicyError("release_facts_invalid") from error
+    return hashlib.sha256(raw).hexdigest()
+
+
+def validate_source_facts(facts, source_sha, tree_sha, modules):
+    """Validate exact-tree facts observed independently from wrapper-authored prose."""
+    require(isinstance(facts, dict) and set(facts) == SOURCE_FACT_FIELDS, "source_facts_fields")
+    require(facts.get("schema") == SOURCE_FACTS_SCHEMA, "source_facts_schema")
+    identity(facts.get("source_sha"))
+    identity(facts.get("tree_sha"))
+    require(facts["source_sha"] == source_sha and facts["tree_sha"] == tree_sha,
+            "source_facts_identity")
+    observed_modules = facts.get("modules")
+    require(isinstance(observed_modules, dict) and observed_modules and observed_modules == modules,
+            "source_facts_modules")
+    require(all(isinstance(name, str) and re.fullmatch(r"[a-z][a-z0-9_]*", name) and
+                isinstance(value, str) and MODULE_VERSION.fullmatch(value)
+                for name, value in observed_modules.items()), "source_facts_modules")
+    for field in ("permanent_requirement_count", "deployable_file_count"):
+        require(type(facts.get(field)) is int and facts[field] > 0, "source_facts_count")
+    return json.loads(json.dumps(facts))
+
+
+def validate_accepted_deltas(deltas):
+    """Accept only ordered canonical PR/merge identities, never provider-authored prose."""
+    require(isinstance(deltas, list) and 0 < len(deltas) <= MAX_ACCEPTED_DELTAS,
+            "accepted_delta_inventory")
+    normalized, pulls, commits = [], set(), set()
+    for delta in deltas:
+        require(isinstance(delta, dict) and set(delta) == ACCEPTED_DELTA_FIELDS,
+                "accepted_delta_fields")
+        pull = delta.get("pull_request")
+        commit = delta.get("merge_sha")
+        require(type(pull) is int and pull > 0, "accepted_delta_identity")
+        identity(commit)
+        require(pull not in pulls and commit not in commits, "accepted_delta_duplicate")
+        pulls.add(pull)
+        commits.add(commit)
+        normalized.append({"pull_request": pull, "merge_sha": commit})
+    return normalized
+
+
+def release_facts_sha256(source_facts, accepted_deltas, predecessor):
+    """Bind source facts and accepted deltas to the exact retained predecessor."""
+    return canonical_sha256({
+        "source_facts": source_facts,
+        "accepted_deltas": accepted_deltas,
+        "predecessor": predecessor,
+    })
+
+
+def render_candidate_notes(app_version, predecessor, source_facts, accepted_deltas):
+    """Render one bounded value-derived note without copying predecessor prose."""
+    module_text = ", ".join(
+        f"{name}={value}" for name, value in sorted(source_facts["modules"].items()))
+    delta_text = ", ".join(
+        f"PR #{delta['pull_request']} at {delta['merge_sha']}" for delta in accepted_deltas)
+    text = (
+        f"Compatible immutable release {app_version} packages exact accepted source "
+        f"{source_facts['source_sha']} at tree {source_facts['tree_sha']}. "
+        f"Module revisions: {module_text}. Permanent requirements total exactly "
+        f"{source_facts['permanent_requirement_count']}. Canonical deployable inventory is exactly "
+        f"{source_facts['deployable_file_count']} regular files. Accepted protected-main deltas since "
+        f"v{predecessor['app_version']}: {delta_text}. Exact immutable predecessor "
+        f"{predecessor['compatibility_record']} at source {predecessor['source_commit_sha']} binds "
+        f"required artifact {predecessor['required_artifact']} at SHA-256 "
+        f"{predecessor['artifact_sha256']} and manifest SHA-256 "
+        f"{predecessor['manifest_sha256']}; it remains application-only rollback and database rollback "
+        "remains prohibited. "
+        "This release-only wrapper closes no issue."
+    )
+    require(len(text.encode("utf-8")) <= MAX_RELEASE_FACT_TEXT_BYTES, "release_facts_too_large")
+    return text
+
+
+def render_release_notes(app_version, predecessor_version, source_facts, accepted_deltas):
+    """Render a deterministic current section whose historical tail can remain byte-exact."""
+    module_text = ", ".join(
+        f"`{name}` `{value}`" for name, value in sorted(source_facts["modules"].items()))
+    delta_text = ", ".join(
+        f"PR #{delta['pull_request']} (`{delta['merge_sha']}`)" for delta in accepted_deltas)
+    section = (
+        f"# Virtual Casino Simulator v{app_version} Release Notes\n\n"
+        "## Mechanically derived accepted-main delta\n\n"
+        f"- Packages accepted protected-main deltas {delta_text}.\n"
+        f"- Binds accepted source `{source_facts['source_sha']}` and tree `{source_facts['tree_sha']}`.\n"
+        f"- Records module revisions {module_text}.\n"
+        f"- Keeps exactly {source_facts['permanent_requirement_count']} permanent requirements.\n"
+        f"- Records exactly {source_facts['deployable_file_count']} canonical deployable regular files.\n"
+        f"- Retains exact immutable v{predecessor_version} as the application-only rollback predecessor; "
+        "database rollback remains prohibited.\n"
+        "- Adds no release-only requirement and closes no issue.\n\n"
+    )
+    require(len(section.encode("utf-8")) <= MAX_RELEASE_FACT_TEXT_BYTES, "release_facts_too_large")
+    return section
 
 
 @dataclass(frozen=True)
@@ -217,7 +328,51 @@ def _registry_provenance_only(change, candidate, replacements):
     require(after == expected or after == before, "wrapper_requirement_behavior")
 
 
-def validate_wrapper(before_manifest, after_manifest, changes, old_compatibility, candidate, catalog):
+def _anchored_release_document(path, before, old_version, new_version, replacements,
+                               predecessor_version, source_facts, accepted_deltas):
+    """Project only path-owned current-release anchors and preserve all history."""
+    try:
+        text = before.decode("utf-8")
+    except UnicodeError as error:
+        raise PolicyError("wrapper_release_document_behavior") from error
+    if path == RELEASE_NOTES_PATH:
+        header = f"# Virtual Casino Simulator v{old_version} Release Notes\n"
+        require(text.startswith(header) and text.count(header) == 1,
+                "wrapper_release_document_anchor")
+        return (render_release_notes(new_version, predecessor_version, source_facts,
+                                     accepted_deltas) + text).encode("utf-8")
+    prefixes = {
+        "README.md": ("Packaged application release:",),
+        "CODEX_START_HERE.md": ("- Packaged application release:", "- [`RELEASE_NOTES.md`]"),
+        "VERSIONING.md": ("- Packaged application release:",
+                          "| Runtime, API, browser shell, Admin |"),
+        "docs/production_cicd_runbook.md": ("Packaged release numbers use the four-part scheme",),
+        "docs/release_artifacts.md": (
+            "The authenticated compatibility record, not GitHub release-list ordering,",
+            "Build a canonical tagged",
+            "python scripts/make_release.py --release-tag",
+            "For v",
+        ),
+        "docs/release_versioning.md": (old_version, f"v{old_version}"),
+    }.get(path, ())
+    lines, changed = text.splitlines(keepends=True), 0
+    projected = []
+    for line in lines:
+        body = line.removesuffix("\n").removesuffix("\r")
+        matches = [prefix for prefix in prefixes if body.startswith(prefix)]
+        if matches:
+            replacement = _replace_identities(line, replacements)
+            require(replacement != line, "wrapper_release_document_anchor")
+            projected.append(replacement)
+            changed += 1
+        else:
+            projected.append(line)
+    require(changed == len(prefixes) and changed > 0, "wrapper_release_document_anchor")
+    return "".join(projected).encode("utf-8")
+
+
+def validate_wrapper(before_manifest, after_manifest, changes, old_compatibility, candidate, catalog,
+                     source_facts=None, accepted_deltas=None, source_sha=None, source_tree=None):
     """Enforce a closed semantic release-wrapper shape, not a filename waiver."""
     old_version, new_version = before_manifest.get("application"), after_manifest.get("application")
     require(new_version == next_patch(old_version), "release_requires_compatible_patch")
@@ -248,15 +403,27 @@ def validate_wrapper(before_manifest, after_manifest, changes, old_compatibility
         old["version"] = expected
         require(old == new, "wrapper_module_descriptor_behavior")
     require(expected_manifest == after_manifest, "wrapper_manifest_behavior")
+    facts = validate_source_facts(source_facts, source_sha, source_tree, modules_after)
+    deltas = validate_accepted_deltas(accepted_deltas)
     require(candidate.get("app_version") == new_version and candidate.get("modules") == modules_after, "wrapper_compatibility_identity")
-    require(candidate.get("predecessor", {}).get("app_version") == old_version and
-            candidate["predecessor"].get("compatibility_record") == f"contracts/compatibility/app-{old_version}.json",
+    predecessor = candidate.get("predecessor")
+    predecessor_fields = {"app_version", "compatibility_record", "required_artifact",
+                          "source_commit_sha", "artifact_sha256", "manifest_sha256"}
+    require(isinstance(predecessor, dict) and set(predecessor) == predecessor_fields and
+            predecessor.get("app_version") == old_version and
+            predecessor.get("compatibility_record") == f"contracts/compatibility/app-{old_version}.json" and
+            predecessor.get("required_artifact") == "release-manifest.json",
             "wrapper_predecessor_not_replaced_version")
+    identity(predecessor.get("source_commit_sha"))
+    identity(predecessor.get("artifact_sha256"), DIGEST)
+    identity(predecessor.get("manifest_sha256"), DIGEST)
     expected_keys = {"app_version", "source_baseline", "api_compatibility_matrix",
                      "release_provenance_requirement", "release_channel", "access_policy",
-                     "predecessor", "rollback", "modules", "notes"}
+                     "predecessor", "rollback", "modules", "notes", "source_facts",
+                     "accepted_deltas", "release_facts_sha256"}
     require(set(candidate) == expected_keys, "wrapper_compatibility_fields")
-    for field in expected_keys - {"app_version", "predecessor", "modules", "notes"}:
+    for field in expected_keys - {"app_version", "predecessor", "modules", "notes", "source_facts",
+                                  "accepted_deltas", "release_facts_sha256"}:
         require(candidate[field] == old_compatibility.get(field), "wrapper_compatibility_policy")
     require(candidate["rollback"] == ROLLBACK, "wrapper_rollback_policy")
     require(candidate["source_baseline"] == after_manifest.get("source_baseline"), "wrapper_source_baseline")
@@ -267,7 +434,14 @@ def validate_wrapper(before_manifest, after_manifest, changes, old_compatibility
     replacements = _identity_replacements(old_version, new_version, old_compatibility, candidate)
     for name in touched_modules:
         replacements[modules_before[name]] = modules_after[name]
-    require(candidate.get("notes") == _replace_identities(old_compatibility.get("notes", ""), replacements),
+    require(candidate.get("source_facts") == facts, "wrapper_source_facts")
+    require(candidate.get("accepted_deltas") == deltas, "wrapper_accepted_deltas")
+    digest = candidate.get("release_facts_sha256")
+    identity(digest, DIGEST)
+    require(digest == release_facts_sha256(facts, deltas, predecessor),
+            "wrapper_release_facts_checksum")
+    require(candidate.get("notes") == render_candidate_notes(
+        new_version, predecessor, facts, deltas),
             "wrapper_compatibility_notes")
     for path, change in changes.items():
         require(change.after is not None and change.after_mode == "100644", "wrapper_file_type")
@@ -279,8 +453,10 @@ def validate_wrapper(before_manifest, after_manifest, changes, old_compatibility
         if path == MANIFEST or path in {f"modules/{name}.json" for name in touched_modules}:
             continue
         if path in RELEASE_DOCS:
-            before_text = change.before.decode("utf-8")
-            require(_replace_identities(before_text, replacements).encode() == change.after,
+            expected = _anchored_release_document(
+                path, change.before, old_version, new_version, replacements,
+                predecessor["app_version"], facts, deltas)
+            require(expected == change.after,
                     "wrapper_release_document_behavior")
         elif path == "pyproject.toml":
             old = change.before.decode("utf-8")
@@ -637,7 +813,7 @@ def validate_workflow_evidence(pull_request, head_pulls, runs_page, jobs_by_run,
 
 def admission_fingerprint(pull_request, head_tree, approvals, reviewer_permissions,
                           comments, merge_pull, head_pulls, workflow_runs, workflow_jobs,
-                          check_runs, check_suites):
+                          check_runs, check_suites, source_facts, accepted_deltas):
     """Hash validated provider identities so a lock recheck detects replacement evidence."""
     receipts = [comment for comment in comments if isinstance(comment.get("body"), str) and
                 comment["body"].startswith(OPERATIONAL_RECEIPT_HEADER)]
@@ -694,6 +870,8 @@ def admission_fingerprint(pull_request, head_tree, approvals, reviewer_permissio
             "created_at": comment["created_at"], "updated_at": comment["updated_at"],
         } for comment in receipts), key=lambda item: item["id"]),
         "runs": runs,
+        "source_facts": source_facts,
+        "accepted_deltas": accepted_deltas,
     }
     return hashlib.sha256(json.dumps(record, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
@@ -701,7 +879,8 @@ def admission_fingerprint(pull_request, head_tree, approvals, reviewer_permissio
 def publication_intent(*, before_sha, head_sha, first_parent, forced, protected,
                        before_manifest, after_manifest, changes=None,
                        old_compatibility=None, candidate=None, catalog=None, pull_request=None,
-                       second_parent=None, head_tree=None, wrapper_tree=None, reviews=None,
+                       second_parent=None, head_tree=None, wrapper_tree=None, source_tree=None,
+                       source_facts=None, accepted_deltas=None, reviews=None,
                        comments=None, head_pulls=None, workflow_runs=None,
                        workflow_jobs=None, check_runs=None, check_suites=None,
                        reviewer_permissions=None, merge_pull=None):
@@ -742,10 +921,13 @@ def publication_intent(*, before_sha, head_sha, first_parent, forced, protected,
     validate_workflow_evidence(pull_request, head_pulls, workflow_runs,
                                workflow_jobs, check_runs, check_suites,
                                second_parent, wrapper_tree, merged_at)
-    validate_wrapper(before_manifest, after_manifest, changes or {}, old_compatibility or {}, candidate or {}, catalog or {})
+    validate_wrapper(
+        before_manifest, after_manifest, changes or {}, old_compatibility or {}, candidate or {},
+        catalog or {}, source_facts, accepted_deltas, before_sha, source_tree)
     admission_sha256 = admission_fingerprint(
         pull_request, wrapper_tree, qualifying_approvals, reviewer_permissions, comments,
-        merge_pull, head_pulls, workflow_runs, workflow_jobs, check_runs, check_suites)
+        merge_pull, head_pulls, workflow_runs, workflow_jobs, check_runs, check_suites,
+        source_facts, accepted_deltas)
     return PublicationPlan("publish", new_version, f"v{new_version}", head_sha, before_sha,
                            f"v{candidate['predecessor']['app_version']}", admission_sha256)
 
