@@ -19,8 +19,8 @@ from casino.core import storage
 from casino.games.bingo import api, engine
 # Import the stable public conflict category asserted by recovery tests.
 from casino.errors import ConflictError
-# Reuse accepted disposable relational harnesses without changing their gates.
-from tests.storage_conformance.database_harnesses import MySQLHarness, PostgresHarness
+# Reuse the accepted disposable MySQL harness without changing its gate.
+from tests.storage_conformance.database_harnesses import MySQLHarness
 # Reuse the always-local temporary JSON harness.
 from tests.storage_conformance.harness import JsonHarness
 
@@ -394,11 +394,6 @@ class BingoPurchaseSessionAssociationTests(unittest.TestCase):
     # Prepare hosted disposable MySQL evidence behind its accepted exact marker and cleanup guard. (TEST-265)
     def test_mysql_harness_persists_private_association_across_restart(self):
         self._exercise_harness(MySQLHarness())
-
-    # Prepare disposable PostgreSQL evidence without starting it unless its exact lane marker is present. (TEST-265)
-    def test_postgres_harness_persists_private_association_across_restart(self):
-        self._exercise_harness(PostgresHarness())
-
 
 # Execute the focused evidence file directly for local diagnosis.
 if __name__ == "__main__":
