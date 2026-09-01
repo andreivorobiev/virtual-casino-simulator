@@ -14,6 +14,8 @@ import hashlib
 import inspect
 # Import deterministic identifier counters for replay-side-effect assertions.
 import itertools
+# Import strict JSON rendering for hostile decoded strategy fixtures.
+import json
 # Import the standard focused test framework.
 import unittest
 
@@ -102,6 +104,31 @@ class ChallengePolicyTests(unittest.TestCase):
         self.assertEqual((completed.receipt.awarded_points, completed.receipt.counted_best_delta), (900, 0))
         # Require an empty ranked journal to retain all three attempts and zero best.
         self.assertEqual(policy.project_day((), player_id=self.player_id, game_id=self.rule.game_id, utc_day="2026-08-31"), policy.ChallengeDayState(0, 3, 0, None))
+        # Record the exact JSON-native types observed by a deliberately mutating scorer.
+        observed_types = []
+
+        def mutating_score(facts):
+            # Prove tuple input is deep-decoded to the exact audited JSON array shape.
+            observed_types.append((type(facts), type(facts["sequence"])))
+            # Mutate nested scorer-owned values to expose any shallow caller alias.
+            facts["nested"]["value"] = 2
+            facts["sequence"][0]["value"] = 2
+            return policy.ChallengeScore(points=200, formula_inputs={"observed": facts["nested"]["value"]})
+
+        mutating_rule = policy.ChallengeRule(game_id=self.rule.game_id, rules_version=self.rule.rules_version, configuration_id=self.rule.configuration_id, score=mutating_score)
+        # Retain caller-owned nested practice facts across trusted scorer mutation.
+        practice_facts = {"nested": {"value": 1}, "sequence": ({"value": 1},)}
+        isolated_practice = policy.complete_practice(rule=mutating_rule, player_id=self.player_id, run_id="practice-isolated-run", started_at=self.now, performance_facts=practice_facts, validation_outcome=policy.ACCEPTED)
+        self.assertEqual((practice_facts, isolated_practice.receipt.awarded_points), ({"nested": {"value": 1}, "sequence": ({"value": 1},)}, 200))
+        # Admit one ranked run under the same immutable rule identity.
+        ranked_start = self.start((), "ranked-start-isolation")
+        ranked_facts = {"nested": {"value": 1}, "sequence": ({"value": 1},)}
+        digest = hashlib.sha256(b"ranked-isolation").hexdigest()
+        isolated_ranked = policy.complete_ranked(ranked_start.events, rule=mutating_rule, player_id=self.player_id, run_id=ranked_start.receipt.run_id, completed_at=self.now + timedelta(minutes=1), idempotency_key="ranked-done-isolation", performance_facts=ranked_facts, action_digest=digest, validation_outcome=policy.ACCEPTED, new_event_id=self.events)
+        # Preserve caller bytes while storing and scoring the exact deep-decoded canonical representation.
+        self.assertEqual(ranked_facts, {"nested": {"value": 1}, "sequence": ({"value": 1},)})
+        self.assertEqual((isolated_ranked.events[0].performance_facts_json, isolated_ranked.receipt.awarded_points), ('{"nested":{"value":1},"sequence":[{"value":1}]}', 200))
+        self.assertEqual(observed_types, [(dict, list), (dict, list)])
 
     # Require every start, including a rejected or abandoned run, to consume allowance.
     def test_three_ranked_starts_are_consumed_and_fourth_fails_closed(self):
@@ -245,12 +272,41 @@ class ChallengePolicyTests(unittest.TestCase):
                 # Require the immutable score type to reject it.
                 with self.assertRaises(ValidationError):
                     policy.ChallengeScore(points=value, formula_inputs={})
+        # Reject integer and boolean object keys at both top-level and nested formula inputs.
+        for formula_inputs in ({1: "value"}, {True: "value"}, {"nested": {1: "value"}}, {"nested": {True: "value"}}):
+            with self.subTest(formula_inputs=formula_inputs):
+                with self.assertRaisesRegex(ValidationError, "formula_inputs"):
+                    policy.ChallengeScore(points=1, formula_inputs=formula_inputs)
         # Start one valid ranked run.
         started = self.start((), "ranked-start-invalid")
         journal = self.append((), started)
         # Reject NaN before invoking the scoring formula or generating an event.
         with self.assertRaisesRegex(ValidationError, "performance_facts"):
             self.complete(journal, started.receipt.run_id, "ranked-done-invalid", facts={"cleared": float("nan"), "mistakes": 0})
+        # Count exact scoring calls around canonical replay and hostile key-type reuse.
+        score_calls = []
+
+        def collision_score(facts):
+            # Retain the isolated canonical graph observed by the trusted scorer.
+            score_calls.append(facts)
+            points = 700 if "1" in facts["payload"] else 0
+            return policy.ChallengeScore(points=points, formula_inputs={"string_key": "1" in facts["payload"]})
+
+        collision_rule = policy.ChallengeRule(game_id=self.rule.game_id, rules_version=self.rule.rules_version, configuration_id=self.rule.configuration_id, score=collision_score)
+        digest = hashlib.sha256(b"canonical-key-replay").hexdigest()
+        valid_facts = {"payload": {"1": "value"}}
+        completed = policy.complete_ranked(journal, rule=collision_rule, player_id=self.player_id, run_id=started.receipt.run_id, completed_at=self.now + timedelta(minutes=1), idempotency_key="ranked-done-canonical-key", performance_facts=valid_facts, action_digest=digest, validation_outcome=policy.ACCEPTED, new_event_id=self.events)
+        committed = self.append(journal, completed)
+        # Exact canonical retry replays without rescoring or allocating another event.
+        replayed = policy.complete_ranked(committed, rule=collision_rule, player_id=self.player_id, run_id=started.receipt.run_id, completed_at=self.now + timedelta(minutes=1), idempotency_key="ranked-done-canonical-key", performance_facts=valid_facts, action_digest=digest, validation_outcome=policy.ACCEPTED, new_event_id=self.events)
+        self.assertEqual((replayed.receipt, replayed.events, len(score_calls)), (completed.receipt, (), 1))
+        generated_before = self.events.calls
+        # Reject formerly colliding integer/bool keys recursively before replay or scoring.
+        for hostile_facts in ({1: "value"}, {True: "value"}, {"payload": {1: "value"}}, {"payload": {True: "value"}}):
+            with self.subTest(hostile_facts=hostile_facts):
+                with self.assertRaisesRegex(ValidationError, "performance_facts"):
+                    policy.complete_ranked(committed, rule=collision_rule, player_id=self.player_id, run_id=started.receipt.run_id, completed_at=self.now + timedelta(minutes=1), idempotency_key="ranked-done-canonical-key", performance_facts=hostile_facts, action_digest=digest, validation_outcome=policy.ACCEPTED, new_event_id=self.events)
+        self.assertEqual((len(score_calls), self.events.calls), (1, generated_before))
 
     # Require cross-subject, orphaned, duplicate, and changed-policy journals to fail closed.
     def test_journal_scope_and_run_integrity_are_strict(self):
@@ -288,6 +344,33 @@ class ChallengePolicyTests(unittest.TestCase):
         # Reject ambiguous durable replay ownership across otherwise valid rows.
         with self.assertRaisesRegex(ConflictError, "idempotency key"):
             policy.project_day((start_event, duplicate_key), player_id=self.player_id, game_id=self.rule.game_id, utc_day="2026-08-31")
+        # Reject every decoded strategy shape outside bounded string-to-string pairs.
+        hostile_decoded = (
+            {"opponent": ["v1"]},
+            {"opponent": {"version": "v1"}},
+            {"opponent": 1},
+            {"opponent": True},
+            {"": "v1"},
+            {"x" * 65: "v1"},
+            {"opponent": "v" * 129},
+        )
+        for strategy in hostile_decoded:
+            with self.subTest(decoded_strategy=strategy):
+                encoded = json.dumps(strategy, sort_keys=True, separators=(",", ":"))
+                with self.assertRaisesRegex(ValidationError, "bot_strategy_json"):
+                    replace(start_event, bot_strategy_json=encoded)
+        # Reject the same hostile shapes, plus non-string keys, before new-write identities.
+        hostile_writes = (*hostile_decoded, {1: "v1"}, {True: "v1"})
+        for index, strategy in enumerate(hostile_writes):
+            with self.subTest(write_strategy=strategy):
+                generated_before = (self.runs.calls, self.events.calls)
+                with self.assertRaisesRegex(ValidationError, "bot_strategy"):
+                    policy.start_ranked((), rule=self.rule, player_id=self.player_id, started_at=self.now, idempotency_key=f"ranked-start-bot-invalid-{index:02d}", season_id="synthetic-season-2026", commitment_id="commitment-synthetic-001", bot_strategy=strategy, new_run_id=self.runs, new_event_id=self.events)
+                self.assertEqual((self.runs.calls, self.events.calls), generated_before)
+        # Accept both inclusive string-length bounds through write and decoded-event validation.
+        boundary_strategy = {"s" * 64: "v" * 128}
+        boundary_start = policy.start_ranked((), rule=self.rule, player_id=self.player_id, started_at=self.now, idempotency_key="ranked-start-bot-boundary", season_id="synthetic-season-2026", commitment_id="commitment-synthetic-001", bot_strategy=boundary_strategy, new_run_id=self.runs, new_event_id=self.events)
+        self.assertEqual(boundary_start.events[0].bot_strategy_json, json.dumps(boundary_strategy, sort_keys=True, separators=(",", ":")))
         # Snapshot identity generation before attempting a new start over corrupt history.
         generated_before = (self.runs.calls, self.events.calls)
         # Fail before allocating a run or event identity from the corrupt journal.
@@ -310,6 +393,11 @@ class ChallengePolicyTests(unittest.TestCase):
         # Reusing the first key on a new day remains a changed-meaning global conflict.
         with self.assertRaisesRegex(ConflictError, "different semantics"):
             self.start(journal, "ranked-start-global-key", at=self.now + timedelta(days=1))
+        # Reject malformed, impossible, padded, or noncanonical projection-day values.
+        for invalid_day in ("not-a-day", "2026-02-30", "2026-8-31", " 2026-08-31"):
+            with self.subTest(invalid_day=invalid_day):
+                with self.assertRaisesRegex(ValidationError, "utc_day"):
+                    policy.project_day(journal, player_id=self.player_id, game_id=self.rule.game_id, utc_day=invalid_day)
 
     # Require terminal time and immutable event shapes to reject inconsistent records.
     def test_terminal_time_and_event_shape_fail_closed(self):

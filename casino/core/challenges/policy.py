@@ -125,16 +125,62 @@ def _idempotency_key(value) -> str:
     return key
 
 
-# Encode one JSON-compatible object canonically or reject ambiguous values.
-def _canonical_json(value, *, field: str) -> str:
-    # Serialize through a strict encoder that rejects NaN, infinity, and custom objects.
+# Normalize one JSON value into a detached JSON-native graph with string-only object keys.
+def _canonical_value(value, *, field: str, active: set[int]):
+    # Convert every mapping to a new plain dictionary before a scorer can observe it.
+    if isinstance(value, Mapping):
+        # Reject cycles without treating the same shared child as a permanent duplicate.
+        marker = id(value)
+        if marker in active:
+            raise ValidationError(f"{field} is invalid", {"field": field})
+        active.add(marker)
+        try:
+            normalized = {}
+            for key, item in value.items():
+                # JSON object keys must already be strings; encoder coercion is ambiguous.
+                if type(key) is not str:
+                    raise ValidationError(f"{field} is invalid", {"field": field})
+                normalized[key] = _canonical_value(item, field=field, active=active)
+            return normalized
+        finally:
+            active.remove(marker)
+    # Normalize both JSON arrays and tuple inputs to a new plain list.
+    if type(value) in (list, tuple):
+        marker = id(value)
+        if marker in active:
+            raise ValidationError(f"{field} is invalid", {"field": field})
+        active.add(marker)
+        try:
+            return [_canonical_value(item, field=field, active=active) for item in value]
+        finally:
+            active.remove(marker)
+    # Retain only exact JSON scalar types so custom subclasses cannot affect scoring.
+    if value is None or type(value) in (str, int, float, bool):
+        return value
+    # Reject sets, bytes, custom objects, and every other non-JSON value.
+    raise ValidationError(f"{field} is invalid", {"field": field})
+
+
+# Encode and deep-decode one value so scoring and audit share exact canonical semantics.
+def _canonical_data(value, *, field: str) -> tuple[Any, str]:
+    # Build a detached graph before serialization to isolate caller-owned nested values.
+    normalized = _canonical_value(value, field=field, active=set())
+    # Serialize through a strict encoder that rejects NaN and infinity.
     try:
-        # Sort mapping keys and remove whitespace for provider-independent bytes.
-        return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        encoded = json.dumps(normalized, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        # Feed scorers the exact JSON-decoded representation whose bytes are audited.
+        decoded = json.loads(encoded)
     # Convert every unsupported or non-finite value into a stable validation failure.
     except (TypeError, ValueError):
         # Never reflect raw performance facts or formula inputs in the diagnostic.
         raise ValidationError(f"{field} is invalid", {"field": field}) from None
+    return decoded, encoded
+
+
+# Encode one JSON-compatible object canonically or reject ambiguous values.
+def _canonical_json(value, *, field: str) -> str:
+    # Return the bytes paired with the detached deep-decoded representation.
+    return _canonical_data(value, field=field)[1]
 
 
 # Validate one already-canonical JSON object stored inside an immutable event.
@@ -207,22 +253,33 @@ def _fingerprint(value: Mapping[str, Any]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+# Canonicalize one bot-strategy object through the shared write/decode shape boundary.
+def _canonical_bot_strategy(value, *, field: str) -> str:
+    # Require named strategy slots rather than an ordered or scalar payload.
+    if not isinstance(value, Mapping):
+        raise ValidationError(f"{field} is invalid", {"field": field})
+    # Deep-normalize first so non-string keys at any level cannot be encoder-coerced.
+    normalized, encoded = _canonical_data(value, field=field)
+    # Require only bounded non-empty strategy-id to version string pairs.
+    if any(not key or len(key) > 64 or type(item) is not str or not item or len(item) > 128 for key, item in normalized.items()):
+        raise ValidationError(f"{field} is invalid", {"field": field})
+    # Return the exact canonical strategy registry bytes.
+    return encoded
+
+
 # Canonicalize optional server-selected bot strategy identifiers and versions.
 def _bot_strategy(value) -> str:
-    # Treat no bot opponent as one explicit empty mapping.
-    candidate = {} if value is None else value
-    # Require named strategy slots rather than an ordered or scalar payload.
-    if not isinstance(candidate, Mapping):
-        # Reject malformed internal strategy metadata before attempt admission.
-        raise ValidationError("bot_strategy must be an object")
-    # Copy once so later caller mutation cannot change fingerprint semantics.
-    normalized = dict(candidate)
-    # Require bounded non-empty strings for each strategy id/version pair.
-    if any(type(key) is not str or not key or len(key) > 64 or type(item) is not str or not item or len(item) > 128 for key, item in normalized.items()):
-        # Never reflect strategy metadata in the stable error.
-        raise ValidationError("bot_strategy is invalid")
-    # Return the exact canonical metadata representation.
-    return _canonical_json(normalized, field="bot_strategy")
+    # Treat no bot opponent as one explicit empty mapping through the shared boundary.
+    return _canonical_bot_strategy({} if value is None else value, field="bot_strategy")
+
+
+# Validate one provider-decoded canonical bot-strategy registry.
+def _stored_bot_strategy(value) -> str:
+    # Require canonical object bytes before applying the strict shared pair shape.
+    _canonical_mapping_json(value, field="bot_strategy_json")
+    # Reuse the same bounded string-to-string validator used for new writes.
+    _canonical_bot_strategy(json.loads(value), field="bot_strategy_json")
+    return value
 
 
 # Describe one deterministic, versioned internal scoring result.
@@ -244,7 +301,7 @@ class ChallengeScore:
             # Reject scalar or sequence inputs before canonicalization.
             raise ValidationError("Challenge formula inputs must be an object")
         # Prove the formula inputs have one strict portable representation.
-        _canonical_json(dict(self.formula_inputs), field="formula_inputs")
+        _canonical_json(self.formula_inputs, field="formula_inputs")
 
 
 # Bind one trusted game/configuration version to its server-owned score formula.
@@ -348,7 +405,7 @@ class ChallengeEvent:
         _identity(self.configuration_id, field="configuration_id", pattern=IDENTITY_PATTERN)
         # Require one safe commitment reference and canonical non-secret bot metadata.
         _identity(self.commitment_id, field="commitment_id")
-        _canonical_mapping_json(self.bot_strategy_json, field="bot_strategy_json")
+        _stored_bot_strategy(self.bot_strategy_json)
         # Require an exact one-based product-approved attempt ordinal.
         if type(self.attempt_ordinal) is not int or not 1 <= self.attempt_ordinal <= RANKED_ATTEMPTS_PER_UTC_DAY:
             # Reject zero, booleans, gaps beyond the daily limit, and scalars.
@@ -550,7 +607,7 @@ def project_day(events: Iterable[ChallengeEvent], *, player_id: str, game_id: st
     # Validate exact identities used to scope future provider reads.
     player_id = _identity(player_id, field="player_id")
     game_id = _identity(game_id, field="game_id", pattern=IDENTITY_PATTERN)
-    utc_day = _identity(utc_day, field="utc_day")
+    utc_day = _stored_day(utc_day, field="utc_day")
     # Read only the requested player/game/day journal.
     rows = _scoped_events(events, player_id=player_id, game_id=game_id, utc_day=utc_day)
     # Select ranked starts in append order.
@@ -786,10 +843,8 @@ def _score(rule: ChallengeRule, performance_facts: Mapping[str, Any]) -> tuple[C
     if not isinstance(performance_facts, Mapping):
         # Reject before the trusted rule function executes.
         raise ValidationError("performance_facts must be an object")
-    # Copy once so a mutable caller mapping cannot change during scoring.
-    facts = dict(performance_facts)
-    # Canonicalize the complete server-owned facts before rule execution.
-    performance_facts_json = _canonical_json(facts, field="performance_facts")
+    # Deep-normalize the complete facts before rule execution and audit encoding.
+    facts, performance_facts_json = _canonical_data(performance_facts, field="performance_facts")
     # Execute only the rule registered by trusted server code.
     result = rule.score(facts)
     # Reject formulas that bypass the explicit bounded result type.
@@ -797,7 +852,7 @@ def _score(rule: ChallengeRule, performance_facts: Mapping[str, Any]) -> tuple[C
         # Keep malformed game-rule diagnostics fixed and private.
         raise ValidationError("Challenge score formula returned an invalid result")
     # Canonicalize disclosed formula inputs for deterministic audit comparison.
-    formula_inputs_json = _canonical_json(dict(result.formula_inputs), field="formula_inputs")
+    formula_inputs_json = _canonical_json(result.formula_inputs, field="formula_inputs")
     # Return the validated score plus both canonical audit representations.
     return result, performance_facts_json, formula_inputs_json
 
@@ -833,10 +888,8 @@ def complete_ranked(
     if not isinstance(performance_facts, Mapping):
         # Reject scalar caller-authored scores or outcomes.
         raise ValidationError("performance_facts must be an object")
-    # Copy the trusted canonical facts exactly once.
-    facts = dict(performance_facts)
-    # Prove the facts have a strict provider-independent representation.
-    facts_json = _canonical_json(facts, field="performance_facts")
+    # Deep-normalize facts once so fingerprinting and scoring share detached semantics.
+    facts, facts_json = _canonical_data(performance_facts, field="performance_facts")
     # Locate the ranked start without trusting a caller-supplied day.
     all_rows = _validated_events(events, player_id=player_id, game_id=rule.game_id)
     # Select only this authenticated subject/game/run start.
