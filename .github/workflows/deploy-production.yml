@@ -12,7 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     # A code-only push never receives publication authority or runs a release build.
     permissions:
+      actions: read
+      checks: read
       contents: read
+      issues: read
       pull-requests: read
     outputs:
       decision: ${{ steps.intent.outputs.decision }}
@@ -41,13 +44,16 @@ jobs:
     needs: release-intent
     if: needs.release-intent.outputs.decision == 'publish'
     runs-on: ubuntu-latest
-    # Share the publication lock with release-event and historical recovery publication.
+    # Share the publication lock with supplemental release-event and historical recovery work.
     concurrency:
       group: production-deploy-main
       cancel-in-progress: false
       queue: max
     permissions:
+      actions: read
+      checks: read
       contents: write
+      issues: read
       pull-requests: read
     outputs:
       app_version: ${{ steps.release_identity.outputs.app_version }}
@@ -73,7 +79,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/release_publication.py inspect --under-lock | tee -a "${GITHUB_OUTPUT}"
+          python scripts/release_publication.py inspect --under-lock | tee locked-before.txt | tee -a "${GITHUB_OUTPUT}"
       # Install validation dependencies only for an eligible wrapper, never ordinary main pushes.
       - name: Install validation requirements
         run: python -m pip install -r requirements-dev.txt
@@ -100,7 +106,16 @@ jobs:
         env:
           RELEASE_TAG: ${{ steps.release_identity.outputs.release_tag }}
         run: python scripts/make_release.py --release-tag "${RELEASE_TAG}" --previous-manifest previous/release-manifest.json
-      # A complete exact-head rerun downloads existing bytes; partial publications stay held.
+      # Re-read every provider and hosted-state observation immediately before mutation or reuse.
+      - name: Reinspect exact release authority immediately before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/release_publication.py inspect --under-lock > locked-before-publication.txt
+          cmp locked-before.txt locked-before-publication.txt
+      # An attempt-one run may reuse complete exact-head bytes; failed reruns and partial state stay held.
       - name: Publish new immutable GitHub Release
         if: steps.release_identity.outputs.release_state == 'create'
         env:
@@ -131,8 +146,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/release_publication.py verify-checksums --directory published
-          python scripts/package_app.py --verify-only --archive published/virtual_casino_simulator_package.zip --manifest published/release-manifest.json --expected-commit "${GITHUB_SHA}" --expected-tag "${RELEASE_TAG}" --require-rollback
+          python scripts/release_publication.py verify-checksums --directory published > /dev/null
+          python scripts/package_app.py --verify-only --archive published/virtual_casino_simulator_package.zip --manifest published/release-manifest.json --expected-commit "${GITHUB_SHA}" --expected-tag "${RELEASE_TAG}" --require-rollback > /dev/null
       # Retain the verified publication artifact as bounded workflow evidence, not a host handoff.
       - name: Upload deployable hosted assets
         uses: actions/upload-artifact@v4
@@ -141,26 +156,120 @@ jobs:
           path: published/
           if-no-files-found: error
           retention-days: 7
+      # Re-observe all admission evidence after publication and before writer success.
+      - name: Recheck admission after hosted publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/release_publication.py inspect --under-lock > locked-after-publication.txt
+          grep -E '^(decision|app_version|release_tag|source_sha|before_sha|predecessor_tag|admission_sha256)=' locked-before.txt > admission-before.txt
+          grep -E '^(decision|app_version|release_tag|source_sha|before_sha|predecessor_tag|admission_sha256)=' locked-after-publication.txt > admission-after.txt
+          cmp admission-before.txt admission-after.txt
+          grep -Fxq 'release_state=reuse' locked-after-publication.txt
       # Delivery is owned by the production-host poller; this workflow never contacts the host.
+
+  verify-hosted:
+    name: Verify hosted publication after writer
+    needs: [release-intent, publish-release]
+    if: needs.release-intent.outputs.decision == 'publish' && needs.publish-release.result == 'success'
+    runs-on: ubuntu-latest
+    # This direct caller runs on protected main; the tag-only environment remains supplemental.
+    concurrency:
+      group: production-deploy-main
+      cancel-in-progress: false
+      queue: max
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact published source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up verification Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install recovery verification dependency
+        run: python -m pip install ".[recovery]"
+      - name: Require and inspect exact writer identity
+        id: hosted_identity
+        env:
+          APP_VERSION: ${{ needs.publish-release.outputs.app_version }}
+          RELEASE_TAG: ${{ needs.publish-release.outputs.release_tag }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${APP_VERSION}"
+          test -n "${RELEASE_TAG}"
+          test "${RELEASE_TAG}" = "v${APP_VERSION}"
+          python scripts/release_publication.py inspect-hosted --tag "${RELEASE_TAG}" --commit "${GITHUB_SHA}" | tee hosted-before.txt | tee -a "${GITHUB_OUTPUT}"
+      - name: Download exact hosted assets and predecessor
+        env:
+          RELEASE_TAG: ${{ steps.hosted_identity.outputs.release_tag }}
+          PREVIOUS_TAG: ${{ steps.hosted_identity.outputs.predecessor_tag }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${RELEASE_TAG}"
+          test -n "${PREVIOUS_TAG}"
+          mkdir published previous
+          gh release download "${RELEASE_TAG}" --pattern virtual_casino_simulator_package.zip --pattern release-manifest.json --pattern checksums.txt --dir published
+          gh release download "${PREVIOUS_TAG}" --pattern virtual_casino_simulator_package.zip --pattern release-manifest.json --pattern checksums.txt --dir previous
+      # Helper success messages below are scoped sub-gates; only the aggregate is terminal.
+      - name: Verify exact hosted artifact evidence
+        env:
+          APP_VERSION: ${{ steps.hosted_identity.outputs.app_version }}
+          RELEASE_TAG: ${{ steps.hosted_identity.outputs.release_tag }}
+          PREVIOUS_TAG: ${{ steps.hosted_identity.outputs.predecessor_tag }}
+          PREVIOUS_SHA: ${{ steps.hosted_identity.outputs.predecessor_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/release_publication.py verify-checksums --directory published > /dev/null
+          python scripts/release_publication.py verify-checksums --directory previous > /dev/null
+          test "$(python scripts/resolve_release_predecessor.py --app-version "${APP_VERSION}" --verify-manifest previous/release-manifest.json)" = "${{ steps.hosted_identity.outputs.predecessor_tag }}"
+          python scripts/package_app.py --verify-only --archive previous/virtual_casino_simulator_package.zip --manifest previous/release-manifest.json --expected-commit "${PREVIOUS_SHA}" --expected-tag "${PREVIOUS_TAG}" > /dev/null
+          python scripts/package_app.py --verify-only --archive published/virtual_casino_simulator_package.zip --manifest published/release-manifest.json --expected-commit "${GITHUB_SHA}" --expected-tag "${RELEASE_TAG}" --require-rollback > /dev/null
+      - name: Reinspect stable hosted identity
+        env:
+          RELEASE_TAG: ${{ steps.hosted_identity.outputs.release_tag }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/release_publication.py inspect-hosted --tag "${RELEASE_TAG}" --commit "${GITHUB_SHA}" > hosted-after.txt
+          cmp hosted-before.txt hosted-after.txt
+      - name: Clean downloaded asset directories
+        if: always()
+        shell: bash
+        run: rm -rf -- published previous
 
   publication-result:
     name: Publish exact-main release
     if: always()
-    needs: [release-intent, publish-release]
+    needs: [release-intent, publish-release, verify-hosted]
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      # This needs-only shell decision makes no checkout, setup, API, artifact, or write call.
+      # This needs-only post-merge aggregate makes no checkout, setup, API, artifact, or write call.
       - name: Require truthful publication result
         env:
           INTENT_RESULT: ${{ needs.release-intent.result }}
           INTENT_DECISION: ${{ needs.release-intent.outputs.decision }}
           WRITER_RESULT: ${{ needs.publish-release.result }}
+          VERIFIER_RESULT: ${{ needs.verify-hosted.result }}
         shell: bash
         run: |
           set -euo pipefail
-          case "${INTENT_RESULT}:${INTENT_DECISION}:${WRITER_RESULT}" in
-            success:noop:skipped|success:publish:success) ;;
+          case "${INTENT_RESULT}:${INTENT_DECISION}:${WRITER_RESULT}:${VERIFIER_RESULT}" in
+            success:noop:skipped:skipped|success:publish:success:success) ;;
             *) exit 1 ;;
           esac
+          printf '%s\n' 'Post-merge publication aggregate passed.'

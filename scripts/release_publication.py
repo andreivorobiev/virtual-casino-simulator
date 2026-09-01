@@ -26,7 +26,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(ROOT))
 from scripts import release_cadence as policy
 
-REPOSITORY = "andreivorobiev/virtual-casino-simulator"
+REPOSITORY = policy.REPOSITORY
 MAX_RECORD_BYTES = 4 * 1024 * 1024
 
 
@@ -44,6 +44,10 @@ class SafeRedirect(HTTPRedirectHandler):
 def github_get(path, *, allow_absent=False):
     """Use only a fixed repository API, never caller-controlled URLs or writes."""
     policy.require(path.startswith(f"repos/{REPOSITORY}/"), "github_repository_scope")
+    if allow_absent:
+        prefix = f"repos/{REPOSITORY}/releases/tags/v"
+        policy.require(path.startswith(prefix) and "?" not in path and "/" not in path[len(prefix):],
+                       "github_absence_scope")
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     policy.require(bool(token), "github_read_token_missing")
     request = Request(f"https://api.github.com/{path}", headers={
@@ -54,10 +58,12 @@ def github_get(path, *, allow_absent=False):
         with build_opener(SafeRedirect()).open(request, timeout=30) as response:
             raw = response.read(MAX_RECORD_BYTES + 1)
             policy.require(len(raw) <= MAX_RECORD_BYTES, "github_record_too_large")
-            result = json.loads(raw)
+            result = policy.json_value(raw)
             return policy.api_result(response.status, result)
     except HTTPError as error:
         return policy.api_result(error.code, None, allow_absent=allow_absent)
+    except policy.PolicyError:
+        raise
     except (URLError, TimeoutError, OSError, ValueError) as error:
         raise policy.PolicyError("github_observation_failed") from error
 
@@ -158,6 +164,89 @@ def hosted_manifest_identity(raw, candidate, head):
     return manifest
 
 
+def hosted_release_fingerprint(metadata, commit, manifest):
+    """Hash stable hosted identity fields while excluding mutable download counts."""
+    assets = metadata.get("assets") if isinstance(metadata, dict) else None
+    policy.require(isinstance(assets, list), "hosted_release_assets")
+    observed_assets = []
+    for asset in assets:
+        policy.require(isinstance(asset, dict), "hosted_release_assets")
+        observed_assets.append({key: asset.get(key) for key in (
+            "id", "node_id", "name", "label", "state", "content_type", "size",
+            "created_at", "updated_at", "digest",
+        )})
+    observation = {
+        "tag_name": metadata.get("tag_name"),
+        "target_commitish": metadata.get("target_commitish"),
+        "draft": metadata.get("draft"),
+        "prerelease": metadata.get("prerelease"),
+        "published_at": metadata.get("published_at"),
+        "commit": commit,
+        "manifest_sha256": hashlib.sha256(manifest).hexdigest(),
+        "assets": sorted(observed_assets, key=lambda asset: (asset.get("name") or "", asset.get("id") or 0)),
+    }
+    return hashlib.sha256(json.dumps(observation, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def observe_admission(head, second_parent, *, expected_number=None):
+    """Fetch one complete bounded provider snapshot for the exact merged wrapper."""
+    pulls = github_get(f"repos/{REPOSITORY}/commits/{head}/pulls?per_page=100")
+    policy.require(isinstance(pulls, list) and len(pulls) < 100, "wrapper_pull_observation")
+    policy.require(len(pulls) == 1, "wrapper_pull_ambiguous")
+    matches = [pull for pull in pulls if isinstance(pull, dict) and
+               pull.get("merge_commit_sha") == head and pull.get("merged_at") and
+               pull.get("base", {}).get("ref") == "main"]
+    policy.require(len(matches) == 1, "wrapper_pull_ambiguous")
+    number = matches[0].get("number")
+    policy.require(type(number) is int and number > 0 and
+                   (expected_number is None or number == expected_number), "wrapper_pull_identity")
+    pull = github_get(f"repos/{REPOSITORY}/pulls/{number}")
+    policy.validate_pull_association(matches[0], pull)
+    reviews = github_get(f"repos/{REPOSITORY}/pulls/{number}/reviews?per_page=100")
+    merged_at = policy.timestamp(pull.get("merged_at"), "wrapper_merge_time")
+    approvals = policy.validate_current_head_approvals(pull, reviews, second_parent, merged_at)
+    comments = github_get(f"repos/{REPOSITORY}/issues/{number}/comments?per_page=100")
+    head_pulls = github_get(f"repos/{REPOSITORY}/commits/{second_parent}/pulls?per_page=100")
+    policy.require(isinstance(head_pulls, list) and len(head_pulls) < 100,
+                   "wrapper_head_pull_observation")
+    workflow_runs = github_get(f"repos/{REPOSITORY}/actions/runs?head_sha={second_parent}&per_page=100")
+    policy.require(isinstance(workflow_runs, dict) and
+                   isinstance(workflow_runs.get("workflow_runs"), list),
+                   "wrapper_workflow_observation")
+    workflow_jobs, check_runs, check_suites = {}, {}, {}
+    for run in workflow_runs["workflow_runs"]:
+        policy.require(isinstance(run, dict) and type(run.get("id")) is int,
+                       "wrapper_workflow_invalid")
+        run_id = run["id"]
+        suite_id = run.get("check_suite_id")
+        if type(suite_id) is int and suite_id not in check_suites:
+            check_suites[suite_id] = github_get(f"repos/{REPOSITORY}/check-suites/{suite_id}")
+        page = github_get(f"repos/{REPOSITORY}/actions/runs/{run_id}/attempts/1/jobs?per_page=100")
+        workflow_jobs[run_id] = page
+        jobs = page.get("jobs") if isinstance(page, dict) else None
+        policy.require(isinstance(jobs, list), "wrapper_job_observation")
+        try:
+            expected_gate = policy.REQUIRED_WORKFLOW_GATES[
+                policy.normalize_workflow_path(run.get("path"), number)]
+        except policy.PolicyError:
+            expected_gate = None
+        for job in jobs:
+            if isinstance(job, dict) and job.get("name") == expected_gate and type(job.get("id")) is int:
+                job_id = job["id"]
+                check_runs[job_id] = github_get(f"repos/{REPOSITORY}/check-runs/{job_id}")
+    # Fetch live reviewer permissions last within the snapshot to minimize revocation drift.
+    reviewer_permissions = {}
+    for approval in approvals:
+        reviewer_permissions[approval["id"]] = github_get(
+            f"repos/{REPOSITORY}/collaborators/{approval['login']}/permission")
+    return {
+        "pull_request": pull, "merge_pull": matches[0], "reviews": reviews,
+        "reviewer_permissions": reviewer_permissions,
+        "comments": comments, "head_pulls": head_pulls, "workflow_runs": workflow_runs,
+        "workflow_jobs": workflow_jobs, "check_runs": check_runs, "check_suites": check_suites,
+    }
+
+
 def inspect_publication(event, environment, root=ROOT, *, under_lock=False):
     """Classify an exact main push and observe create/reuse state, with no writes."""
     policy.require(environment.get("GITHUB_EVENT_NAME") == "push" and
@@ -182,24 +271,22 @@ def inspect_publication(event, environment, root=ROOT, *, under_lock=False):
         return {**result, "release_state": "noop"}
     # A failed publication is an incident to classify, not permission for blind rerun mutation.
     policy.require(environment.get("GITHUB_RUN_ATTEMPT") == "1", "push_publication_rerun_prohibited")
-    # Never accept ambiguous PR association as evidence of a reviewed wrapper.
-    pulls = github_get(f"repos/{REPOSITORY}/commits/{head}/pulls?per_page=100")
-    policy.require(isinstance(pulls, list) and len(pulls) < 100, "wrapper_pull_observation")
-    matches = [pull for pull in pulls if isinstance(pull, dict) and
-               pull.get("merge_commit_sha") == head and pull.get("merged_at") and
-               pull.get("base", {}).get("ref") == "main"]
-    policy.require(len(matches) == 1, "wrapper_pull_ambiguous")
+    second_parent = parents[1] if len(parents) == 2 else None
+    policy.require(isinstance(second_parent, str), "wrapper_merge_parent")
+    head_tree = git_read(root, "rev-parse", f"{head}^{{tree}}").decode().strip()
+    wrapper_tree = (git_read(root, "rev-parse", f"{second_parent}^{{tree}}").decode().strip()
+                    if second_parent else None)
+    observed = observe_admission(head, second_parent)
+    number = observed["pull_request"]["number"]
     candidate = tree_object(root, head, f"contracts/compatibility/app-{current['application']}.json")
     arguments.update(
-        changes=changed_files(root, before, head), pull_request=matches[0], candidate=candidate,
+        changes=changed_files(root, before, head), candidate=candidate,
         old_compatibility=tree_object(root, before, f"contracts/compatibility/app-{old['application']}.json"),
         catalog=tree_object(root, head, "migrations/mysql/catalog.json"),
+        second_parent=second_parent, head_tree=head_tree, wrapper_tree=wrapper_tree,
+        **observed,
     )
     plan = policy.publication_intent(**arguments)
-    if under_lock:
-        current_main = github_get(f"repos/{REPOSITORY}/git/ref/heads/main")
-        policy.require(current_main.get("object", {}).get("type") == "commit" and
-                       current_main["object"].get("sha") == head, "protected_main_moved")
     predecessor = candidate["predecessor"]
     retained_record = tree_object(root, head, predecessor["compatibility_record"])
     policy.require(retained_record.get("app_version") == predecessor["app_version"], "retained_record_identity")
@@ -212,24 +299,45 @@ def inspect_publication(event, environment, root=ROOT, *, under_lock=False):
     state = policy.release_state(plan.app_version, head, tag_commit(root, plan.release_tag), existing)
     if state == "reuse":
         hosted_manifest_identity(manifest_bytes(plan.release_tag), candidate, head)
+    if under_lock:
+        # Re-fetch every mutable admission record; exact main is the final provider read.
+        final_observed = observe_admission(head, second_parent, expected_number=number)
+        final_arguments = {**arguments, **final_observed}
+        final_plan = policy.publication_intent(**final_arguments)
+        policy.require(final_plan == plan, "publication_admission_drift")
+        current_main = github_get(f"repos/{REPOSITORY}/git/ref/heads/main")
+        policy.require(current_main.get("object", {}).get("type") == "commit" and
+                       current_main["object"].get("sha") == head, "protected_main_moved")
     return {**asdict(plan), "release_state": state}
 
 
 def inspect_hosted_release(tag, head, root=ROOT):
-    """Release events verify existing immutable bytes; they never upload assets."""
+    """Observe stable hosted identity for direct or supplemental read-only verification."""
     policy.identity(head)
     policy.require(tag == f"v{tree_object(root, head, policy.MANIFEST)['application']}", "hosted_tag_alignment")
     candidate = tree_object(root, head, f"contracts/compatibility/app-{tag[1:]}.json")
     metadata = github_get(f"repos/{REPOSITORY}/releases/tags/{tag}")
-    policy.require(policy.release_state(tag[1:], head, tag_commit(root, tag), metadata) == "reuse", "hosted_release_unpublished")
-    hosted_manifest_identity(manifest_bytes(tag), candidate, head)
+    current_commit = tag_commit(root, tag)
+    policy.require(policy.release_state(tag[1:], head, current_commit, metadata) == "reuse", "hosted_release_unpublished")
+    current_manifest = manifest_bytes(tag)
+    hosted_manifest_identity(current_manifest, candidate, head)
     previous = candidate["predecessor"]
     previous_tag = f"v{previous['app_version']}"
-    metadata = github_get(f"repos/{REPOSITORY}/releases/tags/{previous_tag}")
-    commit = tag_commit(root, previous_tag)
-    policy.require(policy.release_state(previous["app_version"], previous["source_commit_sha"], commit, metadata) == "reuse", "predecessor_not_published")
-    policy.validate_predecessor(candidate, manifest_bytes(previous_tag), commit)
-    return {"app_version": tag[1:], "release_tag": tag, "source_sha": head, "predecessor_tag": previous_tag}
+    previous_metadata = github_get(f"repos/{REPOSITORY}/releases/tags/{previous_tag}")
+    previous_commit = tag_commit(root, previous_tag)
+    policy.require(policy.release_state(previous["app_version"], previous["source_commit_sha"],
+                                        previous_commit, previous_metadata) == "reuse",
+                   "predecessor_not_published")
+    previous_manifest = manifest_bytes(previous_tag)
+    policy.validate_predecessor(candidate, previous_manifest, previous_commit)
+    fingerprints = {
+        "current": hosted_release_fingerprint(metadata, current_commit, current_manifest),
+        "predecessor": hosted_release_fingerprint(previous_metadata, previous_commit, previous_manifest),
+    }
+    return {"app_version": tag[1:], "release_tag": tag, "source_sha": head,
+            "predecessor_tag": previous_tag, "predecessor_sha": previous_commit,
+            "observation_sha256": hashlib.sha256(
+                json.dumps(fingerprints, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}
 
 
 def verify_checksums(directory):
@@ -265,6 +373,7 @@ def main(argv=None):
     result.add_argument("--intent-result", required=True)
     result.add_argument("--decision", required=True)
     result.add_argument("--writer-result", required=True)
+    result.add_argument("--verifier-result", required=True)
     checksum = subparsers.add_parser("verify-checksums", help="Read and verify downloaded canonical assets")
     checksum.add_argument("--directory", required=True, type=Path)
     batch = subparsers.add_parser("batch-plan", help="Print pure plan evidence from explicit observations")
@@ -279,8 +388,9 @@ def main(argv=None):
             for key, value in inspect_hosted_release(args.tag, args.commit).items():
                 print(f"{key}={value}")
         elif args.command == "result":
-            policy.require(policy.publication_result(args.intent_result, args.decision, args.writer_result), "publication_aggregate_failed")
-            print("Protected-main publication result passed.")
+            policy.require(policy.publication_result(args.intent_result, args.decision,
+                                                     args.writer_result, args.verifier_result),
+                           "publication_aggregate_failed")
         elif args.command == "verify-checksums":
             verify_checksums(args.directory)
             print("Hosted canonical checksums passed.")

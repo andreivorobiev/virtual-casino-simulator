@@ -10,7 +10,9 @@ When the decision is `SKIP`, all four shard jobs remain skipped and the exact `l
 
 ## Unpublished release candidates
 
-An unpublished candidate built for a GitHub pull request consumes exact-head results from the sibling `ci`, `contract_tests`, `module_boundaries`, and `docs` required contexts. It still packages the candidate and runs copied-release smoke coverage. The optimized mode rejects local, manual, protected-main, release-event, tagged, and rollback-manifest invocations. Manual and protected-main candidates retain the complete canonical validation sequence. A published release event does not rebuild or upload a candidate; with read-only authority, it independently verifies the exact hosted release and predecessor assets, checksums, predecessor metadata, package provenance, and application-only rollback evidence.
+An unpublished candidate built for a GitHub pull request consumes exact-head results from the sibling `ci`, `contract_tests`, `module_boundaries`, and `docs` required contexts. It still packages the candidate and runs copied-release smoke coverage. The optimized mode rejects local, manual, protected-main, release-event, tagged, and rollback-manifest invocations. Manual and protected-main candidates retain the complete canonical validation sequence. A published release event does not rebuild or upload a candidate; with read-only authority, it supplies supplemental verification of the exact hosted release and predecessor assets, checksums, predecessor metadata, package provenance, and application-only rollback evidence. Repository `GITHUB_TOKEN` publication cannot trigger that event lane, so it is not direct publication proof and contributes nothing to the protected-main aggregate.
+
+`codex_review_placeholder` preserves a historical status name and reports echo/status evidence only; it is never a human approval or review proof. The legacy-named `Publish exact-main release` job is a post-merge workflow aggregate and is absent from branch protection, not a pull-request merge context.
 
 ## Acceptance evidence
 

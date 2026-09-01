@@ -102,7 +102,8 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         self.assertIn("needs: release-intent", writer_job)
         self.assertIn("if: needs.release-intent.outputs.decision == 'publish'", writer_job)
         self.assertIn("contents: write", writer_job)
-        self.assertEqual(text.count("python scripts/release_publication.py inspect"), 2)
+        self.assertEqual(text.count("python scripts/release_publication.py inspect"), 6)
+        self.assertEqual(text.count("python scripts/release_publication.py inspect --under-lock"), 3)
         self.assertIn("python scripts/release_publication.py inspect --under-lock", writer_job)
         self.assertIn("group: production-deploy-main", writer_job)
         self.assertIn("queue: max", writer_job)
@@ -113,7 +114,7 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
 
     def test_all_publication_paths_share_one_non_cancellable_lock(self):
         text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
-        for job in ("bootstrap-v9-2-predecessor:", "publish-immutable-release:"):
+        for job in ("bootstrap-v9-2-predecessor:", "supplemental-release-verification:"):
             section = text.split(job, 1)[1].split("    steps:", 1)[0]
             self.assertIn("group: production-deploy-main", section)
             self.assertIn("cancel-in-progress: false", section)
@@ -122,7 +123,7 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         top_concurrency = text.split("jobs:", 1)[0].split("concurrency:", 1)[1]
         self.assertIn("cancel-in-progress: false", top_concurrency)
         self.assertIn("queue: max", top_concurrency)
-        event_lane = text.split("  publish-immutable-release:", 1)[1]
+        event_lane = text.split("  supplemental-release-verification:", 1)[1]
         self.assertIn("contents: read", event_lane)
         self.assertNotIn("contents: write", event_lane)
         self.assertNotIn("gh release upload", event_lane)
@@ -133,21 +134,76 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         self.assertIn("scripts/release_publication.py verify-checksums", event_lane)
         self.assertIn("--verify-manifest previous/release-manifest.json", event_lane)
 
-    def test_legacy_context_is_an_always_read_only_aggregate(self):
+    def test_post_merge_publication_result_is_an_always_read_only_aggregate(self):
         text = self.workflow_text()
         aggregate = text.split("  publication-result:", 1)[1]
         self.assertEqual(text.count("name: Publish exact-main release"), 1)
         self.assertIn("name: Publish exact-main release", aggregate)
         self.assertIn("if: always()", aggregate)
-        self.assertIn("needs: [release-intent, publish-release]", aggregate)
+        self.assertIn("needs: [release-intent, publish-release, verify-hosted]", aggregate)
         self.assertIn("contents: read", aggregate)
         self.assertNotIn("contents: write", aggregate)
         self.assertNotIn("uses:", aggregate)
         self.assertNotIn("actions/checkout", aggregate)
         self.assertNotIn("actions/setup", aggregate)
         self.assertNotIn("scripts/release_publication.py", aggregate)
-        self.assertIn("success:noop:skipped|success:publish:success", aggregate)
+        self.assertIn("success:noop:skipped:skipped|success:publish:success:success", aggregate)
         self.assertIn("*) exit 1", aggregate)
+        self.assertEqual(text.count("Post-merge publication aggregate passed."), 1)
+        self.assertIn("Post-merge publication aggregate passed.", aggregate)
+        self.assertNotIn("Post-merge publication aggregate passed.",
+                         (ROOT / "scripts" / "release_publication.py").read_text(encoding="utf-8"))
+
+    def test_direct_hosted_verifier_orders_stability_cleanup_and_terminal_result(self):
+        text = self.workflow_text()
+        writer = text.split("  publish-release:", 1)[1].split("  verify-hosted:", 1)[0]
+        verifier = text.split("  verify-hosted:", 1)[1].split("  publication-result:", 1)[0]
+        aggregate = text.split("  publication-result:", 1)[1]
+        self.assertIn("contents: read", verifier)
+        self.assertNotIn("contents: write", verifier)
+        self.assertNotIn("environment: immutable-release", verifier)
+        self.assertIn("needs: [release-intent, publish-release]", verifier)
+        self.assertIn("needs.publish-release.result == 'success'", verifier)
+        self.assertIn('test -n "${APP_VERSION}"', verifier)
+        self.assertIn('test -n "${RELEASE_TAG}"', verifier)
+        ordered = (
+            verifier.find("inspect-hosted"),
+            verifier.find('gh release download "${RELEASE_TAG}"'),
+            verifier.find('gh release download "${PREVIOUS_TAG}"'),
+            verifier.find("verify-checksums --directory published"),
+            verifier.find("verify-checksums --directory previous"),
+            verifier.find("--archive previous/virtual_casino_simulator_package.zip"),
+            verifier.find("--archive published/virtual_casino_simulator_package.zip"),
+            verifier.rfind("inspect-hosted"),
+            verifier.find("cmp hosted-before.txt hosted-after.txt"),
+            verifier.find("- name: Clean downloaded asset directories"),
+        )
+        self.assertTrue(all(index >= 0 for index in ordered))
+        self.assertEqual(tuple(sorted(ordered)), ordered)
+        cleanup = verifier.split("- name: Clean downloaded asset directories", 1)[1]
+        self.assertIn("if: always()", cleanup)
+        self.assertTrue(verifier.rstrip().endswith("run: rm -rf -- published previous"))
+        self.assertNotIn("continue-on-error", writer + verifier + aggregate)
+        self.assertNotIn("Post-merge publication aggregate passed.", writer + verifier)
+        self.assertIn("Post-merge publication aggregate passed.", aggregate)
+        self.assertNotIn("uses:", aggregate)
+        self.assertNotIn("scripts/release_publication.py", aggregate)
+
+    def test_writer_rechecks_admission_immediately_before_publication(self):
+        writer = self.workflow_text().split("  publish-release:", 1)[1].split("  verify-hosted:", 1)[0]
+        first = writer.find("tee locked-before.txt")
+        final = writer.find("locked-before-publication.txt")
+        compare = writer.find("cmp locked-before.txt locked-before-publication.txt")
+        create = writer.find("gh release create")
+        self.assertTrue(0 <= first < final < compare < create)
+        self.assertEqual(writer.count("inspect --under-lock"), 3)
+        post_publish = writer.find("locked-after-publication.txt")
+        upload = writer.find("name: production-release-assets")
+        self.assertTrue(create < upload < post_publish)
+        self.assertIn("cmp admission-before.txt admission-after.txt", writer)
+        self.assertIn("grep -Fxq 'release_state=reuse'", writer)
+        policy_source = (ROOT / "scripts" / "release_cadence.py").read_text(encoding="utf-8")
+        self.assertIn("admission_sha256", policy_source)
 
     # Prove rollback selection follows repository compatibility policy instead of release ordering.
     def test_workflow_uses_compatibility_declared_predecessor(self):
@@ -173,6 +229,8 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         # Require hosted assets to be verified against exact commit, tag, and rollback provenance.
         self.assertIn('python scripts/package_app.py --verify-only --archive published/virtual_casino_simulator_package.zip --manifest published/release-manifest.json --expected-commit "${GITHUB_SHA}" --expected-tag "${RELEASE_TAG}" --require-rollback', text)
         self.assertIn("python scripts/release_publication.py verify-checksums --directory published", text)
+        self.assertIn("python scripts/release_publication.py verify-checksums --directory previous", text)
+        self.assertIn("--archive previous/virtual_casino_simulator_package.zip", text)
         self.assertNotIn("2>/dev/null", text)
         # Preserve the existing bounded Actions artifact as publication evidence.
         self.assertIn("name: production-release-assets", text)

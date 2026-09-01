@@ -38,26 +38,37 @@ class CiComputeTests(unittest.TestCase):
         self.assertIn('test "${{ needs.long_suite_scope.result }}" = "success"', workflow)
         self.assertIn('test "${{ needs.long_suite_100_shard.result }}" = "skipped"', workflow)
 
-    # Restrict optimized candidate builds to exact PR events and preserve full hosted-release verification.
-    def test_release_pr_mode_is_narrow_and_release_events_verify_hosted_assets(self):
+    # Restrict optimized candidates and retain supplemental read-only hosted verification.
+    def test_release_pr_mode_is_narrow_and_release_events_supplement_hosted_verification(self):
         # Read the workflow to distinguish the optimized PR command from manual and release-event checks.
         workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
         # Require exactly one optimized command and retain the full canonical manual candidate command.
         self.assertEqual(workflow.count("--use-pr-gate-evidence"), 1)
         self.assertIn('python scripts/make_release.py --app-version "${{ inputs.app_version }}"', workflow)
-        release_event_job = workflow.split("  publish-immutable-release:", 1)[1]
-        # Bind the release event to the already-hosted tag, predecessor, checksums, and rollback package.
+        release_event_job = workflow.split("  supplemental-release-verification:", 1)[1]
+        # Bind the external event to already-hosted current and predecessor packages.
         self.assertIn("permissions:\n      contents: read", release_event_job)
         self.assertIn('python scripts/release_publication.py inspect-hosted --tag "${RELEASE_TAG}" --commit "$(git rev-parse HEAD)"', release_event_job)
         self.assertIn('gh release download "${RELEASE_TAG}" --pattern virtual_casino_simulator_package.zip --pattern release-manifest.json --pattern checksums.txt --dir published', release_event_job)
-        self.assertIn('gh release download "${PREVIOUS_TAG}" --pattern release-manifest.json --dir previous', release_event_job)
+        self.assertIn('gh release download "${PREVIOUS_TAG}" --pattern virtual_casino_simulator_package.zip --pattern release-manifest.json --pattern checksums.txt --dir previous', release_event_job)
         self.assertIn("python scripts/release_publication.py verify-checksums --directory published", release_event_job)
+        self.assertIn("python scripts/release_publication.py verify-checksums --directory previous", release_event_job)
         self.assertIn('python scripts/resolve_release_predecessor.py --app-version "${APP_VERSION}" --verify-manifest previous/release-manifest.json', release_event_job)
         self.assertIn('python scripts/package_app.py --verify-only --archive published/virtual_casino_simulator_package.zip --manifest published/release-manifest.json --expected-commit "$(git rev-parse HEAD)" --expected-tag "${RELEASE_TAG}" --require-rollback', release_event_job)
+        self.assertIn('python scripts/package_app.py --verify-only --archive previous/virtual_casino_simulator_package.zip --manifest previous/release-manifest.json --expected-commit "${PREVIOUS_SHA}" --expected-tag "${PREVIOUS_TAG}"', release_event_job)
+        self.assertIn("cmp hosted-before.txt hosted-after.txt", release_event_job)
+        self.assertIn("if: always()", release_event_job.split("Clean downloaded supplemental asset directories", 1)[1])
+        self.assertNotIn("Post-merge publication aggregate passed.", release_event_job)
         # Release-event verification must never rebuild, upload, replace, or publish hosted bytes.
         self.assertNotIn("scripts/make_release.py", release_event_job)
         for mutation in ("contents: write", "actions/upload-artifact", "gh release create", "gh release upload", "gh release edit", "gh release delete", "git tag", "git push"):
             self.assertNotIn(mutation, release_event_job)
+        # The historical Codex context is an echo-only status name, not provider review evidence.
+        placeholder = (ROOT / ".github" / "workflows" / "codex-review.yml").read_text(encoding="utf-8")
+        self.assertEqual(placeholder.splitlines().count("  codex_review_placeholder:"), 1)
+        self.assertIn('run: echo "Enable OpenAI Codex GitHub Action', placeholder)
+        self.assertNotIn("pull_request_review", placeholder)
+        self.assertNotIn("gh api", placeholder)
         # Reject local use before validation, cleanup, or packaging can run.
         with mock.patch("sys.argv", ["make_release.py", "--use-pr-gate-evidence"]), mock.patch.dict("os.environ", {}, clear=True):
             # Exercise only the early authority guard; no subprocess is reachable.

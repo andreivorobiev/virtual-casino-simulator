@@ -18,8 +18,26 @@ VERSION = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.
 MODULE_VERSION = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)")
 COMMIT = re.compile(r"[0-9a-f]{40}")
 DIGEST = re.compile(r"[0-9a-f]{64}")
+LOGIN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?")
 ASSETS = frozenset({"checksums.txt", "release-manifest.json", "virtual_casino_simulator_package.zip"})
 MANIFEST = "modules/module-manifest.json"
+REPOSITORY = "andreivorobiev/virtual-casino-simulator"
+REPOSITORY_OWNER = "andreivorobiev"
+GITHUB_ACTIONS_APP_ID = 15368
+REQUIRED_WORKFLOW_GATES = {
+    ".github/workflows/ci.yml": "ci",
+    ".github/workflows/contract-tests.yml": "contract_tests",
+    ".github/workflows/module-boundaries.yml": "module_boundaries",
+    ".github/workflows/comment-density.yml": "comment_density",
+    ".github/workflows/docs.yml": "docs",
+    # This is a stable status context only; it never supplies review approval.
+    ".github/workflows/codex-review.yml": "codex_review_placeholder",
+    ".github/workflows/long-suite-100.yml": "long_suite_100",
+    ".github/workflows/browser-tests.yml": "browser_tests",
+    ".github/workflows/release.yml": "Build unpublished candidate",
+}
+OPERATIONAL_ACCEPTANCE_ROLES = ("Senior B", "Worker10")
+OPERATIONAL_RECEIPT_HEADER = "Release admission receipt v1"
 RELEASE_DOCS = frozenset({
     "README.md", "CODEX_START_HERE.md", "VERSIONING.md", "RELEASE_NOTES.md",
     "docs/production_cicd_runbook.md", "docs/release_artifacts.md",
@@ -47,8 +65,8 @@ def require(condition, reason):
         raise PolicyError(reason)
 
 
-def object_json(raw):
-    """Reject duplicate keys instead of allowing shadow provenance fields."""
+def json_value(raw):
+    """Decode bounded JSON while rejecting duplicate shadow fields at every depth."""
     def unique(pairs):
         result = {}
         for key, value in pairs:
@@ -58,8 +76,16 @@ def object_json(raw):
 
     try:
         value = json.loads(raw, object_pairs_hook=unique)
+    except PolicyError:
+        raise
     except (ValueError, TypeError, UnicodeError) as error:
         raise PolicyError("invalid_json") from error
+    return value
+
+
+def object_json(raw):
+    """Decode one canonical object rather than a scalar or list."""
+    value = json_value(raw)
     require(isinstance(value, dict), "json_object_required")
     return value
 
@@ -77,6 +103,16 @@ def next_patch(value):
 def identity(value, pattern=COMMIT):
     require(isinstance(value, str) and pattern.fullmatch(value), "invalid_identity")
     return value
+
+
+def timestamp(value, reason):
+    """Parse one explicit provider timestamp without accepting local-time ambiguity."""
+    try:
+        result = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        require(result.utcoffset() is not None, reason)
+        return result.astimezone(timezone.utc)
+    except (ValueError, TypeError, AttributeError) as error:
+        raise PolicyError(reason) from error
 
 
 @dataclass(frozen=True)
@@ -97,6 +133,7 @@ class PublicationPlan:
     source_sha: str
     before_sha: str
     predecessor_tag: str = ""
+    admission_sha256: str = ""
 
 
 def validate_predecessor(candidate, manifest_bytes, tag_commit):
@@ -268,9 +305,406 @@ def validate_wrapper(before_manifest, after_manifest, changes, old_compatibility
             raise PolicyError("wrapper_unrelated_path")
 
 
+def wrapper_premerge_metadata_sha256(pull_request, tree_sha):
+    """Hash only exact wrapper metadata available before the merge occurs."""
+    identity(tree_sha)
+    record = {
+        "repository": REPOSITORY,
+        "number": pull_request.get("number"),
+        "base": {"ref": pull_request.get("base", {}).get("ref"),
+                 "sha": pull_request.get("base", {}).get("sha"),
+                 "repo": pull_request.get("base", {}).get("repo", {}).get("full_name"),
+                 "owner": {"login": pull_request.get("base", {}).get("repo", {}).get("owner", {}).get("login"),
+                           "id": pull_request.get("base", {}).get("repo", {}).get("owner", {}).get("id"),
+                           "type": pull_request.get("base", {}).get("repo", {}).get("owner", {}).get("type")}},
+        "head": {"ref": pull_request.get("head", {}).get("ref"),
+                 "sha": pull_request.get("head", {}).get("sha"),
+                 "repo": pull_request.get("head", {}).get("repo", {}).get("full_name"),
+                 "tree": tree_sha},
+        "author": {"login": pull_request.get("user", {}).get("login"),
+                   "id": pull_request.get("user", {}).get("id"),
+                   "type": pull_request.get("user", {}).get("type")},
+        "title": pull_request.get("title"), "body": pull_request.get("body"),
+    }
+    require(type(record["number"]) is int and record["number"] > 0 and
+            isinstance(record["title"], str) and isinstance(record["body"], str),
+            "wrapper_metadata_invalid")
+    return hashlib.sha256(json.dumps(record, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def validate_pull_association(association, pull_request):
+    """Bind a commit association record to the separately fetched canonical PR."""
+    require(isinstance(association, dict) and isinstance(pull_request, dict),
+            "wrapper_pull_canonical")
+    require(association.get("number") == pull_request.get("number") and
+            association.get("merge_commit_sha") == pull_request.get("merge_commit_sha") and
+            association.get("merged_at") == pull_request.get("merged_at") and
+            association.get("base", {}).get("ref") == pull_request.get("base", {}).get("ref") and
+            association.get("base", {}).get("sha") == pull_request.get("base", {}).get("sha") and
+            association.get("base", {}).get("repo", {}).get("full_name") ==
+            pull_request.get("base", {}).get("repo", {}).get("full_name") and
+            association.get("head", {}).get("ref") == pull_request.get("head", {}).get("ref") and
+            association.get("head", {}).get("sha") == pull_request.get("head", {}).get("sha") and
+            association.get("head", {}).get("repo", {}).get("full_name") ==
+            pull_request.get("head", {}).get("repo", {}).get("full_name") and
+            association.get("user", {}).get("login") == pull_request.get("user", {}).get("login") and
+            association.get("user", {}).get("id") == pull_request.get("user", {}).get("id") and
+            association.get("user", {}).get("type") == pull_request.get("user", {}).get("type"),
+            "wrapper_pull_canonical_drift")
+
+
+def pull_association_record(association):
+    """Project only the validated, bounded commit-to-PR association identity."""
+    return {
+        "number": association["number"], "merge_commit_sha": association["merge_commit_sha"],
+        "merged_at": association["merged_at"],
+        "base": {"ref": association["base"]["ref"], "sha": association["base"]["sha"],
+                 "repo": association["base"]["repo"]["full_name"]},
+        "head": {"ref": association["head"]["ref"], "sha": association["head"]["sha"],
+                 "repo": association["head"]["repo"]["full_name"]},
+        "author": {"login": association["user"]["login"], "id": association["user"]["id"],
+                   "type": association["user"]["type"]},
+    }
+
+
+def operational_receipt(role, head_sha, tree_sha, metadata_sha256):
+    """Return the exact supplemental role-receipt body; it is not an approval."""
+    require(role in OPERATIONAL_ACCEPTANCE_ROLES, "wrapper_receipt_role")
+    identity(head_sha)
+    identity(tree_sha)
+    identity(metadata_sha256, DIGEST)
+    return (f"{OPERATIONAL_RECEIPT_HEADER}\n"
+            f"Operational role: {role}\n"
+            "Verdict: ACCEPT\n"
+            "Scope: supplemental only; not GitHub review approval or release authorization\n"
+            f"Head: {head_sha}\n"
+            f"Tree: {tree_sha}\n"
+            f"Metadata-SHA256: {metadata_sha256}")
+
+
+def validate_operational_receipts(comments, pull_request, head_sha, tree_sha, merged_at):
+    """Require two exact unedited owner-posted role receipts, re-observed unchanged."""
+    require(isinstance(comments, list) and len(comments) < 100, "wrapper_receipt_observation")
+    metadata_sha256 = wrapper_premerge_metadata_sha256(pull_request, tree_sha)
+    expected = {operational_receipt(role, head_sha, tree_sha, metadata_sha256)
+                for role in OPERATIONAL_ACCEPTANCE_ROLES}
+    receipts = [comment for comment in comments if isinstance(comment, dict) and
+                isinstance(comment.get("body"), str) and
+                comment["body"].startswith(OPERATIONAL_RECEIPT_HEADER)]
+    require(len(receipts) == len(expected), "wrapper_receipt_inventory")
+    require({comment.get("body") for comment in receipts} == expected, "wrapper_receipt_inventory")
+    identifiers = [comment.get("id") for comment in receipts]
+    require(all(type(identifier) is int and identifier > 0 for identifier in identifiers) and
+            len(set(identifiers)) == len(identifiers), "wrapper_receipt_identity")
+    for comment in receipts:
+        require(comment.get("created_at") and comment.get("created_at") == comment.get("updated_at"),
+                "wrapper_receipt_edited")
+        require(timestamp(comment["created_at"], "wrapper_receipt_time") < merged_at,
+                "wrapper_receipt_after_merge")
+        require(comment.get("author_association") == "OWNER" and
+                comment.get("user", {}).get("login") == REPOSITORY_OWNER and
+                comment.get("user", {}).get("id") ==
+                pull_request.get("base", {}).get("repo", {}).get("owner", {}).get("id") and
+                comment.get("user", {}).get("type") == "User",
+                "wrapper_receipt_author")
+
+
+def validate_current_head_approvals(pull_request, reviews, wrapper_sha, merged_at):
+    """Return one latest valid approval per non-owner human reviewer."""
+    identity(wrapper_sha)
+    require(isinstance(reviews, list) and len(reviews) < 100, "wrapper_review_observation")
+    author = pull_request.get("user", {}).get("login")
+    author_id = pull_request.get("user", {}).get("id")
+    require(isinstance(author, str) and author and
+            type(author_id) is int and author_id > 0 and
+            pull_request.get("user", {}).get("type") == "User", "wrapper_author_identity")
+    owner = pull_request.get("base", {}).get("repo", {}).get("owner", {})
+    owner_id = owner.get("id")
+    require(owner.get("login") == REPOSITORY_OWNER and owner.get("type") == "User" and
+            type(owner_id) is int and owner_id > 0,
+            "wrapper_owner_identity")
+    identifiers = [review.get("id") for review in reviews if isinstance(review, dict)]
+    require(len(identifiers) == len(reviews) and
+            all(type(identifier) is int and identifier > 0 for identifier in identifiers) and
+            len(set(identifiers)) == len(identifiers), "wrapper_review_identity")
+    effective = {}
+    for review in reviews:
+        state, commit = review.get("state"), review.get("commit_id")
+        if commit != wrapper_sha or state not in {"APPROVED", "CHANGES_REQUESTED", "DISMISSED"}:
+            continue
+        reviewer = review.get("user", {}).get("login")
+        reviewer_id = review.get("user", {}).get("id")
+        reviewer_type = review.get("user", {}).get("type")
+        require(isinstance(reviewer, str) and 0 < len(reviewer) <= 100 and
+                (reviewer_type == "Bot" or LOGIN.fullmatch(reviewer)) and
+                type(reviewer_id) is int and reviewer_id > 0 and
+                reviewer_type in {"User", "Bot"} and
+                isinstance(review.get("submitted_at"), str), "wrapper_approval_invalid")
+        submitted = timestamp(review["submitted_at"], "wrapper_approval_time")
+        require(submitted <= merged_at, "wrapper_approval_after_merge")
+        candidate = {"state": state, "login": reviewer, "id": reviewer_id,
+                     "type": reviewer_type,
+                     "review_id": review["id"],
+                     "submitted_at": review["submitted_at"],
+                     "association": review["author_association"]}
+        current = effective.get(reviewer_id)
+        if current is None or (submitted, candidate["review_id"]) > (
+                                   timestamp(current["submitted_at"], "wrapper_approval_time"),
+                                   current["review_id"]):
+            effective[reviewer_id] = candidate
+    approvals = {}
+    for reviewer_id, review in effective.items():
+        if review["state"] == "CHANGES_REQUESTED":
+            raise PolicyError("wrapper_review_conflict")
+        if review["state"] == "DISMISSED":
+            continue
+        if (review["type"] != "User" or review["login"] in {author, REPOSITORY_OWNER} or
+                reviewer_id in {author_id, owner_id} or
+                review["association"] not in {"COLLABORATOR", "MEMBER"}):
+            continue
+        review.pop("state")
+        review.pop("type")
+        approvals[reviewer_id] = review
+    require(bool(approvals), "wrapper_approval_missing")
+    return [approvals[identifier] for identifier in sorted(approvals)]
+
+
+def validate_reviewer_permissions(approvals, observations):
+    """Return the reviewers that retain provider-visible write authority."""
+    require(isinstance(observations, dict) and
+            set(observations) == {approval["id"] for approval in approvals},
+            "wrapper_reviewer_permission_inventory")
+    qualifying = []
+    for approval in approvals:
+        login, reviewer_id = approval["login"], approval["id"]
+        require(isinstance(login, str) and LOGIN.fullmatch(login), "wrapper_reviewer_login")
+        observation = observations[reviewer_id]
+        require(isinstance(observation, dict) and
+                observation.get("user", {}).get("login") == login and
+                observation.get("user", {}).get("id") == reviewer_id and
+                observation.get("user", {}).get("type") == "User",
+                "wrapper_reviewer_permission_identity")
+        if observation.get("permission") in {"write", "admin"}:
+            qualifying.append(approval)
+        else:
+            require(observation.get("permission") in {"read", "triage", "none"},
+                    "wrapper_reviewer_permission")
+    require(bool(qualifying), "wrapper_reviewer_permission")
+    return qualifying
+
+
+def normalize_workflow_path(value, pull_number=None):
+    """Accept the live bare path or GitHub's documented default-branch suffix."""
+    require(isinstance(value, str), "wrapper_workflow_path")
+    for path in REQUIRED_WORKFLOW_GATES:
+        if value == path:
+            return path
+        if value in {f"{path}@main", f"{path}@refs/heads/main"}:
+            return path
+        if type(pull_number) is int and value == f"{path}@refs/pull/{pull_number}/merge":
+            return path
+    raise PolicyError("wrapper_workflow_path")
+
+
+def validate_workflow_evidence(pull_request, head_pulls, runs_page, jobs_by_run,
+                               check_runs_by_job, check_suites, wrapper_sha, wrapper_tree, merged_at):
+    """Bind one official attempt-one successful gate run to every expected workflow."""
+    identity(wrapper_sha)
+    identity(wrapper_tree)
+    require(isinstance(runs_page, dict), "wrapper_workflow_observation")
+    runs, total = runs_page.get("workflow_runs"), runs_page.get("total_count")
+    require(isinstance(runs, list) and type(total) is int and total == len(runs) and
+            total == len(REQUIRED_WORKFLOW_GATES) and total < 100, "wrapper_workflow_inventory")
+    number = pull_request.get("number")
+    branch = pull_request.get("head", {}).get("ref")
+    require(type(number) is int and number > 0 and isinstance(branch, str) and branch,
+            "wrapper_pull_identity")
+    require(isinstance(head_pulls, list) and len(head_pulls) < 100,
+            "wrapper_head_pull_observation")
+    require(len(head_pulls) == 1 and head_pulls[0].get("number") == number and
+            head_pulls[0].get("merge_commit_sha") == pull_request.get("merge_commit_sha") and
+            head_pulls[0].get("head", {}).get("sha") == wrapper_sha and
+            head_pulls[0].get("head", {}).get("ref") == branch and
+            head_pulls[0].get("base", {}).get("ref") == "main" and
+            head_pulls[0].get("base", {}).get("sha") == pull_request.get("base", {}).get("sha"),
+            "wrapper_head_pull_association")
+    validate_pull_association(head_pulls[0], pull_request)
+    by_path = {}
+    run_ids = set()
+    for run in runs:
+        require(isinstance(run, dict), "wrapper_workflow_invalid")
+        run_id, raw_path = run.get("id"), run.get("path")
+        path = normalize_workflow_path(raw_path, number)
+        require(type(run_id) is int and run_id > 0 and run_id not in run_ids,
+                "wrapper_workflow_ambiguous")
+        run_ids.add(run_id)
+        require(path not in by_path,
+                "wrapper_workflow_ambiguous")
+        require(run.get("event") == "pull_request" and type(run.get("run_attempt")) is int and
+                run.get("run_attempt") == 1 and
+                run.get("status") == "completed" and run.get("conclusion") == "success",
+                "wrapper_workflow_not_successful")
+        require(timestamp(run.get("updated_at"), "wrapper_workflow_time") <= merged_at,
+                "wrapper_workflow_after_merge")
+        require(run.get("head_sha") == wrapper_sha and run.get("head_branch") == branch,
+                "wrapper_workflow_head")
+        require(run.get("head_commit", {}).get("id") == wrapper_sha and
+                run.get("head_commit", {}).get("tree_id") == wrapper_tree,
+                "wrapper_workflow_tree")
+        require(run.get("repository", {}).get("full_name") == REPOSITORY and
+                run.get("head_repository", {}).get("full_name") == REPOSITORY,
+                "wrapper_workflow_repository")
+        require(type(run.get("check_suite_id")) is int and run["check_suite_id"] > 0,
+                "wrapper_workflow_suite")
+        associated = run.get("pull_requests")
+        require(isinstance(associated, list) and len(associated) <= 1,
+                "wrapper_workflow_pull")
+        if associated:
+            require(associated[0].get("number") == number and
+                    associated[0].get("head", {}).get("sha") == wrapper_sha and
+                    associated[0].get("base", {}).get("ref") == "main",
+                    "wrapper_workflow_pull")
+        by_path[path] = run
+    require(set(by_path) == set(REQUIRED_WORKFLOW_GATES) and
+            isinstance(jobs_by_run, dict) and set(jobs_by_run) == run_ids,
+            "wrapper_workflow_inventory")
+    suite_id_list = [run["check_suite_id"] for run in by_path.values()]
+    require(len(suite_id_list) == len(REQUIRED_WORKFLOW_GATES) and
+            all(type(suite_id) is int and suite_id > 0 for suite_id in suite_id_list),
+            "wrapper_suite_identity")
+    suite_ids = set(suite_id_list)
+    require(len(suite_ids) == len(suite_id_list),
+            "wrapper_suite_ambiguous")
+    require(isinstance(check_suites, dict) and set(check_suites) == suite_ids,
+            "wrapper_suite_inventory")
+    for run in by_path.values():
+        suite = check_suites[run["check_suite_id"]]
+        require(isinstance(suite, dict) and suite.get("id") == run["check_suite_id"] and
+                suite.get("head_sha") == wrapper_sha and suite.get("head_branch") == branch,
+                "wrapper_suite_identity")
+        require(suite.get("status") == "completed" and suite.get("conclusion") == "success",
+                "wrapper_suite_not_successful")
+        require(timestamp(suite.get("updated_at"), "wrapper_suite_time") <= merged_at,
+                "wrapper_suite_after_merge")
+        app = suite.get("app", {})
+        require(app.get("id") == GITHUB_ACTIONS_APP_ID and app.get("slug") == "github-actions",
+                "wrapper_suite_app")
+    gate_jobs = {}
+    for path, run in by_path.items():
+        page = jobs_by_run[run["id"]]
+        require(isinstance(page, dict), "wrapper_job_observation")
+        jobs, total = page.get("jobs"), page.get("total_count")
+        require(isinstance(jobs, list) and type(total) is int and total == len(jobs) and total < 100,
+                "wrapper_job_inventory")
+        gates = [job for job in jobs if isinstance(job, dict) and
+                 job.get("name") == REQUIRED_WORKFLOW_GATES[path]]
+        require(len(gates) == 1, "wrapper_gate_ambiguous")
+        gate = gates[0]
+        require(type(gate.get("id")) is int and gate["id"] > 0,
+                "wrapper_gate_identity")
+        require(gate["id"] not in gate_jobs, "wrapper_gate_ambiguous")
+        require(gate.get("run_id") == run["id"] and
+                ("run_attempt" not in gate or
+                 (type(gate["run_attempt"]) is int and gate["run_attempt"] == 1)) and
+                gate.get("head_sha") == wrapper_sha, "wrapper_gate_identity")
+        require(gate.get("status") == "completed" and gate.get("conclusion") == "success",
+                "wrapper_gate_not_successful")
+        require(timestamp(gate.get("completed_at"), "wrapper_gate_time") <= merged_at,
+                "wrapper_gate_after_merge")
+        require(gate.get("check_run_url") ==
+                f"https://api.github.com/repos/{REPOSITORY}/check-runs/{gate.get('id')}",
+                "wrapper_gate_check_url")
+        gate_jobs[gate["id"]] = (gate, run)
+    require(len(gate_jobs) == len(REQUIRED_WORKFLOW_GATES),
+            "wrapper_gate_ambiguous")
+    require(isinstance(check_runs_by_job, dict) and set(check_runs_by_job) == set(gate_jobs),
+            "wrapper_check_inventory")
+    for job_id, (gate, run) in gate_jobs.items():
+        check = check_runs_by_job[job_id]
+        require(isinstance(check, dict) and check.get("id") == job_id and
+                check.get("name") == gate.get("name") and check.get("head_sha") == wrapper_sha,
+                "wrapper_check_identity")
+        require(check.get("status") == "completed" and check.get("conclusion") == "success",
+                "wrapper_check_not_successful")
+        require(timestamp(check.get("completed_at"), "wrapper_check_time") <= merged_at,
+                "wrapper_check_after_merge")
+        require(check.get("check_suite", {}).get("id") == run["check_suite_id"],
+                "wrapper_check_suite")
+        app = check.get("app", {})
+        require(app.get("id") == GITHUB_ACTIONS_APP_ID and app.get("slug") == "github-actions",
+                "wrapper_check_app")
+
+
+def admission_fingerprint(pull_request, head_tree, approvals, reviewer_permissions,
+                          comments, merge_pull, head_pulls, workflow_runs, workflow_jobs,
+                          check_runs, check_suites):
+    """Hash validated provider identities so a lock recheck detects replacement evidence."""
+    receipts = [comment for comment in comments if isinstance(comment.get("body"), str) and
+                comment["body"].startswith(OPERATIONAL_RECEIPT_HEADER)]
+    runs = []
+    number = pull_request["number"]
+    ordered_runs = sorted(workflow_runs["workflow_runs"], key=lambda item: (
+        normalize_workflow_path(item.get("path"), number), item.get("id", 0)))
+    for run in ordered_runs:
+        normalized_path = normalize_workflow_path(run["path"], number)
+        gate_name = REQUIRED_WORKFLOW_GATES[normalized_path]
+        gate = next(job for job in workflow_jobs[run["id"]]["jobs"] if job.get("name") == gate_name)
+        check = check_runs[gate["id"]]
+        suite = check_suites[run["check_suite_id"]]
+        runs.append({
+            "path": normalized_path,
+            "run_id": run["id"],
+            "attempt": run["run_attempt"], "status": run["status"], "conclusion": run["conclusion"],
+            "updated_at": run["updated_at"],
+            "head_sha": run["head_sha"], "head_branch": run["head_branch"],
+            "tree_sha": run["head_commit"]["tree_id"],
+            "suite": {"id": suite["id"], "status": suite["status"],
+                      "conclusion": suite["conclusion"], "updated_at": suite["updated_at"],
+                      "app_id": suite["app"]["id"]},
+            "job": {"id": gate["id"], "name": gate["name"], "status": gate["status"],
+                    "conclusion": gate["conclusion"], "completed_at": gate["completed_at"]},
+            "check": {"id": check["id"], "status": check["status"],
+                      "conclusion": check["conclusion"], "completed_at": check["completed_at"],
+                      "app_id": check["app"]["id"]},
+        })
+    record = {
+        "pull": {"number": pull_request["number"], "merge_commit_sha": pull_request["merge_commit_sha"],
+                 "repository": REPOSITORY, "merged_at": pull_request["merged_at"],
+                 "base_ref": pull_request["base"]["ref"], "base_sha": pull_request["base"]["sha"],
+                 "base_repo": pull_request["base"]["repo"]["full_name"],
+                 "owner": {"login": pull_request["base"]["repo"]["owner"]["login"],
+                           "id": pull_request["base"]["repo"]["owner"]["id"],
+                           "type": pull_request["base"]["repo"]["owner"]["type"]},
+                 "head_ref": pull_request["head"]["ref"], "head_sha": pull_request["head"]["sha"],
+                 "head_repo": pull_request["head"]["repo"]["full_name"],
+                 "head_tree": head_tree, "author": pull_request["user"]["login"],
+                 "author_id": pull_request["user"]["id"], "author_type": pull_request["user"]["type"],
+                 "updated_at_observation": pull_request.get("updated_at"),
+                 "premerge_metadata_sha256": wrapper_premerge_metadata_sha256(pull_request, head_tree),
+                 "title_sha256": hashlib.sha256(pull_request["title"].encode()).hexdigest(),
+                 "body_sha256": hashlib.sha256(pull_request["body"].encode()).hexdigest()},
+        "approvals": [{**approval,
+                       "permission": reviewer_permissions[approval["id"]].get("permission")}
+                      for approval in approvals],
+        "head_pull_association": pull_association_record(head_pulls[0]),
+        "merge_pull_association": pull_association_record(merge_pull),
+        "receipts": sorted(({
+            "id": comment["id"],
+            "body_sha256": hashlib.sha256(comment["body"].encode()).hexdigest(),
+            "created_at": comment["created_at"], "updated_at": comment["updated_at"],
+        } for comment in receipts), key=lambda item: item["id"]),
+        "runs": runs,
+    }
+    return hashlib.sha256(json.dumps(record, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
 def publication_intent(*, before_sha, head_sha, first_parent, forced, protected,
                        before_manifest, after_manifest, changes=None,
-                       old_compatibility=None, candidate=None, catalog=None, pull_request=None):
+                       old_compatibility=None, candidate=None, catalog=None, pull_request=None,
+                       second_parent=None, head_tree=None, wrapper_tree=None, reviews=None,
+                       comments=None, head_pulls=None, workflow_runs=None,
+                       workflow_jobs=None, check_runs=None, check_suites=None,
+                       reviewer_permissions=None, merge_pull=None):
     """Unchanged versions are successful no-ops; version changes need proof."""
     identity(before_sha)
     identity(head_sha)
@@ -283,16 +717,37 @@ def publication_intent(*, before_sha, head_sha, first_parent, forced, protected,
     if old_version == new_version:
         return PublicationPlan("noop", new_version, f"v{new_version}", head_sha, before_sha)
     require(isinstance(pull_request, dict), "wrapper_review_missing")
+    identity(second_parent)
+    identity(head_tree)
+    identity(wrapper_tree)
     require(pull_request.get("merged_at") and pull_request.get("merge_commit_sha") == head_sha and
-            pull_request.get("base", {}).get("ref") == "main", "wrapper_merge_identity")
+            pull_request.get("base", {}).get("ref") == "main" and
+            pull_request.get("base", {}).get("sha") == before_sha and
+            pull_request.get("base", {}).get("repo", {}).get("full_name") == REPOSITORY,
+            "wrapper_merge_identity")
+    merged_at = timestamp(pull_request["merged_at"], "wrapper_merge_time")
+    timestamp(pull_request.get("updated_at"), "wrapper_updated_time")
+    require(pull_request.get("head", {}).get("sha") == second_parent and
+            pull_request.get("head", {}).get("repo", {}).get("full_name") == REPOSITORY and
+            head_tree == wrapper_tree, "wrapper_head_tree_identity")
+    validate_pull_association(merge_pull, pull_request)
     branch = pull_request.get("head", {}).get("ref", "")
     require(re.fullmatch(r"codex/release-v" + re.escape(new_version) + r"(?:-[a-z0-9][a-z0-9.-]*)?", branch), "wrapper_branch_identity")
     declarations = re.findall(r"(?im)^\s*Release-only:\s*(.*?)\s*$", pull_request.get("body") or "")
     require(declarations == ["yes"], "wrapper_declaration")
     require(re.search(r"(?i)\brelease\b.*\bv" + re.escape(new_version) + r"(?![.\d])", pull_request.get("title") or ""), "wrapper_title_identity")
+    approvals = validate_current_head_approvals(pull_request, reviews, second_parent, merged_at)
+    qualifying_approvals = validate_reviewer_permissions(approvals, reviewer_permissions)
+    validate_operational_receipts(comments, pull_request, second_parent, wrapper_tree, merged_at)
+    validate_workflow_evidence(pull_request, head_pulls, workflow_runs,
+                               workflow_jobs, check_runs, check_suites,
+                               second_parent, wrapper_tree, merged_at)
     validate_wrapper(before_manifest, after_manifest, changes or {}, old_compatibility or {}, candidate or {}, catalog or {})
+    admission_sha256 = admission_fingerprint(
+        pull_request, wrapper_tree, qualifying_approvals, reviewer_permissions, comments,
+        merge_pull, head_pulls, workflow_runs, workflow_jobs, check_runs, check_suites)
     return PublicationPlan("publish", new_version, f"v{new_version}", head_sha, before_sha,
-                           f"v{candidate['predecessor']['app_version']}")
+                           f"v{candidate['predecessor']['app_version']}", admission_sha256)
 
 
 def release_state(app_version, source_sha, tag_commit, release):
@@ -307,6 +762,7 @@ def release_state(app_version, source_sha, tag_commit, release):
             release.get("target_commitish") == source_sha, "immutable_release_identity")
     require(release.get("draft") is False and release.get("prerelease") is False and
             isinstance(release.get("published_at"), str), "immutable_release_unpublished")
+    timestamp(release["published_at"], "immutable_release_unpublished")
     assets = release.get("assets")
     require(isinstance(assets, list) and len(assets) == len(ASSETS), "immutable_release_assets")
     require(all(isinstance(asset, dict) and asset.get("state") == "uploaded" and
@@ -324,20 +780,16 @@ def api_result(status, payload, *, allow_absent=False):
     return payload
 
 
-def publication_result(intent_result, decision, writer_result):
-    """Keep the legacy required context truthful even when the writer is skipped."""
-    return (intent_result, decision, writer_result) in {
-        ("success", "noop", "skipped"), ("success", "publish", "success"),
+def publication_result(intent_result, decision, writer_result, verifier_result):
+    """Keep the post-merge aggregate truthful through read-only verification."""
+    return (intent_result, decision, writer_result, verifier_result) in {
+        ("success", "noop", "skipped", "skipped"),
+        ("success", "publish", "success", "success"),
     }
 
 
 def _instant(value):
-    try:
-        result = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        require(result.utcoffset() is not None, "batch_time_not_explicit")
-        return result.astimezone(timezone.utc)
-    except (ValueError, TypeError, AttributeError) as error:
-        raise PolicyError("batch_time_invalid") from error
+    return timestamp(value, "batch_time_invalid")
 
 
 def batch_plan(observation):
