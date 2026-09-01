@@ -22,7 +22,7 @@ Historical source baseline: 9.1.0
 - blackjack: 9.1.13
 - baccarat: 9.2.1
 - keno: 9.4.2
-- bingo: 9.3.9
+- bingo: 9.3.10
 - multi_hand_video_poker: 1.1.4
 - casino_war: 1.2.2
 - big_six_wheel: 1.2.1
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.5
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.7
-- tests: 1.124.1
-- docs: 1.117.1
+- tests: 1.125.0
+- docs: 1.118.0
 - contracts: 1.63.2
 - tooling: 1.50.2
 - commenting_policy: 2.1.0
@@ -773,6 +773,7 @@ Historical source baseline: 9.1.0
 - **TEST-256** (Tests) - PASS: Listener-free transaction-faithful PostgreSQL game-action evidence covers paid and zero-cost execution, compatible replay, conflict-before-resources, executor-first, resolver-first and pending resolution, planner at-most-once and purity, late-receipt rollback, concurrent same-key ownership, reset phase and epoch reuse, fixed parameterized append-only SQL, and unchanged JSON and MySQL behavior. Explicit disposable PostgreSQL 16 evidence repeats paid execution, planner-zero replay and committed resolution through provider restart, zero-cost execution, execute-versus-resolve contention, resolver-first, reset-gap, fresh-epoch reuse, immutable history, and exact cleanup.
 - **TEST-257** (Tests) - PASS: One registered conformance run executes the unchanged A-J storage contract against temporary JSON, disposable MySQL, and disposable PostgreSQL harnesses with per-group timings, hard total budgets below ten seconds for JSON and sixty seconds for each reachable relational provider, real thread calls, complete fresh-state reset comparison, declared error containment, and success/failure cleanup. Central and package boundary gates reject concrete-provider imports or classes anywhere in the case kit; absent reviewed relational reachability skips cleanly, while present malformed reachability fails closed before optional-driver or network access.
 - **TEST-258** (Tests) - PASS: Listener-free production-bootstrap evidence proves mutually exclusive disposable and production authorization, exact release-manifest SHA binding before connector access, empty-target-only application, least-privilege migration-role rejection, runtime provider and loopback binding, fixed secret-free native failures, atomic cleanup, provider-aware release compatibility, and exact source-bound MySQL and PostgreSQL edge profiles without opening a listener or cloud target.
+- **TEST-265** (Tests) - PASS: Focused Bingo association evidence proves the exact two-field schema and identifier grammar, one-to-one immutability, recursive exact-key public redaction, atomic session/link publication, complete settle_purchase commit-response-loss and finalize-response-loss replay, strict legacy promotion, prohibited inference, fail-closed corrupt or ambiguous recovery, compensation only for a matching prepared marker with no association and no active session, reset/refund and terminal retention, the exact 1,051-row bound, and restart-equivalent behavior on temporary JSON plus explicitly authorized disposable MySQL.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -940,6 +941,7 @@ Historical source baseline: 9.1.0
 - **BINGO-026** (Bingo) - PASS: Every Bingo pattern pays roughly 0.9 divided by its measured win probability at the guaranteed four-card field, giving each pattern a modest single-digit-to-low-double-digit house edge instead of the prior player-positive returns, and the competitor field is always seated at full strength with synthetic house spoiler cards that end sessions but are never credited.
 - **BINGO-027** (Bingo) - PASS: Bingo autoplay defaults to one complete bounded 75-call plan, including for disposable guests, and resetting a called session requires explicit non-refund confirmation followed by truthful refunded, abandoned, or cleared feedback.
 - **BINGO-028** (Bingo) - PASS: Bingo purchase reservation, card/session publication, ordered ball calls, terminal settlement, and reset publication mutate provider-current player state atomically. Private stable action markers reconcile committed debit, refund, and payout responses without repeating wallet movement, preserve unrelated sibling fields, and keep the frozen v1 payload free of recovery metadata.
+- **BINGO-029** (Bingo) - PASS: Each successful Bingo purchase that accepts a session atomically persists one private immutable purchase_id-to-session_id association with that session. Exact whole-workflow commit and finalize response-loss retries and restart recovery reuse the association; reset/refund and terminal archival preserve it, and bounded retention pins every active or archived session association while keeping only the newest history-only facts. Definitively unaccepted or compensated purchases create no association. Corrupt or ambiguous recovery state fails closed, legacy promotion is permitted only from an exact committed purchase marker naming the same extant session, and every public projection recursively omits private association and pending-action keys plus raw purchase identities.
 - **BJ-001** (Blackjack) - PASS: Blackjack deals two player cards and two dealer cards.
 - **BJ-002** (Blackjack) - PASS: Dealer hole card is hidden in public state.
 - **BJ-003** (Blackjack) - PASS: Aces can count as 1 or 11.

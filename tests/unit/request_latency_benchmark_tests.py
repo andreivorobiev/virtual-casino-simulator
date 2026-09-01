@@ -1381,8 +1381,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Retain all PostgreSQL allocations and the single curated-tour UI requirement. (TOUR-003)
-        self.assertEqual(len(requirements), 1130)
+        # Retain all prior allocations plus the Bingo association requirement and its focused proof. (BINGO-029, TEST-265)
+        self.assertEqual(len(requirements), 1132)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
