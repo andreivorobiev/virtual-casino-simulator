@@ -63,6 +63,18 @@ The cadence is currently **HOLD** until an exact non-owner human reviewer and th
 
 The generic wrapper gate accepts only the next patch in the same four-part line. A skipped/burned identity, major/platform/wave change, incompatible predecessor or failed publication requires a separately reviewed decision; it cannot be hidden by reusing tags, replacing assets, or spending `0.9.6.0`.
 
+## Exact source facts for release wrappers
+
+A release wrapper cannot obtain truth by replacing version literals in predecessor prose. Its compatibility record carries one closed `release-source-facts/v1` object with exactly six fields: schema, the accepted pre-wrapper source commit, that commit's tree, candidate-tree module revisions, the permanent row count from the candidate `docs/requirements/requirements.json`, and the candidate deployable-file count. Source commit/tree identity is intentionally separate from the wrapper candidate tree; the latter supplies the projected modules, requirements and deployable inventory.
+
+The deployable count applies the existing package allowlist, forbidden-name rules and required-file set directly to immutable Git-tree entries. Only regular `100644` or `100755` blobs count. Checkout filesystem state is not authority. Documentation and test paths remain excluded; a new allowlisted compatibility record counts once; duplicate, linked, special, credential-like and unsafe entries hold publication.
+
+Accepted deltas are an ordered first-parent list containing only canonical pull-request numbers and full merge commit hashes. Candidate compatibility notes come from one bounded deterministic template containing the exact facts, accepted deltas and complete predecessor identity. A canonical checksum binds those three records. Missing or extra fields, false counts, stale identities, malformed types, an unaccepted delta or a checksum mismatch all fail closed.
+
+Release-document projection is path-specific. Each governed document must contain its exact current-release anchor once, while the release-notes wrapper prepends one deterministic current section and preserves the complete historical tail byte-for-byte. Global predecessor-text replacement, missing or duplicated anchors, historical edits and arbitrary appended prose are not release identity changes and are refused.
+
+The publication adapter derives these records from Git objects at initial admission and recomputes them under the publication lock. Any source, tree, module, requirement, inventory or accepted-delta drift is a hold before provider write authority. Existing no-op, next-patch, review, receipt, workflow, predecessor, checksum, tag/release and publication-state gates remain mandatory.
+
 Release identity changes do not waive module-version rules. The PWA/package identity, enumerated release documentation and new compatibility record require exact matching compatible patch bumps for application, docs and contracts. Optional literal-only release-test alignment requires a tests patch bump. Descriptor ownership/dependency fields, unrelated module revisions and executable behavior remain unchanged. Product changes, including What's New activation or copy, must be accepted outside the generic wrapper.
 
 These rules classify packaged identity only. They do not change `/api/v1` or `/api/v2`, broaden any compatibility record, activate a storage provider, migrate a database, or authorize a release or production action.
