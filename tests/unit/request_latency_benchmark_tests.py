@@ -1628,9 +1628,9 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-194": "Tests",  # Bind both race orders, recovery, and provider-parity evidence.
             "GUEST-007": "Core",  # Bind shared post-commit conversion analytics convergence.
             "TEST-195": "Tests",  # Bind self-service privacy, recovery, Admin, API, and Browser evidence.
-            "CHALLENGE-001": "Core",  # Bind challenge policy evaluation to the shared core boundary.
-            "CHALLENGE-002": "Core",  # Bind exact challenge replay and conflict semantics.
-            "CHALLENGE-003": "Core",  # Bind deterministic daily projections and attempt limits.
+            "CHALLENGE-001": "Core",  # Bind points/token separation and the no-wallet-or-ledger boundary.
+            "CHALLENGE-002": "Core",  # Bind ranked limits, deterministic scoring, delta, replay, and conflicts.
+            "CHALLENGE-003": "Core",  # Bind disabled, empty-registry behavior with no API or award authority.
             "TEST-263": "Tests",  # Bind the focused Challenge policy evidence.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
