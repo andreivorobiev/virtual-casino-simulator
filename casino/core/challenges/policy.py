@@ -22,6 +22,8 @@ import json
 import re
 # Import callable and mapping types for the internal versioned score-rule seam.
 from collections.abc import Callable, Iterable, Mapping
+# Import an immutable mapping wrapper so production registration stays explicitly empty.
+from types import MappingProxyType
 from typing import Any
 
 # Import stable application errors for bounded validation and retry conflicts.
@@ -269,6 +271,10 @@ class ChallengeRule:
         if not callable(self.score):
             # Keep the diagnostic independent of the supplied object.
             raise ValidationError("Challenge score formula is invalid")
+
+
+# Keep production registration explicitly empty until owning games receive separate certification.
+PRODUCTION_RULE_REGISTRY = MappingProxyType({})
 
 
 # Represent one provider-neutral append-only start or terminal event.

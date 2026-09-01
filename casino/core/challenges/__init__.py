@@ -5,6 +5,7 @@
 # Re-export only the immutable policy inputs and transition functions future adapters consume.
 from casino.core.challenges.policy import (
     ACCEPTED,
+    PRODUCTION_RULE_REGISTRY,
     REJECTED,
     ChallengeDayState,
     ChallengeEvent,
@@ -22,6 +23,7 @@ from casino.core.challenges.policy import (
 # Publish an explicit route-free surface rather than leaking implementation helpers.
 __all__ = (
     "ACCEPTED",
+    "PRODUCTION_RULE_REGISTRY",
     "REJECTED",
     "ChallengeDayState",
     "ChallengeEvent",

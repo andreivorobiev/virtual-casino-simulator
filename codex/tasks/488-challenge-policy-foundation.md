@@ -21,7 +21,7 @@ Status: source-only implementation admitted as child #1091; central metadata rem
 
 - Goal: establish server-owned Challenge Points admission and scoring transitions over trusted versioned scorers before any ranked game can award points, while leaving production-formula determinism to owning-game certification.
 - Non-goals: no game implementation, production rule registration, endpoint, provider adapter, migration, season aggregation, leaderboard, Admin view, UI, token movement, deployment, or external system.
-- User-visible behavior expected: none; the production rule registry and routes remain absent.
+- User-visible behavior expected: none; the production rule registry remains explicitly empty and routes remain absent.
 
 ## Requirements
 

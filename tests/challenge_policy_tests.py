@@ -388,6 +388,10 @@ class ChallengePolicyTests(unittest.TestCase):
 
     # Require the prototype source and event contract to have no token/storage surface.
     def test_policy_has_structural_wallet_and_provider_separation(self):
+        # Require the production registry to remain explicitly empty and immutable.
+        self.assertEqual(dict(policy.PRODUCTION_RULE_REGISTRY), {})
+        with self.assertRaises(TypeError):
+            policy.PRODUCTION_RULE_REGISTRY["synthetic_challenge"] = self.rule
         # Parse the exact implementation module currently under test.
         tree = ast.parse(inspect.getsource(policy))
         # Collect every imported module path.
