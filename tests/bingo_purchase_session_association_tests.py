@@ -100,17 +100,26 @@ class BingoPurchaseSessionAssociationTests(unittest.TestCase):
                 return current
 
             updated = provider.update_document(key, associate, default_state)
+            restarted_close_pool = None
             if harness.name == "json":
                 restarted = storage.JsonStorageProvider(Path(root))
             else:
                 close_pool = getattr(provider, "close_pool", None)
                 if callable(close_pool):
                     close_pool()
-                restarted = provider
-            observed = restarted.read_document(key, default_state)
-            self.assertEqual(updated, observed)
-            self.assertEqual("provider-purchase", api._purchase_id_for_session(observed, "provider-session"))
-            self.assertNotIn("provider-purchase", json.dumps(api._public_state(observed), sort_keys=True))
+                # Reconstruct the production provider over the same target instead of reusing its closed pool.
+                restarted = storage.MySQLStorageProvider(provider.config)
+                self.assertIsNot(provider, restarted)
+                restarted_close_pool = restarted.close_pool
+            try:
+                observed = restarted.read_document(key, default_state)
+                self.assertEqual(updated, observed)
+                self.assertEqual("provider-purchase", api._purchase_id_for_session(observed, "provider-session"))
+                self.assertNotIn("provider-purchase", json.dumps(api._public_state(observed), sort_keys=True))
+            finally:
+                # Release the restart-owned pool before the harness drops its synthetic database and accounts.
+                if restarted_close_pool is not None:
+                    restarted_close_pool()
         except BaseException:
             try:
                 harness.destroy()
