@@ -1381,8 +1381,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Retain all prior allocations plus the Bingo association requirement and its focused proof. (BINGO-029, TEST-265)
-        self.assertEqual(len(requirements), 1132)
+        # Retain all prior allocations plus the Challenge foundation and Bingo association proofs. (CHALLENGE-001, TEST-263, BINGO-029, TEST-265)
+        self.assertEqual(len(requirements), 1136)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1628,6 +1628,10 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-194": "Tests",  # Bind both race orders, recovery, and provider-parity evidence.
             "GUEST-007": "Core",  # Bind shared post-commit conversion analytics convergence.
             "TEST-195": "Tests",  # Bind self-service privacy, recovery, Admin, API, and Browser evidence.
+            "CHALLENGE-001": "Core",  # Bind challenge policy evaluation to the shared core boundary.
+            "CHALLENGE-002": "Core",  # Bind exact challenge replay and conflict semantics.
+            "CHALLENGE-003": "Core",  # Bind deterministic daily projections and attempt limits.
+            "TEST-263": "Tests",  # Bind the focused Challenge policy evidence.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():
