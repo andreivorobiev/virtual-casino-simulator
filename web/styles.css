@@ -1,4 +1,35 @@
 /* CSS namespace gate (#717): bare `.red`, `.black`, and `.green` rules are forbidden; route and card scopes own semantic game colors. */
+/* Curated release tours own one bounded scroll surface; no animation or game-layout changes. (TOUR-003) */
+.whats-new-dialog {
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: clamp(18px, 4vw, 28px);
+  overflow: hidden;
+  color: var(--text, #f4f3f8);
+  background: #15101e;
+  border: 1px solid var(--border, #51455f);
+  border-radius: 18px;
+  overflow-wrap: anywhere;
+}
+/* Keep title and actions visible while only the named update list scrolls on compact screens. */
+.whats-new-dialog[open] { display: flex; flex-direction: column; }
+.whats-new-dialog > :not(ul) { flex: none; }
+.whats-new-dialog::backdrop { background: rgb(8 5 14 / 78%); }
+.whats-new-dialog h2 { margin: 0 0 12px; }
+.whats-new-dialog h3 { margin: 0 0 8px; font-size: 1.05rem; }
+.whats-new-dialog p { line-height: 1.55; }
+.whats-new-dialog ul { padding-inline-start: 22px; margin-block: 12px; min-height: 0; overflow-y: auto; flex: 1 1 auto; scrollbar-width: thin; }
+.whats-new-dialog li { padding-block: 10px; }
+.whats-new-dialog a { display: inline-block; color: #d7b9ff; min-height: 44px; line-height: 44px; }
+/* Preserve semantic omission when the server changelog path is not allowlisted. */
+.whats-new-dialog a[hidden] { display: none; }
+.whats-new-dialog [role="alert"]:empty { display: none; }
+.whats-new-dialog [role="alert"] { color: #ffbecb; }
+.whats-new-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
+.whats-new-actions button { min-height: 44px; min-width: 44px; padding: 10px 18px; white-space: normal; }
+.whats-new-dialog :focus-visible { outline: 3px solid #d7b9ff; outline-offset: 3px; }
 /* Bundled native-label subsets keep the locked localization registry legible without network fonts. */
 @font-face {
   font-family: "Casino Locale CJK";

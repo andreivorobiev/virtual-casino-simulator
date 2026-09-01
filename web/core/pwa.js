@@ -17,6 +17,7 @@ const SERVER_CONTROL_SELECTOR = [
   '.game-screen button', '.game-screen input', '.game-screen select', '.game-screen textarea',
   '.wallet-menu button', '.wallet-menu input', '#feedback-dialog button', '#feedback-dialog input', '#feedback-dialog select', '#feedback-dialog textarea',
   '#wellness-dialog button', '#wellness-dialog input',
+  '[data-testid="whats-new-dismiss"]',
 ].join(',');
 // Enumerate display-only lifecycle states accepted by the bounded shell status renderer.
 const DISPLAY_STATES = new Set(['cold-start', 'warm-start', 'offline', 'reconnecting', 'online', 'route-restored', 'update', 'update-failed', 'stale-client', 'expired-session', 'reconnect-failed']);
@@ -33,6 +34,8 @@ let offline = navigator.onLine === false;
 let currentState = offline ? 'offline' : 'online';
 // Store the application-owned authoritative refresh callback used after reconnect.
 let reconnectHandler = null;
+// Coalesce duplicate online notifications while one authoritative route restore owns the shell.
+let reconnectTask = null;
 // Prevent duplicate listener and service-worker registration when boot is called more than once.
 let initialized = false;
 // Hold the bounded update timeout so a failed activation can become visible without a reload loop.
@@ -191,7 +194,20 @@ function handleOffline() {
 }
 
 // Refresh session, wallet, game state, and route before releasing controls after reconnect.
-export async function reconnectAuthoritatively() {
+export function reconnectAuthoritatively() {
+  // Share the exact pending result instead of starting overlapping session and route hydration.
+  if (reconnectTask) return reconnectTask;
+  // Publish ownership before invoking callbacks that can synchronously emit another online event.
+  reconnectTask = Promise.resolve().then(performReconnect).finally(() => {
+    // Permit a later explicit connectivity attempt after success or failure, never auto-retry.
+    reconnectTask = null;
+  });
+  // Return one operation to every caller in this connectivity cohort.
+  return reconnectTask;
+}
+
+// Perform the existing fail-closed refresh exactly once for the current reconnect cohort.
+async function performReconnect() {
   // Keep actions disabled until the application proves authoritative state.
   offline = false;
   // Present the reconnecting state while the backend callback runs.

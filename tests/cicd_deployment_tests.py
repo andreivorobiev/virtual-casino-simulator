@@ -1847,7 +1847,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         expected_groups = {
             "auth_public": ("BR-STATIC-CACHE-001", "BR-MARKETING-001", "BR-SHELL-BRAND-GUEST-001", "BR-OAUTH-001", "BR-OAUTH-SIGNUP-001", "BR-VERIFIED-EMAIL-001", "BR-TOUCH-TARGET-AUTH-001"),
             "auth_session": ("BR-AUTH-LOGIN-001", "BR-TERMS-001", "BR-AUTH-SHELL-001", "BR-OAUTH-RUNTIME-001", "BR-TOKEN-001", "BR-SEC-001", "BR-AUTH-LOCALE-001", "BR-AUTH-LOGOUT-001"),
-            "lobby_shell": ("BR-TOKEN-FRACTION-001", "BR-SHELL-001", "BR-TOUCH-TARGET-001", "BR-SHELL-BRAND-001", "BR-TOKEN-WALLET-001", "BR-LOBBY-001", "BR-CATALOG-NAV-001", "BR-CATALOG-I18N-RU-001", "BR-LOBBY-RESP-001"),
+            "lobby_shell": ("BR-TOKEN-FRACTION-001", "BR-SHELL-001", "BR-TOUCH-TARGET-001", "BR-SHELL-BRAND-001", "BR-TOKEN-WALLET-001", "BR-LOBBY-001", "BR-CATALOG-NAV-001", "BR-CATALOG-I18N-RU-001", "BR-LOBBY-RESP-001", "BR-TOUR-001"),
         }
         # Flatten the insertion-ordered tuples into the unchanged registration stream.
         expected_ids = tuple(case_id for group_ids in expected_groups.values() for case_id in group_ids)
@@ -1999,8 +1999,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         from tests import runner as browser_runner_module
         # Discover inline and extracted permanent IDs at their exact cross-file source positions.
         case_ids = browser_runner_module.browser_case_ids()
-        # Bind the complete inventory after adding the Acey-Deucey formal lifecycle regression. (TEST-092)
-        self.assertEqual(len(case_ids), 133)
+        # Bind the complete inventory including the curated What's New browser journey. (TOUR-003)
+        self.assertEqual(len(case_ids), 134)
         # Read the first extracted Browser affinity owner for guard-location checks below.
         auth_backend_pwa_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py")
         # Read the extracted disposable guest-lifecycle owner for guard-location checks below.
@@ -2027,8 +2027,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         default_duration = sorted(durations.values())[len(durations) // 2] if durations else 1
         # Compute each ordered shard's reviewed aggregate weight.
         shard_loads = tuple(sum(durations.get(case_id, default_duration) for case_id in shard_cases) for shard_cases in shard_sets)
-        # Bind deterministic load totals after packing the three formal lifecycle regressions. (TEST-092, TEST-242)
-        self.assertEqual(shard_loads, (228, 226, 227, 226, 226, 227))
+        # Bind the added unmeasured tour at the existing profile median until hosted profiling. (TOUR-003)
+        self.assertEqual(shard_loads, (228, 227, 227, 228, 226, 228))
         # Reject a degenerate or materially imbalanced assignment even if union remains exact.
         self.assertLessEqual(max(shard_loads) - min(shard_loads), 3)
         # Prove additional runners now reduce the reviewed full-run floor beyond six shards.

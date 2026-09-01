@@ -358,6 +358,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/transactional_mail_runbook.md`](docs/transactional_mail_runbook.md) — Transactional mail runbook
 - [`docs/verified_email_enrollment.md`](docs/verified_email_enrollment.md) — Verified-email enrollment
 - [`docs/visual_design_standard.md`](docs/visual_design_standard.md) — Visual Design Standard
+- [`docs/whats_new_tour.md`](docs/whats_new_tour.md) — Curated What's New browser tour
 
 ### Mobile integration documentation
 

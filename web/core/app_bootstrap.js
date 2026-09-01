@@ -42,6 +42,48 @@ export function currentTokenBalance(session) {
   return Number(value || 0);
 }
 
+// Own one server-authored pre-expiration warning without retaining session identity. (SESSION-012)
+export function createSessionWarningController({ clearTimer, now, notify, setTimer }) {
+  // Invalidate callbacks even when a host has already queued a timer while it is being cleared.
+  let generation = 0;
+  // Retain only the active host timer handle.
+  let timer = null;
+
+  // Cancel the current session generation before logout or replacement can expose stale copy.
+  function dispose() {
+    // Advance first so an already-queued callback cannot notify for the discarded session.
+    generation += 1;
+    // Clear only a timer this controller owns.
+    if (timer !== null) clearTimer(timer);
+    // Release the host handle after cancellation.
+    timer = null;
+  }
+
+  // Schedule from the normalized server descriptor, never a browser-derived expiry estimate.
+  function schedule(descriptor = {}) {
+    // Replace any prior session or refresh before validating the new descriptor.
+    dispose();
+    // Stop when warning is disabled, absent, or already terminal.
+    if (!descriptor.warn_at || Number(descriptor.warning_seconds || 0) <= 0 || Number(descriptor.expires_in_seconds || 0) <= 0) return false;
+    // Preserve the existing host-safe delay clamp around the server-owned UTC instant.
+    const delay = Math.max(0, Math.min(Date.parse(descriptor.warn_at) - now(), 2147483647));
+    // Bind the callback to only this accepted descriptor generation.
+    const ticket = generation;
+    // Schedule localized informational copy; the next API remains authoritative for expiry.
+    timer = setTimer(() => {
+      // Ignore a callback retained by a replaced or disposed host timer queue.
+      if (ticket !== generation) return;
+      // Publish only the bounded display value already derived from server-authored seconds.
+      notify(Math.max(1, Math.ceil(Number(descriptor.warning_seconds) / 60)));
+    }, delay);
+    // Report only whether one timer was accepted, never its host handle.
+    return true;
+  }
+
+  // Expose lifecycle operations without session, clock, or timer mutation authority.
+  return { dispose, schedule };
+}
+
 // Start global lifecycle listeners and initialize the authenticated shell once.
 export async function startApplication(dependencies) {
   // Capture state adapters, controllers, and extracted routing seams.
