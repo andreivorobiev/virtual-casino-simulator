@@ -20,6 +20,8 @@ def run_cases(run_case, run_unit_module):
     run_case("API-ROU-ATOMIC-001", ["ROU-073", "TEST-202"], lambda: run_unit_module("tests.games.roulette.test_atomic_state", "Roulette atomic state suite failed"))
     # Execute fresh-process Bingo call ordering plus purchase, refund, payout, and reset recovery evidence. (issue #779)
     run_case("API-BINGO-ATOMIC-001", ["BINGO-028", "TEST-203"], lambda: run_unit_module("tests.games.bingo.test_atomic_state", "Bingo atomic state suite failed"))
+    # Execute private Bingo purchase/session association, recovery, retention, privacy, and provider-parity evidence. (issue #1087)
+    run_case("API-BINGO-PURCHASE-ASSOCIATION-001", ["BINGO-029", "TEST-265"], lambda: run_unit_module("tests.bingo_purchase_session_association_tests", "Bingo purchase-session association suite failed"))
     # Execute fresh-process Caribbean Stud decision ordering plus rollback and lost-response recovery. (issue #781)
     run_case("API-CS-ATOMIC-001", ["CS-007", "TEST-204"], lambda: run_unit_module("tests.games.caribbean_stud.test_api", "Caribbean Stud atomic state suite failed"))
     # Execute fresh-process Four Card Poker decision ordering plus rollback and lost-response recovery. (issue #783)

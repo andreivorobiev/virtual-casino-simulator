@@ -1,5 +1,5 @@
 {
-  "count": 222,
+  "count": 223,
   "case_ids": [
     "API-AB-001",
     "API-AB-ATOMIC-001",
@@ -24,6 +24,7 @@
     "API-BINGO-001",
     "API-BINGO-ATOMIC-001",
     "API-BINGO-ECONOMICS-001",
+    "API-BINGO-PURCHASE-ASSOCIATION-001",
     "API-BJ-001",
     "API-BJ-002",
     "API-BJ-003",

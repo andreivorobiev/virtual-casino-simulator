@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if __package__ in (None, ""):
     sys.path.insert(0, str(ROOT))
 from scripts import release_cadence as policy
+from scripts import package_app
 
 REPOSITORY = policy.REPOSITORY
 MAX_RECORD_BYTES = 4 * 1024 * 1024
@@ -124,6 +125,120 @@ def changed_files(root, before, head):
         new, new_mode = tree_file(root, head, path)
         result[path] = policy.Change(old, new, old_mode, new_mode)
     return result
+
+
+def tree_entries(root, commit):
+    """Return one exact recursive Git-tree inventory without filesystem discovery."""
+    policy.identity(commit)
+    raw = git_read(root, "ls-tree", "-r", "-z", commit)
+    policy.require(len(raw) <= MAX_RECORD_BYTES, "source_facts_tree")
+    entries, seen = [], set()
+    for record in raw.split(b"\0"):
+        if not record:
+            continue
+        try:
+            metadata, raw_path = record.split(b"\t", 1)
+            mode, kind, object_id = metadata.decode("ascii").split(" ")
+            path = raw_path.decode("utf-8")
+        except (ValueError, UnicodeError) as error:
+            raise policy.PolicyError("source_facts_tree") from error
+        policy.require(path not in seen, "source_facts_tree")
+        policy.identity(object_id)
+        seen.add(path)
+        entries.append((path, mode, kind, object_id))
+    return entries
+
+
+def deployable_tree_paths(entries):
+    """Apply package policy to immutable Git entries without statting the checkout."""
+    selected = []
+    for path, mode, kind, _object_id in sorted(entries):
+        if not package_app.is_allowlisted(path):
+            continue
+        reason = package_app.forbidden_reason(path)
+        if reason == "forbidden runtime, test, or evidence directory":
+            continue
+        policy.require(reason is None, "source_facts_inventory")
+        policy.require(kind == "blob" and mode in {"100644", "100755"},
+                       "source_facts_inventory")
+        selected.append(path)
+    policy.require(package_app.REQUIRED_FILES <= set(selected), "source_facts_inventory")
+    return selected
+
+
+def observe_source_facts(root, source_sha, candidate_sha, after_manifest):
+    """Derive closed release facts from exact Git objects and package policy."""
+    policy.identity(source_sha)
+    policy.identity(candidate_sha)
+    source_tree = git_read(root, "rev-parse", f"{source_sha}^{{tree}}").decode("ascii").strip()
+    policy.identity(source_tree)
+    candidate_manifest = tree_object(root, candidate_sha, policy.MANIFEST)
+    policy.require(candidate_manifest == after_manifest, "source_facts_manifest")
+    modules = candidate_manifest.get("modules")
+    requirements = tree_object(root, candidate_sha, "docs/requirements/requirements.json")
+    rows = requirements.get("requirements")
+    policy.require(isinstance(rows, list) and rows, "source_facts_requirements")
+    requirement_ids = []
+    for row in rows:
+        requirement_id = row.get("id") if isinstance(row, dict) else None
+        policy.require(isinstance(requirement_id, str) and
+                       re.fullmatch(r"[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+", requirement_id),
+                       "source_facts_requirements")
+        requirement_ids.append(requirement_id)
+    policy.require(len(requirement_ids) == len(set(requirement_ids)), "source_facts_requirements")
+    entries = tree_entries(root, candidate_sha)
+    deployable = deployable_tree_paths(entries)
+    return {
+        "schema": policy.SOURCE_FACTS_SCHEMA,
+        "source_sha": source_sha,
+        "tree_sha": source_tree,
+        "modules": modules,
+        "permanent_requirement_count": len(rows),
+        "deployable_file_count": len(deployable),
+    }
+
+
+def accepted_deltas_from_log(raw, predecessor_sha, source_sha):
+    """Require an exact contiguous two-parent mainline from predecessor to source."""
+    policy.identity(predecessor_sha)
+    policy.identity(source_sha)
+    policy.require(len(raw) <= MAX_RECORD_BYTES, "accepted_delta_observation")
+    deltas, expected_first_parent = [], predecessor_sha
+    for record in raw.split(b"\0"):
+        record = record.strip(b"\r\n")
+        if not record:
+            continue
+        try:
+            raw_sha, raw_parents, raw_subject = record.split(b"\t", 2)
+            commit = raw_sha.decode("ascii")
+            parents = raw_parents.decode("ascii").split()
+            subject = raw_subject.decode("utf-8")
+        except (ValueError, UnicodeError) as error:
+            raise policy.PolicyError("accepted_delta_observation") from error
+        policy.identity(commit)
+        policy.require(len(parents) == 2, "accepted_delta_parent_count")
+        for parent in parents:
+            policy.identity(parent)
+        policy.require(parents[0] == expected_first_parent, "accepted_delta_first_parent")
+        match = re.fullmatch(r"Merge pull request #([1-9][0-9]*) from andreivorobiev/[A-Za-z0-9._/-]+", subject)
+        policy.require(match is not None, "accepted_delta_observation")
+        deltas.append({"pull_request": int(match.group(1)), "merge_sha": commit})
+        expected_first_parent = commit
+    policy.require(bool(deltas) and expected_first_parent == source_sha,
+                   "accepted_delta_source_linkage")
+    return policy.validate_accepted_deltas(deltas)
+
+
+def observe_accepted_deltas(root, predecessor_sha, source_sha):
+    """Project verified first-parent merge identities without trusting PR prose."""
+    policy.identity(predecessor_sha)
+    policy.identity(source_sha)
+    common = git_read(root, "merge-base", predecessor_sha, source_sha).decode("ascii").strip()
+    policy.require(common == predecessor_sha, "accepted_delta_predecessor")
+    raw = git_read(
+        root, "log", "--first-parent", "--reverse", "--format=%H%x09%P%x09%s%x00",
+        f"{predecessor_sha}..{source_sha}")
+    return accepted_deltas_from_log(raw, predecessor_sha, source_sha)
 
 
 def peel_tag_output(raw, tag):
@@ -274,16 +389,21 @@ def inspect_publication(event, environment, root=ROOT, *, under_lock=False):
     second_parent = parents[1] if len(parents) == 2 else None
     policy.require(isinstance(second_parent, str), "wrapper_merge_parent")
     head_tree = git_read(root, "rev-parse", f"{head}^{{tree}}").decode().strip()
+    source_tree = git_read(root, "rev-parse", f"{before}^{{tree}}").decode().strip()
     wrapper_tree = (git_read(root, "rev-parse", f"{second_parent}^{{tree}}").decode().strip()
                     if second_parent else None)
     observed = observe_admission(head, second_parent)
     number = observed["pull_request"]["number"]
     candidate = tree_object(root, head, f"contracts/compatibility/app-{current['application']}.json")
+    source_facts = observe_source_facts(root, before, head, current)
+    accepted_deltas = observe_accepted_deltas(
+        root, candidate.get("predecessor", {}).get("source_commit_sha"), before)
     arguments.update(
         changes=changed_files(root, before, head), candidate=candidate,
         old_compatibility=tree_object(root, before, f"contracts/compatibility/app-{old['application']}.json"),
         catalog=tree_object(root, head, "migrations/mysql/catalog.json"),
         second_parent=second_parent, head_tree=head_tree, wrapper_tree=wrapper_tree,
+        source_tree=source_tree, source_facts=source_facts, accepted_deltas=accepted_deltas,
         **observed,
     )
     plan = policy.publication_intent(**arguments)
@@ -302,7 +422,17 @@ def inspect_publication(event, environment, root=ROOT, *, under_lock=False):
     if under_lock:
         # Re-fetch every mutable admission record; exact main is the final provider read.
         final_observed = observe_admission(head, second_parent, expected_number=number)
-        final_arguments = {**arguments, **final_observed}
+        final_source_facts = observe_source_facts(root, before, head, current)
+        final_accepted_deltas = observe_accepted_deltas(
+            root, candidate["predecessor"]["source_commit_sha"], before)
+        policy.require(final_source_facts == source_facts and
+                       final_accepted_deltas == accepted_deltas,
+                       "publication_source_facts_drift")
+        final_arguments = {
+            **arguments, **final_observed,
+            "source_facts": final_source_facts,
+            "accepted_deltas": final_accepted_deltas,
+        }
         final_plan = policy.publication_intent(**final_arguments)
         policy.require(final_plan == plan, "publication_admission_drift")
         current_main = github_get(f"repos/{REPOSITORY}/git/ref/heads/main")
