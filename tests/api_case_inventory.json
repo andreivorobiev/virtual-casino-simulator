@@ -1,5 +1,5 @@
 {
-  "count": 223,
+  "count": 224,
   "case_ids": [
     "API-AB-001",
     "API-AB-ATOMIC-001",
@@ -151,6 +151,7 @@
     "API-WALLET-RESTART-001",
     "API-WELLNESS-001",
     "BROWSER-138-HARNESS-001",
+    "CHALLENGE-POLICY-001",
     "CI-COMPUTE-001",
     "CI-QUALIFICATION-001",
     "DEPLOY-CICD-001",

@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.75.0
-- core: 10.19.0
+- core: 10.20.0
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.4
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.5
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.7
-- tests: 1.125.0
-- docs: 1.118.0
+- tests: 1.126.0
+- docs: 1.119.0
 - contracts: 1.63.2
 - tooling: 1.50.2
 - commenting_policy: 2.1.0
@@ -774,6 +774,10 @@ Historical source baseline: 9.1.0
 - **TEST-257** (Tests) - PASS: One registered conformance run executes the unchanged A-J storage contract against temporary JSON, disposable MySQL, and disposable PostgreSQL harnesses with per-group timings, hard total budgets below ten seconds for JSON and sixty seconds for each reachable relational provider, real thread calls, complete fresh-state reset comparison, declared error containment, and success/failure cleanup. Central and package boundary gates reject concrete-provider imports or classes anywhere in the case kit; absent reviewed relational reachability skips cleanly, while present malformed reachability fails closed before optional-driver or network access.
 - **TEST-258** (Tests) - PASS: Listener-free production-bootstrap evidence proves mutually exclusive disposable and production authorization, exact release-manifest SHA binding before connector access, empty-target-only application, least-privilege migration-role rejection, runtime provider and loopback binding, fixed secret-free native failures, atomic cleanup, provider-aware release compatibility, and exact source-bound MySQL and PostgreSQL edge profiles without opening a listener or cloud target.
 - **TEST-265** (Tests) - PASS: Focused Bingo association evidence proves the exact two-field schema and identifier grammar, one-to-one immutability, recursive exact-key public redaction, atomic session/link publication, complete settle_purchase commit-response-loss and finalize-response-loss replay, strict legacy promotion, prohibited inference, fail-closed corrupt or ambiguous recovery, compensation only for a matching prepared marker with no association and no active session, reset/refund and terminal retention, the exact 1,051-row bound, and restart-equivalent behavior on temporary JSON plus explicitly authorized disposable MySQL.
+- **CHALLENGE-001** (Core) - PASS: Challenge Points are strictly separate from play tokens; practice is non-persistent and no transition can create a wallet or ledger movement.
+- **CHALLENGE-002** (Core) - PASS: Ranked transition policy enforces three starts per player and game per UTC day, deterministic versioned integer scoring from 0 through 1,000, daily-best delta, exact idempotent replay, and fail-closed conflict and journal validation.
+- **CHALLENGE-003** (Core) - PASS: The Challenge Points kernel is disabled unless a future reviewed provider-atomic integration supplies canonical facts, storage, and a non-empty production rule registry; it has no API or award authority by itself.
+- **TEST-263** (Tests) - PASS: Listener-free synthetic Challenge Points evidence covers score bounds, hostile inputs, ranked attempts, daily-best delta, exact retry and conflict behavior, decoded-journal validation, and negative wallet fields without claiming provider concurrency or restart parity.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
