@@ -837,6 +837,63 @@ class ReleaseCadenceTests(unittest.TestCase):
                 with mock.patch.object(boundary, "git_read", return_value=duplicate * 2), \
                      self.assertRaisesRegex(policy.PolicyError, "source_facts_tree"):
                     boundary.tree_entries(root, source)
+    def test_accepted_deltas_require_contiguous_real_two_parent_history(self):
+        with tempfile.TemporaryDirectory(prefix="casino-accepted-deltas-") as temporary:
+            root = Path(temporary)
+            self.git(root, "init", "-b", "main")
+            self.git(root, "commit", "--allow-empty", "-m", "predecessor")
+            predecessor = self.git(root, "rev-parse", "HEAD")
+            merges = []
+            for number in (1094, 1096):
+                branch = f"feature-{number}"
+                self.git(root, "switch", "-c", branch)
+                self.git(root, "commit", "--allow-empty", "-m", f"feature {number}")
+                self.git(root, "switch", "main")
+                self.git(root, "merge", "--no-ff", branch, "-m",
+                         f"Merge pull request #{number} from andreivorobiev/{branch}")
+                merges.append(self.git(root, "rev-parse", "HEAD"))
+            source = merges[-1]
+            self.assertEqual(boundary.observe_accepted_deltas(root, predecessor, source), [
+                {"pull_request": 1094, "merge_sha": merges[0]},
+                {"pull_request": 1096, "merge_sha": merges[1]}])
+            raw = boundary.git_read(root, "log", "--first-parent", "--reverse",
+                                    "--format=%H%x09%P%x09%s%x00", f"{predecessor}..{source}")
+            records = [record for record in raw.split(b"\0") if record]
+            for label, hostile in (("malformed", b"malformed\0"),
+                                   ("skipped", records[1] + b"\0"),
+                                   ("reordered", b"\0".join(reversed(records)) + b"\0")):
+                with self.subTest(history=label), self.assertRaises(policy.PolicyError):
+                    boundary.accepted_deltas_from_log(hostile, predecessor, source)
+            self.git(root, "commit", "--allow-empty", "-m",
+                     "Merge pull request #2000 from andreivorobiev/spoof")
+            single = self.git(root, "rev-parse", "HEAD")
+            with self.assertRaisesRegex(policy.PolicyError, "accepted_delta_parent_count"):
+                boundary.observe_accepted_deltas(root, source, single)
+            side_heads = []
+            for branch in ("octopus-a", "octopus-b"):
+                self.git(root, "switch", "-c", branch, source)
+                self.write_fixture(root, f"{branch}.txt", branch.encode())
+                self.git(root, "add", ".")
+                self.git(root, "commit", "-m", branch)
+                side_heads.append(self.git(root, "rev-parse", "HEAD"))
+            octopus = self.git(root, "commit-tree", self.git(root, "rev-parse", f"{source}^{{tree}}"),
+                               "-p", source, "-p", side_heads[0], "-p", side_heads[1], "-m",
+                               "Merge pull request #2001 from andreivorobiev/octopus")
+            with self.assertRaisesRegex(policy.PolicyError, "accepted_delta_parent_count"):
+                boundary.observe_accepted_deltas(root, source, octopus)
+            self.git(root, "switch", "-c", "side-predecessor", source)
+            self.git(root, "commit", "--allow-empty", "-m", "side predecessor")
+            side_predecessor = self.git(root, "rev-parse", "HEAD")
+            self.git(root, "switch", "-c", "side-main-feature", source)
+            self.git(root, "commit", "--allow-empty", "-m", "side main feature")
+            self.git(root, "switch", "-c", "side-main", source)
+            self.git(root, "merge", "--no-ff", "side-main-feature", "-m",
+                     "Merge pull request #2003 from andreivorobiev/side-main-feature")
+            self.git(root, "merge", "--no-ff", "side-predecessor", "-m",
+                     "Merge pull request #2002 from andreivorobiev/side-predecessor")
+            side_source = self.git(root, "rev-parse", "HEAD")
+            with self.assertRaisesRegex(policy.PolicyError, "accepted_delta_first_parent"):
+                boundary.observe_accepted_deltas(root, side_predecessor, side_source)
     def test_real_git_wrapper_observation_requires_unique_pr_and_locked_main(self):
         with tempfile.TemporaryDirectory(prefix="casino-cadence-wrapper-") as temporary:
             root = Path(temporary)

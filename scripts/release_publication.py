@@ -198,32 +198,47 @@ def observe_source_facts(root, source_sha, candidate_sha, after_manifest):
     }
 
 
-def observe_accepted_deltas(root, predecessor_sha, source_sha):
-    """Project the first-parent accepted merge identities without trusting PR prose."""
+def accepted_deltas_from_log(raw, predecessor_sha, source_sha):
+    """Require an exact contiguous two-parent mainline from predecessor to source."""
     policy.identity(predecessor_sha)
     policy.identity(source_sha)
-    common = git_read(root, "merge-base", predecessor_sha, source_sha).decode("ascii").strip()
-    policy.require(common == predecessor_sha, "accepted_delta_predecessor")
-    raw = git_read(
-        root, "log", "--first-parent", "--reverse", "--format=%H%x09%s%x00",
-        f"{predecessor_sha}..{source_sha}")
     policy.require(len(raw) <= MAX_RECORD_BYTES, "accepted_delta_observation")
-    deltas = []
+    deltas, expected_first_parent = [], predecessor_sha
     for record in raw.split(b"\0"):
         record = record.strip(b"\r\n")
         if not record:
             continue
         try:
-            raw_sha, raw_subject = record.split(b"\t", 1)
+            raw_sha, raw_parents, raw_subject = record.split(b"\t", 2)
             commit = raw_sha.decode("ascii")
+            parents = raw_parents.decode("ascii").split()
             subject = raw_subject.decode("utf-8")
         except (ValueError, UnicodeError) as error:
             raise policy.PolicyError("accepted_delta_observation") from error
         policy.identity(commit)
+        policy.require(len(parents) == 2, "accepted_delta_parent_count")
+        for parent in parents:
+            policy.identity(parent)
+        policy.require(parents[0] == expected_first_parent, "accepted_delta_first_parent")
         match = re.fullmatch(r"Merge pull request #([1-9][0-9]*) from andreivorobiev/[A-Za-z0-9._/-]+", subject)
         policy.require(match is not None, "accepted_delta_observation")
         deltas.append({"pull_request": int(match.group(1)), "merge_sha": commit})
+        expected_first_parent = commit
+    policy.require(bool(deltas) and expected_first_parent == source_sha,
+                   "accepted_delta_source_linkage")
     return policy.validate_accepted_deltas(deltas)
+
+
+def observe_accepted_deltas(root, predecessor_sha, source_sha):
+    """Project verified first-parent merge identities without trusting PR prose."""
+    policy.identity(predecessor_sha)
+    policy.identity(source_sha)
+    common = git_read(root, "merge-base", predecessor_sha, source_sha).decode("ascii").strip()
+    policy.require(common == predecessor_sha, "accepted_delta_predecessor")
+    raw = git_read(
+        root, "log", "--first-parent", "--reverse", "--format=%H%x09%P%x09%s%x00",
+        f"{predecessor_sha}..{source_sha}")
+    return accepted_deltas_from_log(raw, predecessor_sha, source_sha)
 
 
 def peel_tag_output(raw, tag):
