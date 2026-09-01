@@ -14331,7 +14331,7 @@
     {
       "id": "TEST-265",
       "module": "Tests",
-      "description": "Focused Bingo association evidence proves the exact two-field schema and identifier grammar, one-to-one immutability, recursive exact-key public redaction, atomic session/link publication, complete settle_purchase commit-response-loss and finalize-response-loss replay, strict legacy promotion, prohibited inference, fail-closed corrupt or ambiguous recovery, compensation only for a matching prepared marker with no association and no active session, reset/refund and terminal retention, the exact 1,051-row bound, and restart-equivalent behavior on temporary JSON plus explicitly authorized disposable MySQL and PostgreSQL providers.",
+      "description": "Focused Bingo association evidence proves the exact two-field schema and identifier grammar, one-to-one immutability, recursive exact-key public redaction, atomic session/link publication, complete settle_purchase commit-response-loss and finalize-response-loss replay, strict legacy promotion, prohibited inference, fail-closed corrupt or ambiguous recovery, compensation only for a matching prepared marker with no association and no active session, reset/refund and terminal retention, the exact 1,051-row bound, and restart-equivalent behavior on temporary JSON plus explicitly authorized disposable MySQL.",
       "status": "PASS",
       "api_tests": [
         "API-BINGO-PURCHASE-ASSOCIATION-001"
@@ -14345,7 +14345,7 @@
       ],
       "introduced_in": "issue-1087-bingo-purchase-session-association",
       "changed_in": "issue-1087-bingo-purchase-session-association",
-      "notes": "JSON evidence always runs. MySQL may run only through the accepted tests.storage_conformance MySQL harness after its exact disposable marker and complete loopback reachability pass; PostgreSQL may run only through the accepted PostgreSQL harness after CASINO_POSTGRES_CONFORMANCE_LIVE=CASINO-POSTGRES-1060-LIVE and CASINO_POSTGRES_TEST_BIN validation. Missing relational authorization skips, malformed authorization fails before driver or network access, and PASS is emitted only after database/account or role/process/listener/filesystem cleanup. The #1087 slice reuses those harnesses unchanged and edits no provider, migration, workflow, deployment, or production configuration."
+      "notes": "JSON evidence always runs. MySQL may run only through the accepted tests.storage_conformance MySQL harness after its exact disposable marker and complete loopback reachability pass. Missing relational authorization skips, malformed authorization fails before driver or network access, and PASS is emitted only after database/account cleanup. The #1087 slice reuses that harness unchanged and edits no provider, migration, workflow, deployment, or production configuration."
     },
     {
       "id": "ROU-001",
