@@ -40,6 +40,20 @@ class BingoPurchaseSessionAssociationTests(unittest.TestCase):
     def _marker(purchase_id: str = "purchase-private-1") -> dict:
         return {"kind": "purchase", "status": "prepared", "purchase_id": purchase_id, "player_id": "human", "amount": 5.0, "pattern": "line"}
 
+    # Build a valid maximum-retention document in provider transaction order.
+    @classmethod
+    def _retention_boundary_state(cls) -> dict:
+        # Retain the oldest-to-newest thousand history-only associations first.
+        history = [{"purchase_id": f"purchase-history-{index}", "session_id": f"history-{index}"} for index in range(api.PURCHASE_ASSOCIATION_HISTORY_LIMIT)]
+        # Retain the engine's complete fifty-session archive after older history.
+        archived = [{"session_id": f"archived-{index}"} for index in range(50)]
+        archived_associations = [{"purchase_id": f"purchase-archived-{index}", "session_id": f"archived-{index}"} for index in range(50)]
+        # Make the current active purchase the newest durable relationship.
+        active = cls._session("active-boundary")
+        active_association = {"purchase_id": "purchase-active-boundary", "session_id": active["session_id"]}
+        # Return the exact one-active, fifty-archive, and thousand-history ceiling.
+        return {"active_session": active, "last_sessions": archived, api.PURCHASE_ASSOCIATIONS_KEY: [*history, *archived_associations, active_association]}
+
     # Build one in-memory provider update seam that rolls back callback failures.
     @staticmethod
     def _memory_update(box: dict, lose_when=None):
@@ -156,6 +170,56 @@ class BingoPurchaseSessionAssociationTests(unittest.TestCase):
         self.assertEqual("preserved", public["_bingo_pending_action_public"])
         self.assertEqual("preserved", public["_bingo_purchase_session_associations_public"])
         self.assertEqual(before, state)
+
+    # Prove every registered mutating route sanitizes its explicit sibling session projection. (TEST-265)
+    def test_registered_mutating_routes_redact_explicit_session_projection(self):
+        # Record the real registered handler functions without opening a listener.
+        class Router:
+            def __init__(self):
+                self.handlers = {}
+
+            def get(self, path):
+                return self._register("GET", path)
+
+            def post(self, path):
+                return self._register("POST", path)
+
+            def _register(self, method, path):
+                def decorator(handler):
+                    self.handlers[(method, path)] = handler
+                    return handler
+                return decorator
+
+        router = Router()
+        api.register(router)
+        purchase_id = "purchase-private-route-leak"
+        session = self._session("session-route-public")
+        session["nested"] = [
+            {api.PENDING_ACTION_KEY: {"purchase_id": purchase_id}},
+            {api.PURCHASE_ASSOCIATIONS_KEY: [{"purchase_id": purchase_id, "session_id": session["session_id"]}]},
+        ]
+        session["_bingo_pending_action_public"] = "preserved"
+        session["_bingo_purchase_session_associations_public"] = "preserved"
+        state = {"active_session": copy.deepcopy(session), "last_sessions": [], api.PURCHASE_ASSOCIATIONS_KEY: [{"purchase_id": purchase_id, "session_id": session["session_id"]}]}
+        player = {"player_id": "human", "type": "human", "balance": 10.0}
+        committed_call = {"kind": "call", "status": "committed", "action_id": "route-call", "session_id": session["session_id"], "calls": [1], "terminal": False, "history_claims": []}
+        with mock.patch.object(api, "request_player_id", return_value="human"), mock.patch.object(api, "require_amount", return_value=5.0), mock.patch.object(api, "load_player_game_state", side_effect=lambda *_args, **_kwargs: copy.deepcopy(state)), mock.patch.object(api, "resume_pending_action"), mock.patch.object(api, "prepare_purchase", return_value=self._marker(purchase_id)), mock.patch.object(api, "settle_purchase", return_value=copy.deepcopy(session)), mock.patch.object(api, "commit_calls", return_value=committed_call), mock.patch.object(api, "settle_committed_call", return_value=(copy.deepcopy(session), [1], [])), mock.patch.object(api.players, "list_players", return_value=[player]), mock.patch.object(api.players, "get_player", return_value=player):
+            responses = (
+                router.handlers[("POST", "/api/v1/games/bingo/cards")]({"amount": 5.0}, {}),
+                router.handlers[("POST", "/api/v1/games/bingo/call")]({}, {}),
+                router.handlers[("POST", "/api/v1/games/bingo/auto")]({"max_calls": 1}, {}),
+            )
+            empty_auto = router.handlers[("POST", "/api/v1/games/bingo/auto")]({"max_calls": 0}, {})
+        for response in responses:
+            for projection in (response["state"], response["session"]):
+                encoded = json.dumps(projection, sort_keys=True)
+                self.assertNotIn(api.PENDING_ACTION_KEY + '"', encoded)
+                self.assertNotIn(api.PURCHASE_ASSOCIATIONS_KEY + '"', encoded)
+                self.assertNotIn(purchase_id, encoded)
+            self.assertEqual("preserved", response["session"]["_bingo_pending_action_public"])
+            self.assertEqual("preserved", response["session"]["_bingo_purchase_session_associations_public"])
+        self.assertIsNone(empty_auto["session"])
+        self.assertEqual(session, state["active_session"])
 
     # Validate exact two-field rows, identifier grammar, uniqueness, and the hard total ceiling. (TEST-265)
     def test_association_schema_identifier_and_size_policy_fail_closed(self):
@@ -395,6 +459,41 @@ class BingoPurchaseSessionAssociationTests(unittest.TestCase):
             api._retain_purchase_session_association(state, "purchase-active", "different-session")
         with self.assertRaisesRegex(ConflictError, "identity changed"):
             api._retain_purchase_session_association(state, "different-purchase", "active-pinned")
+
+    # Reapply newest-history retention when terminal archival or reset changes pinned membership. (TEST-265)
+    def test_terminal_and_reset_transitions_renormalize_retention_boundary(self):
+        # Move the active session into a full archive and evict its oldest predecessor.
+        terminal_box = {"state": self._retention_boundary_state()}
+
+        def terminal_call(current):
+            session = copy.deepcopy(current["active_session"])
+            session["status"] = "no_win"
+            session["called"] = [1]
+            current["active_session"] = None
+            current["last_sessions"].append(copy.deepcopy(session))
+            current["last_sessions"] = current["last_sessions"][-50:]
+            return session, 1
+
+        update_patch, read_patch = self._provider_patches(terminal_box)
+        with update_patch, read_patch, mock.patch.object(api, "new_id", return_value="call-retention-boundary"), mock.patch.object(api.engine, "call_next", side_effect=terminal_call):
+            marker = api.commit_calls("human", terminal_box["state"], 1)
+        self.assertTrue(marker["terminal"])
+        self.assertEqual(api.PURCHASE_ASSOCIATION_MAX_RECORDS - 1, len(terminal_box["state"][api.PURCHASE_ASSOCIATIONS_KEY]))
+        self.assertIsNone(api._purchase_id_for_session(terminal_box["state"], "history-0"))
+        self.assertEqual("purchase-archived-0", api._purchase_id_for_session(terminal_box["state"], "archived-0"))
+        self.assertEqual("purchase-active-boundary", api._purchase_id_for_session(terminal_box["state"], "active-boundary"))
+
+        # Reset the newest active session so it becomes history while preserving all fifty archives.
+        reset_box = {"state": self._retention_boundary_state()}
+        settlement = self._Settlement()
+        update_patch, read_patch = self._provider_patches(reset_box)
+        with update_patch, read_patch, mock.patch.object(api, "SETTLEMENT", settlement), mock.patch.object(api.players, "get_player", return_value={"balance": 10.0}), mock.patch.object(api, "append_history"):
+            reset_marker = api.prepare_reset("human", reset_box["state"])
+            api.settle_prepared_reset("human", reset_box["state"], reset_marker)
+        self.assertEqual(api.PURCHASE_ASSOCIATION_MAX_RECORDS - 1, len(reset_box["state"][api.PURCHASE_ASSOCIATIONS_KEY]))
+        self.assertIsNone(api._purchase_id_for_session(reset_box["state"], "history-0"))
+        self.assertEqual("purchase-active-boundary", api._purchase_id_for_session(reset_box["state"], "active-boundary"))
+        self.assertEqual("purchase-archived-0", api._purchase_id_for_session(reset_box["state"], "archived-0"))
 
     # Always exercise production JSON persistence and restart through the reviewed harness. (TEST-265)
     def test_json_harness_persists_private_association_across_restart(self):

@@ -86,7 +86,7 @@
       "requirement_id": "BINGO-001",
       "engine_path": "casino/games/bingo/engine.py",
       "settlement_path": "casino/games/bingo/api.py",
-      "production_sha256": "1b2c6bd387016c81ce2b671daa532d08ae4d1106b9f377a929840fb0315bfae2",
+      "production_sha256": "1db2b19738389e4d3955b1988ec203adc60242a7a34b12bc63198d37ea9a452a",
       "proof_tests": ["tests.bingo_economics_tests:BingoEconomicsTests.test_every_pattern_is_house_edged", "tests.bingo_economics_tests:BingoEconomicsTests.test_payout_for_uses_rebalanced_multipliers"],
       "rationale": "Every published pattern multiplier is calibrated against the mandatory competitor field and tested through the production payout path."
     },

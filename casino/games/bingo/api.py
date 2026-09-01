@@ -78,6 +78,15 @@ def _public_state(state: dict) -> dict:
     return redact(state)
 
 
+# Return one optional detached public session through the same recursive privacy boundary. (BINGO-029)
+def _public_session(session: dict | None) -> dict | None:
+    # Preserve the established no-session response without invoking mapping projection.
+    if session is None:
+        return None
+    # Remove nested private recovery and association keys from the explicit sibling projection.
+    return _public_state(session)
+
+
 # Accept only the bounded portable identity grammar used by durable association rows. (BINGO-029)
 def _valid_purchase_association_id(value) -> bool:
     # Reject subclasses and non-text values before applying the complete ASCII expression.
@@ -119,26 +128,13 @@ def _validated_purchase_session_associations(state: dict) -> list[dict]:
     return records
 
 
-# Retain one immutable purchase/session join inside the session publication transaction. (BINGO-029)
-def _retain_purchase_session_association(state: dict, purchase_id: str, session_id: str) -> None:
-    # Require exact non-empty identities before any private state mutation.
-    if not _valid_purchase_association_id(purchase_id) or not _valid_purchase_association_id(session_id):
-        # Reject missing recovery identity instead of publishing an ambiguous join.
-        raise ConflictError("Bingo purchase association identity is invalid")
-    # Validate all existing records before checking replay or conflict semantics.
-    records = _validated_purchase_session_associations(state)
-    # Compare the requested pair with each retained immutable association.
-    for record in records:
-        # Make an exact replay a stable no-op that does not reorder retention.
-        if record["purchase_id"] == purchase_id and record["session_id"] == session_id:
-            # Preserve byte-stable provider state across a lost-response replay.
-            return
-        # Prevent either durable identity from being rebound to another action.
-        if record["purchase_id"] == purchase_id or record["session_id"] == session_id:
-            # Fail closed on a one-to-one association conflict.
-            raise ConflictError("Bingo purchase association identity changed")
-    # Append the newly accepted relationship in provider transaction order.
-    updated = [*records, {"purchase_id": purchase_id, "session_id": session_id}]
+# Reapply pinned and newest-history retention after any association or session-lifecycle transition. (BINGO-029)
+def _normalize_purchase_session_association_retention(state: dict, records: list[dict] | None = None) -> None:
+    # Keep legacy documents without an association index byte-stable during unrelated calls or resets.
+    if records is None and PURCHASE_ASSOCIATIONS_KEY not in state:
+        return
+    # Validate provider-owned rows unless the caller already validated and appended one exact new pair.
+    retained_records = _validated_purchase_session_associations(state) if records is None else records
     # Pin every association whose session remains in the public active/archive state.
     retained_session_ids = set()
     # Preserve the active session join for its complete visible lifetime.
@@ -159,14 +155,38 @@ def _retain_purchase_session_association(state: dict, purchase_id: str, session_
             # Pin the exact terminal session identity.
             retained_session_ids.add(session["session_id"])
     # Select bounded historical rows whose sessions are no longer retained by game state.
-    historical_indexes = [index for index, record in enumerate(updated) if record["session_id"] not in retained_session_ids]
+    historical_indexes = [index for index, record in enumerate(retained_records) if record["session_id"] not in retained_session_ids]
     # Keep only the newest bounded historical associations while never evicting pinned sessions.
     historical_indexes = set(historical_indexes[-PURCHASE_ASSOCIATION_HISTORY_LIMIT:])
     # Preserve original transaction order for every retained pair.
-    state[PURCHASE_ASSOCIATIONS_KEY] = [record for index, record in enumerate(updated) if record["session_id"] in retained_session_ids or index in historical_indexes]
+    state[PURCHASE_ASSOCIATIONS_KEY] = [record for index, record in enumerate(retained_records) if record["session_id"] in retained_session_ids or index in historical_indexes]
     # Treat any future retention regression as corruption before publishing provider state.
     if len(state[PURCHASE_ASSOCIATIONS_KEY]) > PURCHASE_ASSOCIATION_MAX_RECORDS:
         raise ConflictError("Bingo purchase association state is invalid")
+
+
+# Retain one immutable purchase/session join inside the session publication transaction. (BINGO-029)
+def _retain_purchase_session_association(state: dict, purchase_id: str, session_id: str) -> None:
+    # Require exact non-empty identities before any private state mutation.
+    if not _valid_purchase_association_id(purchase_id) or not _valid_purchase_association_id(session_id):
+        # Reject missing recovery identity instead of publishing an ambiguous join.
+        raise ConflictError("Bingo purchase association identity is invalid")
+    # Validate all existing records before checking replay or conflict semantics.
+    records = _validated_purchase_session_associations(state)
+    # Compare the requested pair with each retained immutable association.
+    for record in records:
+        # Make an exact replay a stable no-op that does not reorder retention.
+        if record["purchase_id"] == purchase_id and record["session_id"] == session_id:
+            # Preserve byte-stable provider state across a lost-response replay.
+            return
+        # Prevent either durable identity from being rebound to another action.
+        if record["purchase_id"] == purchase_id or record["session_id"] == session_id:
+            # Fail closed on a one-to-one association conflict.
+            raise ConflictError("Bingo purchase association identity changed")
+    # Append the newly accepted relationship in provider transaction order.
+    updated = [*records, {"purchase_id": purchase_id, "session_id": session_id}]
+    # Apply pinned and newest-history retention before publishing the provider document.
+    _normalize_purchase_session_association_retention(state, updated)
 
 
 # Resolve the private purchase identity for one exact session without exposing the index. (BINGO-029)
@@ -648,6 +668,8 @@ def commit_calls(player_id: str, state: dict, max_calls: int) -> dict:
         else:
             # Preserve the existing compatibility batch behavior.
             session, calls = engine.auto_play(current, max_calls)
+        # Reclassify any session archived or evicted by this terminal transition before publication.
+        _normalize_purchase_session_association_retention(current)
         # Publish one private response/settlement marker before leaving the atomic boundary.
         marker = {"kind": "call", "status": "committed", "action_id": action_id, "session_id": session["session_id"], "calls": list(calls), "terminal": session.get("status") != "active", "history_claims": []}
         # Retain the exact provider-ordered result for lost-response recovery.
@@ -907,6 +929,8 @@ def settle_prepared_reset(player_id: str, state: dict, marker: dict) -> list[dic
                 raise ConflictError("Bingo reset session changed")
             # Clear only the selected active session.
             current["active_session"] = None
+            # Keep the reset association as newest history while pruning any displaced oldest fact.
+            _normalize_purchase_session_association_retention(current)
             # Release the exact reset action slot.
             current.pop(PENDING_ACTION_KEY, None)
             # Publish the complete current document.
@@ -982,7 +1006,7 @@ def register(router):
         # Debit/fund/publish/finalize without a stale whole-document save.
         session = settle_purchase(player_id, state, marker)
         # Preserve the established response envelope.
-        return {"session": session, **payload(player_id, state)}
+        return {"session": _public_session(session), **payload(player_id, state)}
 
     # Call exactly one provider-ordered ball and settle any terminal result.
     @router.post(r"/api/v1/games/bingo/call")
@@ -998,7 +1022,7 @@ def register(router):
         # Settle/finalize the exact committed session without selecting again.
         session, calls, credits = settle_committed_call(player_id, state, marker)
         # Preserve the exact one-ball response fields.
-        return {"session": session, "called": calls[0], "label": engine.ball_label(calls[0]), "credits": credits, **payload(player_id, state)}
+        return {"session": _public_session(session), "called": calls[0], "label": engine.ball_label(calls[0]), "credits": credits, **payload(player_id, state)}
 
     # Preserve the compatibility bounded auto-call endpoint behind one atomic callback.
     @router.post(r"/api/v1/games/bingo/auto")
@@ -1014,13 +1038,13 @@ def register(router):
         # Preserve the established no-op response for zero or negative compatibility batches.
         if max_calls <= 0:
             # Return no session/calls/credits without publishing a marker or selecting entropy.
-            return {"session": None, "calls": [], "labels": [], "credits": [], **payload(player_id, state)}
+            return {"session": _public_session(None), "calls": [], "labels": [], "credits": [], **payload(player_id, state)}
         # Preserve the established bounded engine batch semantics.
         marker = commit_calls(player_id, state, max_calls)
         # Settle/finalize only the committed provider result.
         session, calls, credits = settle_committed_call(player_id, state, marker)
         # Preserve exact calls, labels, credits, and payload response shape.
-        return {"session": session, "calls": calls, "labels": [engine.ball_label(number) for number in calls], "credits": credits, **payload(player_id, state)}
+        return {"session": _public_session(session), "calls": calls, "labels": [engine.ball_label(number) for number in calls], "credits": credits, **payload(player_id, state)}
 
     # Reset one selected active session after exact refund or abandonment evidence.
     @router.post(r"/api/v1/games/bingo/reset")
