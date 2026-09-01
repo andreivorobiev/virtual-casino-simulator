@@ -27,7 +27,7 @@ EXPECTED_SHELL_ASSETS = {
     "/index.html", "/styles.css", "/app.js", "/brands/tiltseven.js", "/manifest.webmanifest", "/assets/favicon.svg",
     "/assets/pwa-icon-192.png", "/assets/pwa-icon-512.png", "/assets/pwa-maskable-192.png", "/assets/pwa-maskable-512.png",
     "/core/api.js", "/core/app_bootstrap.js", "/core/app_router.js", "/core/brand.js", "/core/celebrate.js", "/core/feedback.js", "/core/wellness.js", "/core/i18n.js", "/core/pwa.js", "/core/pwa_version.js", "/core/ui.js", "/core/voice.js",
-    "/views/invitation.js", "/views/lobby.js", "/views/login.js", "/views/reset.js", "/views/settings.js", "/views/signup.js", "/views/terms.js", "/views/verification.js",
+    "/views/invitation.js", "/views/lobby.js", "/views/login.js", "/views/reset.js", "/views/settings.js", "/views/signup.js", "/views/terms.js", "/views/verification.js", "/views/whats_new.js",
     "/i18n/en-US/feedback.json", "/i18n/en-US/shell.json", "/i18n/ru-RU/feedback.json", "/i18n/ru-RU/shell.json",
 }
 # Name every reviewed shared asset kept network-only because it cannot function without authoritative state.
@@ -147,6 +147,17 @@ def png_dimensions(path):
 
 # Group browser-free PWA policy tests under one discoverable test case.
 class PwaFoundationTests(unittest.TestCase):
+    # Execute the real reconnect coordinator against deterministic duplicate-event and failure seams.
+    def test_single_flight_reconnect_runtime(self):
+        # Require the same Node runtime used by hosted frontend governance.
+        node = shutil.which("node") or str(pathlib.Path.home() / ".cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe")
+        # Missing execution authority must not silently skip the reconnect regression.
+        self.assertTrue(pathlib.Path(node).is_file(), "Node is required for the PWA reconnect contract")
+        # Run the production module without a listener or browser under one bounded process lifetime.
+        result = subprocess.run([node, "--test", "tests/unit/pwa_reconnect.test.mjs"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=30)
+        # Preserve the focused assertions as ordinary fail-closed API governance.
+        self.assertEqual(result.returncode, 0, (result.stdout + result.stderr)[-6000:])
+
     # Require page, worker, and canonical release identities to remain aligned.
     def test_canonical_version_alignment(self):
         # Read the canonical packaged application release.

@@ -24,7 +24,7 @@ BROWSER_CASE_AFFINITY_GROUPS = {
     # Keep terms, authenticated OAuth, wallet mutation, security, locale, and logout state together.
     "auth_session": ("BR-AUTH-LOGIN-001", "BR-TERMS-001", "BR-AUTH-SHELL-001", "BR-OAUTH-RUNTIME-001", "BR-TOKEN-001", "BR-SEC-001", "BR-AUTH-LOCALE-001", "BR-AUTH-LOGOUT-001"),
     # Keep the fractional wallet, shared shell, catalog, and responsive lobby consumers together.
-    "lobby_shell": ("BR-TOKEN-FRACTION-001", "BR-SHELL-001", "BR-TOUCH-TARGET-001", "BR-SHELL-BRAND-001", "BR-TOKEN-WALLET-001", "BR-LOBBY-001", "BR-CATALOG-NAV-001", "BR-CATALOG-I18N-RU-001", "BR-LOBBY-RESP-001"),
+    "lobby_shell": ("BR-TOKEN-FRACTION-001", "BR-SHELL-001", "BR-TOUCH-TARGET-001", "BR-SHELL-BRAND-001", "BR-TOKEN-WALLET-001", "BR-LOBBY-001", "BR-CATALOG-NAV-001", "BR-CATALOG-I18N-RU-001", "BR-LOBBY-RESP-001", "BR-TOUR-001"),
     # Keep only Roulette cases that share wager, autoplay, and settlement state together.
     "roulette": ("BR-ROU-FORMAL-SETTINGS-001", "BR-ROU-HITMAP-001", "BR-ROU-REFUND-001", "BR-ROU-SLIP-AUDIT-001", "BR-ROU-PREMIUM-001", "BR-I18N-GAMESTATE-ROU-001", "BR-ROU-MOTION-CURVE-001", "BR-ROU-SPINNING-COPY-001", "BR-ROU-LOCKED-REMOVE-001", "BR-ROU-001", "BR-AUTO-START-FAIL-001", "BR-AUTO-ROU-001", "BR-ROU-REDUCED-MOTION-001"),
     # Keep Slots presentation, economics, and settled-result consumers together.

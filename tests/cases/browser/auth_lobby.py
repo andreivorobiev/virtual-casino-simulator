@@ -1440,6 +1440,10 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             reset_lobby_scroll()
         # Execute the full locale, viewport, state, and interaction matrix under the permanent requirement mapping.
         run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009','UX-012','UX-013','TEST-072','TEST-076','UX-016','TEST-085'],responsive_lobby)
+        # Keep tour state inside its existing authenticated Lobby owner. (TOUR-003, TEST-106)
+        from tests.whats_new_browser_case import run_whats_new_browser_case
+        # Prove native modal accessibility, locale transitions, and production-authority dismissal persistence.
+        run_case('BR-TOUR-001',['TOUR-001','TOUR-002','TOUR-003','TEST-106'],lambda: run_whats_new_browser_case(page,base,ROOT,visual_matrix,game_evidence))
     # Preserve exact lobby-shell case accounting on non-owning shards.
     else:
         # Advance only the fractional-wallet-through-responsive-lobby affinity range.

@@ -6973,6 +6973,7 @@
         "web/views/signup.js",
         "web/views/terms.js",
         "web/views/verification.js",
+        "web/views/whats_new.js",
         "casino/app.py",
         "casino/wsgi.py",
         "web/i18n/en-US/shell.json",
@@ -6980,8 +6981,8 @@
         "docs/pwa_foundation.md"
       ],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "issue-719-service-worker-manifest",
-      "notes": "Issue #719 single-sources the page and module-worker cache identity, validates every cached file, installed locale shell, startup import, and explicitly excluded shared-core asset, and renders localized connection-required copy instead of a dead loader for offline game routes. Activation still prunes only prior Casino static-shell caches, update activation is user-requested, protected-session expiry clears mounted authenticated chrome, game modules and authoritative state remain network-only, and no deployment or public exposure is authorized."
+      "changed_in": "issue-165-whats-new-ui",
+      "notes": "Issue #719 single-sources the page and module-worker cache identity, validates every cached file, installed locale shell, startup import, and explicitly excluded shared-core asset, and renders localized connection-required copy instead of a dead loader for offline game routes. Issue #165 adds the public tour view to the exact static closure and coalesces concurrent online notifications into one in-flight authoritative reconnect so duplicate session/route hydration cannot unmount its successor. Later explicit reconnects remain possible after failure, without automatic retries or timing changes. Activation still prunes only prior Casino static-shell caches, update activation is user-requested, protected-session expiry clears mounted authenticated chrome, game modules and authoritative state remain network-only, and no deployment or public exposure is authorized."
     },
     {
       "id": "TEST-095",
@@ -6995,13 +6996,14 @@
       ],
       "implementation_files": [
         "tests/pwa_tests.py",
+        "tests/unit/pwa_reconnect.test.mjs",
         "tests/cases/browser/auth_backend_pwa.py",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "issue-719-service-worker-manifest",
-      "notes": "Browser-free coverage fails when an extracted static startup import, installed locale shell, or shared-core disposition is absent, when a cached path is missing, when a reviewed row is removed, when page and worker identity diverge, or when event.waitUntil activation ownership is absent. Exact-head Browser coverage proves the cached shell reconstructs an honest offline game-route panel and remounts that route only after authoritative reconnect; native install and relaunch evidence remains deferred with full issue #182."
+      "changed_in": "issue-165-whats-new-ui",
+      "notes": "Browser-free coverage fails when an extracted static startup import, installed locale shell, or shared-core disposition is absent, when a cached path is missing, when a reviewed row is removed, when page and worker identity diverge, or when event.waitUntil activation ownership is absent. Issue #165 adds real-module duplicate-online promise identity, one authoritative callback, fail-closed controls, failure cleanup, and later explicit-attempt evidence. Exact-head Browser coverage proves the cached shell reconstructs an honest offline game-route panel and remounts that route only after authoritative reconnect; native install and relaunch evidence remains deferred with full issue #182."
     },
     {
       "id": "TEST-096",
@@ -7703,6 +7705,18 @@
       "notes": "The additive v2 routes accept no caller-authored subject or release identity. Terms, privacy consent, credentials, provider actions, and ledger movement remain outside this feature."
     },
     {
+      "id": "TOUR-003",
+      "module": "Core",
+      "description": "After terms-complete registered-account entry, the browser may present one native modal containing at most three server-selected curated updates. It resolves all copy through installed shell dictionaries and fallback before display; unresolved or excessive copy fails closed, raw release keys are never rendered, and only the fixed repository changelog is linkable. Got it closes only after a confirmed self-only empty-body durable acknowledgement. Not now and Escape defer locally without claiming persistence. Optional failures, guests, another open dialog, logout, replacement sessions, and late responses cannot block or repaint the authenticated shell. Locale changes preserve focused controls; all four governed viewports and reduced motion retain semantic keyboard access and containment. Release-coordinator catalog activation remains separately held.",
+      "status": "PASS",
+      "api_tests": ["API-TOUR-001"],
+      "browser_tests": ["BR-TOUR-001"],
+      "implementation_files": ["web/views/whats_new.js", "web/app.js", "web/styles.css", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json"],
+      "introduced_in": "issue-165-whats-new-ui",
+      "changed_in": "issue-165-whats-new-ui",
+      "notes": "Coordinator allocation is recorded on issue #165. This browser continuation does not activate release entries, replace consent, mutate gameplay or ledger state, or change any API/provider contract. Browser fixtures adapt the existing endpoints to the real production eligibility and dismissal functions with isolated JSON persistence; they never edit the shipped catalog."
+    },
+    {
       "id": "TEST-106",
       "module": "Tests",
       "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.86 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
@@ -7710,14 +7724,17 @@
       "api_tests": [
         "API-TOUR-001"
       ],
-      "browser_tests": [],
+      "browser_tests": ["BR-TOUR-001"],
       "implementation_files": [
         "tests/whats_new_tests.py",
+        "tests/unit/whats_new_view.test.mjs",
+        "tests/whats_new_browser_case.py",
+        "tests/cases/browser/auth_lobby.py",
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-165-whats-new-foundation",
-      "changed_in": "9.5.3",
-      "notes": "Allocated after TEST-105 became permanent on current main. Every focused write uses an isolated temporary provider and no listener, browser, credential, repository runtime file, provider network, or live system is touched."
+      "changed_in": "issue-165-whats-new-ui",
+      "notes": "API-TOUR-001 remains listener-free and now executes the real JavaScript controller against deterministic DOM and transport seams, including locale fallback, missing-copy rejection, empty-body acknowledgement, save failure, modal deferral, double click, and late-response generation isolation. BR-TOUR-001 separately proves native modal keyboard focus, EN/RU four-viewport containment, reduced motion, real production-authority JSON dismissal after provider reconstruction, local deferral, and next-release eligibility using a page-local adapter and disposable data. The checked catalog remains disabled."
     },
     {
       "id": "MARKETING-001",

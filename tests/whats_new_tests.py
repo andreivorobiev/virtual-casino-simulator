@@ -1,11 +1,15 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Focused server-only What's New eligibility tests. (#165, TOUR-001, TOUR-002, TEST-106)"""
+"""Listener-free What's New authority and UI lifecycle tests. (#165, TOUR-001/002/003, TEST-106)"""
 
 # Import SHA-256 so the additive v2 contract stays pinned to exact reviewed bytes.
 import hashlib
 # Import JSON parsing for the curated metadata and checked digest inventory.
 import json
+# Locate the standard or bundled Node runtime for the listener-free UI contract.
+import shutil
+# Execute the real JavaScript lifecycle without a browser or listener.
+import subprocess
 # Import temporary directories so tests never touch repository or user runtime state.
 import tempfile
 # Import the standard unittest framework used by the repository's focused suites.
@@ -42,8 +46,17 @@ def entry(version, *, enabled=True):
     return {"version": version, "show_in_whats_new": enabled, "title_key": "whatsNew.test.title", "body_key": "whatsNew.test.body"}
 
 
-# Verify the server-only foundation stays curated, private, recoverable, and disabled in shipped metadata.
+# Verify authority and optional UI stay curated, private, recoverable, and disabled in shipped metadata.
 class WhatsNewTests(unittest.TestCase):
+    # Exercise production presentation and asynchronous account isolation through the API governance lane.
+    def test_browser_controller_contract(self):
+        # Prefer the hosted runtime, falling back to the bundled desktop executable.
+        node = shutil.which("node") or str(Path.home() / ".cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe")
+        # Run deterministic Node tests with a hard bounded process lifetime.
+        result = subprocess.run([node, "--test", "tests/unit/whats_new_view.test.mjs"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=30)
+        # Fail closed on any lifecycle, privacy, or translation regression.
+        self.assertEqual(result.returncode, 0, (result.stdout + result.stderr)[-6000:])
+
     # Seed two isolated subjects so dismissal privacy has a populated neighbour.
     def setUp(self) -> None:
         # Allocate an automatically cleaned root outside repository runtime state.
