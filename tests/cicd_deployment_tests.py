@@ -1058,10 +1058,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
 
     # Prove the atomic game-state registrations moved as one exact ordered area.
     def test_api_game_atomic_area_registration_ownership_is_exact(self):
-        # Define the complete reviewed atomic case order from Casino War through Pai Gow Poker.
+        # Define the complete reviewed atomic and recovery case order from Casino War through Pai Gow Poker.
         expected_ids = (
             "API-CW-ATOMIC-001", "API-KENO-ATOMIC-001", "API-BAC-ATOMIC-001", "API-BJ-ATOMIC-001",
-            "API-MHVP-ATOMIC-001", "API-ROU-ATOMIC-001", "API-BINGO-ATOMIC-001", "API-CS-ATOMIC-001",
+            "API-MHVP-ATOMIC-001", "API-ROU-ATOMIC-001", "API-BINGO-ATOMIC-001", "API-BINGO-PURCHASE-ASSOCIATION-001", "API-CS-ATOMIC-001",
             "API-FOUR-CARD-POKER-ATOMIC-001", "API-TCP-ATOMIC-001", "API-CH-ATOMIC-001", "API-PGP-ATOMIC-001",
         )
         # Read the compatibility runner and extracted area as inert source text.
