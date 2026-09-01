@@ -175,9 +175,11 @@ def _retain_purchase_session_association(state: dict, purchase_id: str, session_
     records = _validated_purchase_session_associations(state)
     # Compare the requested pair with each retained immutable association.
     for record in records:
-        # Make an exact replay a stable no-op that does not reorder retention.
+        # Make an exact replay normalize stale pinned membership without reordering retained facts.
         if record["purchase_id"] == purchase_id and record["session_id"] == session_id:
-            # Preserve byte-stable provider state across a lost-response replay.
+            # Reapply the newest-history ceiling before completing response-loss recovery.
+            _normalize_purchase_session_association_retention(state, records)
+            # Preserve value-stable provider state when the retained membership is already current.
             return
         # Prevent either durable identity from being rebound to another action.
         if record["purchase_id"] == purchase_id or record["session_id"] == session_id:

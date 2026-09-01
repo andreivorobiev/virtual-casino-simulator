@@ -460,6 +460,18 @@ class BingoPurchaseSessionAssociationTests(unittest.TestCase):
         with self.assertRaisesRegex(ConflictError, "identity changed"):
             api._retain_purchase_session_association(state, "different-purchase", "active-pinned")
 
+    # Normalize a stale formerly pinned exact pair during response-loss replay. (TEST-265)
+    def test_exact_pair_recovery_normalizes_stale_history_boundary(self):
+        state = self._retention_boundary_state()
+        # Model an interrupted older transition that cleared the active pin before normalization.
+        state["active_session"] = None
+        api._retain_purchase_session_association(state, "purchase-active-boundary", "active-boundary")
+        records = state[api.PURCHASE_ASSOCIATIONS_KEY]
+        self.assertEqual(api.PURCHASE_ASSOCIATION_MAX_RECORDS - 1, len(records))
+        self.assertIsNone(api._purchase_id_for_session(state, "history-0"))
+        self.assertEqual("purchase-active-boundary", api._purchase_id_for_session(state, "active-boundary"))
+        self.assertEqual(1, sum(record == {"purchase_id": "purchase-active-boundary", "session_id": "active-boundary"} for record in records))
+
     # Reapply newest-history retention when terminal archival or reset changes pinned membership. (TEST-265)
     def test_terminal_and_reset_transitions_renormalize_retention_boundary(self):
         # Move the active session into a full archive and evict its oldest predecessor.
