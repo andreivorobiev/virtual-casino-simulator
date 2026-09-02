@@ -55,6 +55,13 @@ class ReleaseCadenceTests(unittest.TestCase):
             "pyproject.toml": policy.Change(b'[project]\nversion = "0.9.5.86"\n', b'[project]\nversion = "0.9.5.87"\n'),
             "web/core/pwa_version.js": policy.Change(b"export const PWA_APP_VERSION = '0.9.5.86';\n", b"export const PWA_APP_VERSION = '0.9.5.87';\n"),
             "contracts/compatibility/app-0.9.5.87.json": policy.Change(None, encoded(self.candidate), None), }
+        inactive_catalog = {"schema_version": 1, "changelog_path": "RELEASE_NOTES.md", "max_merged_entries": 3,
+                            "entries": [{"version": "0.9.5.86", "show_in_whats_new": False,
+                                         "title_key": "whatsNew.entry.frozen.title", "body_key": "whatsNew.entry.frozen.body"}]}
+        synchronized_catalog = copy.deepcopy(inactive_catalog)
+        synchronized_catalog["entries"][0]["version"] = "0.9.5.87"
+        self.changes[policy.INACTIVE_WHATS_NEW_CATALOG] = policy.Change(
+            encoded(inactive_catalog), encoded(synchronized_catalog))
         document_bytes = { "README.md": b"Packaged application release: `0.9.5.86`\n", "CODEX_START_HERE.md": b"- Packaged application release: `0.9.5.86`\n"
                                    b"- [`RELEASE_NOTES.md`](RELEASE_NOTES.md) - Virtual Casino Simulator v0.9.5.86 Release Notes\n",
             "VERSIONING.md": b"- Packaged application release: `0.9.5.86`\n" b"| Runtime, API, browser shell, Admin | Packaged application release (`0.9.5.86`) |\n",
@@ -151,6 +158,62 @@ class ReleaseCadenceTests(unittest.TestCase):
         self.assertEqual((plan.decision, plan.release_tag, plan.predecessor_tag), ("publish", "v0.9.5.87", "v0.9.5.86"))
         self.assertRegex(plan.admission_sha256, r"^[0-9a-f]{64}$")
         self.assertEqual(policy.validate_predecessor(self.candidate, encoded(self.previous), "d" * 40), "v0.9.5.86")
+    def test_inactive_whats_new_catalog_sync_is_exact_required_and_source_bound(self):
+        change = self.changes[policy.INACTIVE_WHATS_NEW_CATALOG]
+        tracked = (Path(__file__).resolve().parents[1] / policy.INACTIVE_WHATS_NEW_CATALOG).read_bytes()
+        tracked_catalog = json.loads(tracked)
+        tracked_after = tracked.replace(b'"version": "0.9.5.86"', b'"version": "0.9.5.87"')
+        policy._inactive_whats_new_catalog(policy.Change(tracked, tracked_after), "0.9.5.86", "0.9.5.87")
+        self.assertEqual(policy.INACTIVE_WHATS_NEW_CATALOG, "docs/releases/whats_new.json")
+        self.assertTrue(tracked_catalog["entries"])
+        self.assertTrue(all(entry["show_in_whats_new"] is False for entry in tracked_catalog["entries"]))
+        synchronized = json.loads(change.after)
+        self.assertEqual([entry["version"] for entry in synchronized["entries"]], ["0.9.5.87"])
+        self.assertEqual(sum(entry["show_in_whats_new"] is True for entry in synchronized["entries"]), 0)
+        self.assertEqual([(entry["title_key"], entry["body_key"]) for entry in synchronized["entries"]],
+                         [(entry["title_key"], entry["body_key"]) for entry in json.loads(change.before)["entries"]])
+        arguments = self.arguments()
+        arguments["changes"] = {path: value for path, value in self.changes.items()
+                                if path != policy.INACTIVE_WHATS_NEW_CATALOG}
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_identity_incomplete"):
+            policy.publication_intent(**arguments)
+        arguments = self.arguments()
+        arguments["source_facts"]["deployable_file_count"] += 1
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_source_facts"):
+            policy.publication_intent(**arguments)
+    def test_inactive_whats_new_catalog_rejects_activation_copy_shape_and_nearby_paths(self):
+        original = self.changes[policy.INACTIVE_WHATS_NEW_CATALOG]
+        after = json.loads(original.after)
+        mutations = []
+        for field, value in (("show_in_whats_new", True), ("title_key", "changed.title"),
+                             ("body_key", "changed.body"), ("version", "0.9.5.86")):
+            candidate = copy.deepcopy(after)
+            candidate["entries"][0][field] = value
+            mutations.append(encoded(candidate))
+        candidate = copy.deepcopy(after)
+        candidate["entries"][0]["extra"] = "forbidden"
+        mutations.extend((encoded(candidate), original.after + b" \n"))
+        for replacement in mutations:
+            arguments = self.arguments()
+            arguments["changes"] = {**self.changes, policy.INACTIVE_WHATS_NEW_CATALOG:
+                                    policy.Change(original.before, replacement)}
+            with self.subTest(replacement=replacement), self.assertRaises(policy.PolicyError):
+                policy.publication_intent(**arguments)
+        active_before = json.loads(original.before)
+        active_before["entries"][0]["show_in_whats_new"] = True
+        active_before = encoded(active_before)
+        active_after = active_before.replace(b'"version": "0.9.5.86"', b'"version": "0.9.5.87"')
+        arguments = self.arguments()
+        arguments["changes"] = {**self.changes, policy.INACTIVE_WHATS_NEW_CATALOG:
+                                policy.Change(active_before, active_after)}
+        with self.assertRaisesRegex(policy.PolicyError, "wrapper_whats_new_catalog_inactive"):
+            policy.publication_intent(**arguments)
+        for path in ("docs/releases/whats_new.json.bak", "docs/releases/private.json",
+                     "docs/whats_new_tour.md"):
+            arguments = self.arguments()
+            arguments["changes"] = {**self.changes, path: policy.Change(b"old\n", b"new\n")}
+            with self.subTest(path=path), self.assertRaisesRegex(policy.PolicyError, "wrapper_unrelated_path"):
+                policy.publication_intent(**arguments)
     def test_premerge_receipt_digest_survives_only_legitimate_merge_fields(self):
         open_pull = copy.deepcopy(self.pull)
         open_pull.update(merge_commit_sha="5" * 40, merged_at=None)
@@ -212,7 +275,7 @@ class ReleaseCadenceTests(unittest.TestCase):
                 policy.publication_intent(**arguments)
     def test_unrelated_paths_and_prior_compatibility_are_never_wrapper_metadata(self):
         for path in ("casino/app.py", "contracts/openapi/core-v1.yaml", "migrations/mysql/catalog.json",
-                     "web/games/roulette.js", "scripts/release_cadence.py", ".github/workflows/ci.yml", "docs/releases/whats_new.json", "web/i18n/en-US/shell.json",
+                     "web/games/roulette.js", "scripts/release_cadence.py", ".github/workflows/ci.yml", "web/i18n/en-US/shell.json",
                      "contracts/compatibility/app-0.9.5.86.json", "tests/unrelated.py"):
             arguments = self.arguments()
             arguments["changes"] = {**self.changes, path: policy.Change(b"old\n", b"new\n")}
