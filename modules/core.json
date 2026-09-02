@@ -1,6 +1,6 @@
 {
   "module": "core",
-  "version": "10.19.0",
+  "version": "10.20.0",
   "paths": [
     "casino/core/",
     "casino/app.py",
@@ -27,7 +27,8 @@
     "MYSQL",
     "STORAGE",
     "TOUR",
-    "MAGIC"
+    "MAGIC",
+    "CHALLENGE"
   ],
   "contracts": [
     "contracts/openapi/admin-users.v2.yaml",

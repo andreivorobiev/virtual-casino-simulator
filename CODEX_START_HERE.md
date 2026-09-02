@@ -165,6 +165,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`codex/prompts/module_tests.md`](codex/prompts/module_tests.md) — Codex task prompt: tests
 - [`codex/prompts/worker_task.md`](codex/prompts/worker_task.md) — Agent worker task prompt
 - [`codex/REPOSITORY_BOOTSTRAP_TASK.md`](codex/REPOSITORY_BOOTSTRAP_TASK.md) — Repository Bootstrap Validation Task
+- [`codex/tasks/488-challenge-policy-foundation.md`](codex/tasks/488-challenge-policy-foundation.md) — Issue #488 Challenge Points policy-foundation task packet
 - [`codex/tasks/artifacts/current-p1-visual-admin-repair/README.md`](codex/tasks/artifacts/current-p1-visual-admin-repair/README.md) — Current P1 visual and Admin repair evidence
 - [`codex/tasks/artifacts/issue-130-joker-poker/README.md`](codex/tasks/artifacts/issue-130-joker-poker/README.md) — Issue #130 Joker Poker Integration Packet
 - [`codex/tasks/artifacts/issue-130-joker-poker/validation.md`](codex/tasks/artifacts/issue-130-joker-poker/validation.md) — Validation Notes

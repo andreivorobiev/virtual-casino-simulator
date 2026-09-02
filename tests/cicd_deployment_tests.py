@@ -1395,6 +1395,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         expected_cases = (
             ("API-WELLNESS-001", ["WELL-001", "WELL-002", "TEST-105"]),
             ("API-TOUR-001", ["TOUR-001", "TOUR-002", "TEST-106"]),
+            ("CHALLENGE-POLICY-001", ["CHALLENGE-001", "CHALLENGE-002", "CHALLENGE-003", "TEST-263"]),
             ("API-SELF-SERVICE-BATCH-001", ["REPLAY-001", "REPLAY-002", "PROFILE-001", "PROFILE-002", "COMPARE-001", "TEST-108", "TEST-109", "TEST-110"]),
             ("API-CONVERT-001", ["CONVERT-001", "CONVERT-002", "CONVERT-003", "GUEST-007", "TEST-111", "TEST-158", "TEST-195"]),
             ("API-ADMIN-GUEST-CONVERT-001", ["ADMIN-035", "GUEST-007", "TEST-193", "TEST-195"]),
@@ -1420,7 +1421,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Bind exact case, requirement, and callback ownership in historical order.
         self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
         self.assertEqual(tuple(callback for _, _, callback in captured), (
-            "run_wellness_tests", "run_whats_new_tests", "run_self_service_batch_tests", "run_guest_conversion_tests",
+            "run_wellness_tests", "run_whats_new_tests", "run_challenge_policy_tests", "run_self_service_batch_tests", "run_guest_conversion_tests",
             "run_admin_guest_conversion_tests", "run_account_spine_tests", "run_admin_session_control_tests", "run_marketing_site_tests",
         ))
         # Reject duplicate registration ownership in the compatibility runner.

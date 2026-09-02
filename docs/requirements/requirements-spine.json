@@ -14092,6 +14092,54 @@
       "introduced_in": "issue-1087-bingo-purchase-session-association",
       "changed_in": "issue-1087-bingo-purchase-session-association",
       "notes": "JSON evidence always runs. MySQL may run only through the accepted tests.storage_conformance MySQL harness after its exact disposable marker and complete loopback reachability pass. Missing relational authorization skips, malformed authorization fails before driver or network access, and PASS is emitted only after database/account cleanup. The #1087 slice reuses that harness unchanged and edits no provider, migration, workflow, deployment, or production configuration."
+    },
+    {
+      "id": "CHALLENGE-001",
+      "module": "Core",
+      "description": "Challenge Points are strictly separate from play tokens; practice is non-persistent and no transition can create a wallet or ledger movement.",
+      "status": "PASS",
+      "api_tests": ["CHALLENGE-POLICY-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/challenges/policy.py", "tests/challenge_policy_tests.py", "tests/cases/api/player_foundation.py"],
+      "introduced_in": "issue-1091-challenge-policy-foundation",
+      "changed_in": "issue-1091-challenge-policy-foundation",
+      "notes": "The inactive provider-neutral kernel emits immutable append candidates only. It imports no wallet, ledger, storage, route, or game module, and the production rule registry remains empty."
+    },
+    {
+      "id": "CHALLENGE-002",
+      "module": "Core",
+      "description": "Ranked transition policy enforces three starts per player and game per UTC day, deterministic versioned integer scoring from 0 through 1,000, daily-best delta, exact idempotent replay, and fail-closed conflict and journal validation.",
+      "status": "PASS",
+      "api_tests": ["CHALLENGE-POLICY-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/challenges/policy.py", "tests/challenge_policy_tests.py", "tests/cases/api/player_foundation.py"],
+      "introduced_in": "issue-1091-challenge-policy-foundation",
+      "changed_in": "issue-1091-challenge-policy-foundation",
+      "notes": "The kernel validates one transaction snapshot and does not claim provider concurrency, persistence, recovery, season aggregation, or game-formula certification."
+    },
+    {
+      "id": "CHALLENGE-003",
+      "module": "Core",
+      "description": "The Challenge Points kernel is disabled unless a future reviewed provider-atomic integration supplies canonical facts, storage, and a non-empty production rule registry; it has no API or award authority by itself.",
+      "status": "PASS",
+      "api_tests": ["CHALLENGE-POLICY-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/challenges/__init__.py", "casino/core/challenges/policy.py", "tests/challenge_policy_tests.py", "tests/cases/api/player_foundation.py"],
+      "introduced_in": "issue-1091-challenge-policy-foundation",
+      "changed_in": "issue-1091-challenge-policy-foundation",
+      "notes": "No route, provider adapter, storage schema, production rule, catalog entry, game, leaderboard, Admin surface, or browser behavior is enabled by this requirement."
+    },
+    {
+      "id": "TEST-263",
+      "module": "Tests",
+      "description": "Listener-free synthetic Challenge Points evidence covers score bounds, hostile inputs, ranked attempts, daily-best delta, exact retry and conflict behavior, decoded-journal validation, and negative wallet fields without claiming provider concurrency or restart parity.",
+      "status": "PASS",
+      "api_tests": ["CHALLENGE-POLICY-001"],
+      "browser_tests": [],
+      "implementation_files": ["tests/challenge_policy_tests.py", "tests/cases/api/player_foundation.py", "tests/api_case_inventory.json", "tests/cicd_deployment_tests.py"],
+      "introduced_in": "issue-1091-challenge-policy-foundation",
+      "changed_in": "issue-1091-challenge-policy-foundation",
+      "notes": "The registered case runs thirteen deterministic unit tests with no listener, provider, external database, wallet mutation, production rule registration, or persistent state."
     }
   ]
 }

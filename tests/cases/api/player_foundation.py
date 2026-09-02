@@ -45,6 +45,26 @@ def run_cases(run_case, run_game_frontend_node_test):
     # Record curated opt-in, disabled-catalog, privacy, idempotency, route, and contract proof.
     run_case('API-TOUR-001', ['TOUR-001', 'TOUR-002', 'TEST-106'], run_whats_new_tests)
 
+    # Execute the inactive Challenge Points policy kernel without a listener or provider.
+    def run_challenge_policy_tests():
+        # Import only the synthetic policy evidence after the named case is selected.
+        from tests import challenge_policy_tests
+
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(
+            challenge_policy_tests.ChallengePolicyTests
+        )
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the registered case on any authority, replay, attempt, or wallet-separation regression.
+        if not result.wasSuccessful():
+            raise AssertionError('Challenge Points policy foundation suite failed')
+
+    # Bind the permanent Challenge policy requirements to one exact listener-free case.
+    run_case(
+        'CHALLENGE-POLICY-001',
+        ['CHALLENGE-001', 'CHALLENGE-002', 'CHALLENGE-003', 'TEST-263'],
+        run_challenge_policy_tests,
+    )
+
     # Execute the complete player self-service batch proof without opening a listener.
     def run_self_service_batch_tests():
         # Import the focused classes only when the mapped case executes.
