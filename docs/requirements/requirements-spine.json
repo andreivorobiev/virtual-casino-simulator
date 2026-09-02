@@ -7309,7 +7309,7 @@
     {
       "id": "TOOL-008",
       "module": "Tooling",
-      "description": "Protected-main CI/CD makes unchanged packaged versions read-only publication no-ops and grants write authority only to an exact next-patch release wrapper whose canonical commit-to-pull associations, independent exact Git-object source facts, accepted first-parent merge identities, deterministic compatibility notes, path-anchored release-document projection, module revisions, compatibility-pinned predecessor, exact-current-head human approval with live permission, exact unedited supplemental receipts, protected current-main source, first run attempt, peeled tag and GitHub Release state all pass bounded fail-closed gates. The immutable pre-wrapper source commit and tree are bound separately from candidate-tree module revisions, permanent requirement count and deployable regular-file inventory; all facts and mutable admission evidence are recomputed under lock before write authority. The writer re-observes admission before and after publication, and a direct queued verifier proves current and predecessor hosted evidence. Externally initiated published-release events provide supplemental read-only verification only; production delivery remains a host-owned pull state machine with exact provenance, schema-two, authenticated live identity and application-only rollback gates.",
+      "description": "Protected-main CI/CD makes unchanged packaged versions read-only publication no-ops and grants write authority only to an exact next-patch release wrapper whose canonical commit-to-pull associations, independent exact Git-object source facts, accepted first-parent merge identities, deterministic compatibility notes, path-anchored release-document projection, module revisions, compatibility-pinned predecessor, exact-current-head human approval with live permission, exact unedited supplemental receipts, protected current-main source, first run attempt, peeled tag and GitHub Release state all pass bounded fail-closed gates. One exact inactive What's New catalog path is mandatory wrapper metadata: only its prior packaged-version fields may synchronize to the next packaged version, every entry must remain strictly disabled, and copy, keys, shape, formatting, adjacent documentation and arbitrary paths remain immutable. The immutable pre-wrapper source commit and tree are bound separately from candidate-tree module revisions, permanent requirement count and deployable regular-file inventory; all facts and mutable admission evidence are recomputed under lock before write authority. The writer re-observes admission before and after publication, and a direct queued verifier proves current and predecessor hosted evidence. Externally initiated published-release events provide supplemental read-only verification only; production delivery remains a host-owned pull state machine with exact provenance, schema-two, authenticated live identity and application-only rollback gates.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-CICD-001"
@@ -7334,17 +7334,18 @@
         "docs/release_artifacts.md",
         "docs/release_versioning.md",
         "docs/production_service.md",
+        "docs/releases/whats_new.json",
         "tests/cicd_deployment_tests.py",
         "tests/release_artifact_tests.py"
       ],
       "introduced_in": "cicd-main-deploy",
-      "changed_in": "issue-1098-release-source-facts",
-      "notes": "Source facts are a closed six-field object derived from exact Git objects: schema, accepted pre-wrapper source SHA and tree SHA, candidate module revisions, exact requirements.json row count and package-policy deployable inventory. Inventory applies the existing allowlist, forbidden-name and required-file rules directly to regular candidate-tree blobs, so checkout filesystem state supplies no authority and the future compatibility record counts exactly once. Candidate notes use only the fixed bounded fact/delta/predecessor template; release documents change only owned current-release anchors, and the complete historical release-notes tail stays byte-exact. The facts/deltas checksum and initial-versus-lock recomputation make any omission, substitution or drift a hold. Existing review, receipt, workflow, no-op, next-patch, predecessor, tag/release and publication gates remain unchanged. Provider onboarding/protection/ruleset/environment changes and all release, deployment, API, contract, provider and database mutations remain separately held."
+      "changed_in": "issue-1106-inactive-whats-new-release-sync",
+      "notes": "Source facts remain a closed six-field object derived from exact Git objects: schema, accepted pre-wrapper source SHA and tree SHA, candidate module revisions, exact requirements.json row count and package-policy deployable inventory. The inactive catalog exception names one exact packaged runtime-metadata path, requires the prior version at every entry, permits only byte-exact version-field replacement, and requires zero active entries before and after. Adjacent What's New documentation, localization keys and copy remain outside generic wrapper authority. Existing review, receipt, workflow, no-op, next-patch, predecessor, tag/release and publication gates remain unchanged. Provider onboarding/protection/ruleset/environment changes and all release, deployment, API, contract, provider and database mutations remain separately held."
     },
     {
       "id": "TEST-133",
       "module": "Tests",
-      "description": "Listener-free CI/CD evidence verifies code-only publication no-op, exact release-wrapper eligibility, canonical association identity, immutable Git-object source facts and accepted first-parent delta identities, deterministic predecessor-bound compatibility notes, path-specific release-document anchors with byte-exact historical tail preservation, package-policy inventory projection, repeated under-lock fact/admission observation, existential latest-state human review with live permission, strict supplemental receipt timing and privacy, first-attempt and current-main rebinding, forced/nonlinear/missing history refusal, compatible next-patch and semantic path/field allowlists, predecessor checksum/schema binding, dual release/tag absence, complete exact-head reuse, direct hosted verification, supplemental read-only release events, the exact post-merge aggregate truth table, and pure three-hour no-change/not-due/blocked/eligible planning.",
+      "description": "Listener-free CI/CD evidence verifies code-only publication no-op, exact release-wrapper eligibility, canonical association identity, immutable Git-object source facts and accepted first-parent delta identities, deterministic predecessor-bound compatibility notes, path-specific release-document anchors with byte-exact historical tail preservation, exact inactive What's New catalog version-only synchronization with zero active entries and adjacent-path refusal, package-policy inventory projection, repeated under-lock fact/admission observation, existential latest-state human review with live permission, strict supplemental receipt timing and privacy, first-attempt and current-main rebinding, forced/nonlinear/missing history refusal, compatible next-patch and semantic path/field allowlists, predecessor checksum/schema binding, dual release/tag absence, complete exact-head reuse, direct hosted verification, supplemental read-only release events, the exact post-merge aggregate truth table, and pure three-hour no-change/not-due/blocked/eligible planning.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-CICD-001"
@@ -7368,8 +7369,8 @@
         "scripts/run_edge_monitor.py"
       ],
       "introduced_in": "cicd-main-deploy",
-      "changed_in": "issue-1098-release-source-facts",
-      "notes": "This proof reads inert workflow text, exact Git objects, pure explicit observation records, mocked bounded GitHub GET results, synthetic hosted bytes and disposable local Git histories only. It proves protected-main source/tree identity separately from candidate-tree modules, 1,130 permanent requirements and canonical deployable inventory; an allowlisted regular file changes inventory while docs/tests do not, and duplicate, linked, special, credential-like or unsafe paths fail closed without checkout stat authority. Per-field missing, extra, stale, false, boolean, string, zero, checksum, accepted-delta and initial-to-lock drift cases fail with bounded value-free errors. It also covers stale/global/arbitrary prose and historical-tail mutation while retaining all prior review, receipt, workflow, predecessor, tag/release, reuse and aggregate evidence. It opens no listener or SSH, contacts no provider or production target, creates no PR/tag/release/asset, and mutates no host/provider/database/DNS setting."
+      "changed_in": "issue-1106-inactive-whats-new-release-sync",
+      "notes": "This proof reads inert workflow text, exact Git objects, pure explicit observation records, mocked bounded GitHub GET results, synthetic hosted bytes and disposable local Git histories only. It proves protected-main source/tree identity separately from candidate-tree modules, the exact permanent requirement count and canonical deployable inventory. Catalog cases require the exact path and prior-to-next version replacement, prove every entry remains false, reject activation, copy, key, shape and formatting mutations, and keep surrounding documentation and near-miss paths forbidden. Per-field source-fact, checksum, accepted-delta and initial-to-lock drift cases remain fail-closed with bounded value-free errors. It opens no listener or SSH, contacts no provider or production target, creates no PR/tag/release/asset, and mutates no host/provider/database/DNS setting."
     },
     {
       "id": "STORAGE-008",
@@ -7670,7 +7671,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.86 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog version is reconciled to the packaged application while every entry remains explicitly disabled until the separately governed release-coordinator activation remainder of issue #165 is accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -7683,8 +7684,8 @@
         "contracts/openapi/user-settings.v2.yaml"
       ],
       "introduced_in": "issue-165-whats-new-foundation",
-      "changed_in": "9.5.3",
-      "notes": "This requirement covers only the inactive server and curated-metadata foundation. GitHub issue #165 remains open for player UI, release transitions, responsive and accessibility evidence, reduced motion, and product-owned activation."
+      "changed_in": "issue-1106-inactive-whats-new-release-sync",
+      "notes": "This requirement covers the inactive server and curated-metadata foundation. Generic release wrappers may synchronize only the exact inactive catalog version field; they cannot activate entries or change keys, copy, shape, formatting or neighboring documentation. GitHub issue #165 remains open for product-owned activation."
     },
     {
       "id": "TOUR-002",
@@ -7719,7 +7720,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.86 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, catalog version equality with the current packaged application while activation remains disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -7733,8 +7734,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-165-whats-new-foundation",
-      "changed_in": "issue-165-whats-new-ui",
-      "notes": "API-TOUR-001 remains listener-free and now executes the real JavaScript controller against deterministic DOM and transport seams, including locale fallback, missing-copy rejection, empty-body acknowledgement, save failure, modal deferral, double click, and late-response generation isolation. BR-TOUR-001 separately proves native modal keyboard focus, EN/RU four-viewport containment, reduced motion, real production-authority JSON dismissal after provider reconstruction, local deferral, and next-release eligibility using a page-local adapter and disposable data. The checked catalog remains disabled."
+      "changed_in": "issue-1106-inactive-whats-new-release-sync",
+      "notes": "API-TOUR-001 remains listener-free and executes the real JavaScript controller against deterministic DOM and transport seams. The shipped-catalog assertion derives version authority from APP_VERSION and requires every activation flag to be exactly false. Release-cadence tests separately prove the only wrapper-owned catalog mutation is byte-exact version synchronization; BR-TOUR-001 remains unchanged and parent issue #165 still owns activation."
     },
     {
       "id": "MARKETING-001",

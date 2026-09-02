@@ -21,6 +21,7 @@ DIGEST = re.compile(r"[0-9a-f]{64}")
 LOGIN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?")
 ASSETS = frozenset({"checksums.txt", "release-manifest.json", "virtual_casino_simulator_package.zip"})
 MANIFEST = "modules/module-manifest.json"
+INACTIVE_WHATS_NEW_CATALOG = "docs/releases/whats_new.json"
 REPOSITORY = "andreivorobiev/virtual-casino-simulator"
 REPOSITORY_OWNER = "andreivorobiev"
 GITHUB_ACTIONS_APP_ID = 15368
@@ -371,6 +372,40 @@ def _anchored_release_document(path, before, old_version, new_version, replaceme
     return "".join(projected).encode("utf-8")
 
 
+def _inactive_whats_new_catalog(change, old_version, new_version):
+    """Permit only app-version synchronization in the strictly inactive catalog."""
+    before, after = object_json(change.before), object_json(change.after)
+    expected_fields = {"schema_version", "changelog_path", "max_merged_entries", "entries"}
+    require(set(before) == expected_fields and set(after) == expected_fields,
+            "wrapper_whats_new_catalog_fields")
+    require(before.get("schema_version") == 1 and
+            before.get("changelog_path") == "RELEASE_NOTES.md" and
+            before.get("max_merged_entries") == 3,
+            "wrapper_whats_new_catalog_policy")
+    entries = before.get("entries")
+    require(isinstance(entries, list) and 0 < len(entries) <= 3,
+            "wrapper_whats_new_catalog_entries")
+    entry_fields = {"version", "show_in_whats_new", "title_key", "body_key"}
+    require(all(isinstance(entry, dict) and set(entry) == entry_fields and
+                entry.get("version") == old_version and
+                entry.get("show_in_whats_new") is False and
+                isinstance(entry.get("title_key"), str) and entry["title_key"].strip() and
+                isinstance(entry.get("body_key"), str) and entry["body_key"].strip()
+                for entry in entries),
+            "wrapper_whats_new_catalog_inactive")
+    old = f'"version": "{old_version}"'.encode()
+    new = f'"version": "{new_version}"'.encode()
+    require(change.before.count(old) == len(entries),
+            "wrapper_whats_new_catalog_version_anchor")
+    require(change.before.replace(old, new) == change.after,
+            "wrapper_whats_new_catalog_behavior")
+    require(all(entry.get("version") == new_version and
+                entry.get("show_in_whats_new") is False
+                for entry in after.get("entries", [])) and
+            len(after.get("entries", [])) == len(entries),
+            "wrapper_whats_new_catalog_inactive")
+
+
 def validate_wrapper(before_manifest, after_manifest, changes, old_compatibility, candidate, catalog,
                      source_facts=None, accepted_deltas=None, source_sha=None, source_tree=None):
     """Enforce a closed semantic release-wrapper shape, not a filename waiver."""
@@ -379,6 +414,7 @@ def validate_wrapper(before_manifest, after_manifest, changes, old_compatibility
     required_paths = {
         MANIFEST, "pyproject.toml", "web/core/pwa_version.js", "README.md",
         "CODEX_START_HERE.md", "VERSIONING.md", "RELEASE_NOTES.md", GENERATED_REQUIREMENTS,
+        INACTIVE_WHATS_NEW_CATALOG,
         f"contracts/compatibility/app-{new_version}.json",
     }
     require(required_paths <= changes.keys(), "wrapper_identity_incomplete")
@@ -467,6 +503,8 @@ def validate_wrapper(before_manifest, after_manifest, changes, old_compatibility
             old = f"export const PWA_APP_VERSION = '{old_version}';".encode()
             new = f"export const PWA_APP_VERSION = '{new_version}';".encode()
             require(change.before.count(old) == 1 and change.before.replace(old, new) == change.after, "wrapper_pwa_behavior")
+        elif path == INACTIVE_WHATS_NEW_CATALOG:
+            _inactive_whats_new_catalog(change, old_version, new_version)
         elif path == GENERATED_REQUIREMENTS:
             old = change.before.decode("utf-8")
             expected = old.replace(f"Packaged application release: {old_version}\n", f"Packaged application release: {new_version}\n", 1)
