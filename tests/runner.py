@@ -247,6 +247,11 @@ def browser_save_player_game_state(game_id,player_id,state):
     # Preserve the established state_store schema and timestamp behavior inside the cache-free callback.
     return browser_parent_fixture_write(lambda: save_player_game_state(game_id,player_id,state))
 
+# Provision one isolated registered Browser identity without mutating game state. (TEST-092, issue #1104)
+def browser_create_isolated_user(email,password,display_name):
+    # Reopen current durable Auth and player bytes before allocating the case-owned account.
+    return browser_parent_fixture_write(lambda: auth_core.create_user(email,password,display_name,terms_required=False))
+
 # Publish one ordinary Browser fixture document through the same current-byte boundary.
 def browser_write_json(path,data):
     # Preserve the established provider-owned document mapping inside the cache-free callback.
@@ -5673,7 +5678,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Delegate the complete Roulette, autoplay, Slots, and Keno affinity chain without transferring shared page ownership.
                 browser_roulette_slots_keno.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,browser_player_id,visual_matrix,browser_save_player_game_state,roulette_i18n_failure_diagnostic,slots_engine,keno_engine,shot,viewport_shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,evidence_commit,evidence_branch,screenshots)
                 # Delegate the complete Bingo-through-Admin affinity chain without transferring shared Browser lifecycle.
-                browser_bingo_admin.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,casino_config.DATA_DIR,browser_player_id,visual_matrix,browser_save_player_game_state,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,browser_write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots)
+                browser_bingo_admin.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,browser,base,ROOT,casino_config.DATA_DIR,browser_player_id,visual_matrix,browser_save_player_game_state,browser_create_isolated_user,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,browser_write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots)
                 if console_errors or page_errors or http_errors: raise AssertionError('Browser errors: '+str(console_errors+page_errors+http_errors))
             # Handle the expected failure path for the protected logic.
             except Exception:
