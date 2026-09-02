@@ -1964,7 +1964,13 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Keep each permanent identity under exactly one executable source owner.
             self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
         # Require one delegation at the group's exact historical position.
-        self.assertEqual(runner_source.count("browser_bingo_admin.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,casino_config.DATA_DIR,browser_player_id,visual_matrix,browser_save_player_game_state,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,browser_write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots)"), 1)
+        self.assertEqual(runner_source.count("browser_bingo_admin.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,browser,base,ROOT,casino_config.DATA_DIR,browser_player_id,visual_matrix,browser_save_player_game_state,browser_create_isolated_user,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,browser_write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots)"), 1)
+        # Bind the formal replay case to a distinct durable player and disposable browser owner. (TEST-092, issue #1104)
+        self.assertIn("assert formal_user['player_id']!=browser_player_id", owner_source)
+        self.assertIn("formal_context=browser.new_context", owner_source)
+        self.assertIn("formal_context.close()", owner_source)
+        # Reject direct Acey-Deucey state injection as a substitute for public Pass/Play/Repeat evidence.
+        self.assertNotIn("save_player_game_state('acey_deucey'", owner_source)
         # Require Operations degradation to target the invocation-scoped provider root instead of checkout data. (issue #1014)
         self.assertIn("players_path=browser_data_dir/'players.json'", owner_source)
         # Reject the historical checkout-relative fixture mutation from the extracted owner.
@@ -1986,7 +1992,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Reject any accidental case execution on a shard that does not own the complete group.
         reject_case = lambda *_args: self.fail("non-owner executed a Bingo/Admin case")
         # Execute the non-owner path with every page dependency absent so setup access fails the test immediately.
-        bingo_admin.run_cases(reject_case, lambda group_name: False, skipped_groups.append, *([None] * 30))
+        bingo_admin.run_cases(reject_case, lambda group_name: False, skipped_groups.append, *([None] * 32))
         # Require one ordered skip for each exact contiguous reduced family.
         self.assertEqual(skipped_groups, ["table_games", "feedback_admin", "admin_presentation"])
 
