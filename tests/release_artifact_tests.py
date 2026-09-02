@@ -14,6 +14,8 @@ import re
 import tempfile
 # Import unittest for repository-standard focused test execution.
 import unittest
+# Import mock seams for regular-file policy proofs without privileged filesystem nodes.
+from unittest import mock
 # Import ZIP inspection for negative private-content assertions.
 import zipfile
 
@@ -21,6 +23,8 @@ import zipfile
 from scripts import make_release
 # Import the release implementation under test from the repository scripts namespace.
 from scripts import package_app
+# Import exact-tree source-fact projection for deployable inventory delta evidence.
+from scripts import release_publication
 # Import the protected predecessor receipt helper for exact fail-closed recovery tests.
 from scripts import bootstrap_predecessor
 # Import compatibility-owned predecessor resolution for the live release-policy regression.
@@ -68,6 +72,8 @@ class ReleaseArtifactTests(unittest.TestCase):
             "contracts/compatibility/app-9.3.0.json": "{\"app_version\": \"9.3.0\", \"rollback\": {\"scope\": \"application-only\", \"database_rollback\": \"prohibited\", \"mysql_expected_schema_version\": 2, \"requires_retained_predecessor_manifest\": true}}\n",
             "deploy/gunicorn.conf.py": "# Bind the fixture production policy to loopback only.\nbind = '127.0.0.1:8765'\n",
             "deploy/systemd/casino.service": "[Service]\n# Start only the fixture production adapter.\nExecStart=gunicorn casino.wsgi:application\n",
+            # Copy the exact inactive runtime catalog rather than manufacturing release copy in tests.
+            "docs/releases/whats_new.json": (package_app.ROOT / "docs" / "releases" / "whats_new.json").read_text(encoding="utf-8"),
             "modules/module-manifest.json": json.dumps({"application": "9.3.0", "source_baseline": "9.1.0", "modules": {"tooling": "1.7.0"}}) + "\n",
             "pyproject.toml": "[project]\nname = \"virtual-casino-simulator\"\nversion = \"9.3.0\"\nrequires-python = \">=3.10\"\ndependencies = [\"gunicorn>=23,<24\"]\n\n[project.optional-dependencies]\nmysql = [\"mysql-connector-python>=8.4\"]\nrecovery = [\"cryptography>=46,<50\"]\n",
             "run.py": "# Import the fixture application entry point.\nfrom casino.app import main\n",
@@ -298,6 +304,91 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.assertEqual(first_archive.read_bytes(), second_archive.read_bytes())
         # Require identical checksum-bound provenance bytes across output locations.
         self.assertEqual(first_manifest.read_bytes(), second_manifest.read_bytes())
+
+    # Prove the inactive curated catalog survives packaging with exact tracked bytes. (TOOL-003, TOUR-001)
+    def test_inactive_whats_new_catalog_is_packaged_exactly(self):
+        # Build a structurally valid candidate without changing the fixture opt-in state.
+        archive_path, _ = self.build("inactive-whats-new-catalog")
+        # Name the sole allowed documentation member inside the immutable archive.
+        member = f"{package_app.ARCHIVE_ROOT}/docs/releases/whats_new.json"
+        # Inspect the member without extracting or executing application code.
+        with zipfile.ZipFile(archive_path, "r") as archive:
+            # Require packaged bytes to match the tracked fixture byte-for-byte.
+            self.assertEqual(archive.read(member), self.files["docs/releases/whats_new.json"].encode("utf-8"))
+        # Parse only the fixture copy to prove this prerequisite cannot activate release copy.
+        catalog = json.loads(self.files["docs/releases/whats_new.json"])
+        # Require every shipped entry to retain the exact disabled Boolean boundary.
+        self.assertTrue(catalog["entries"] and all(entry.get("show_in_whats_new") is False for entry in catalog["entries"]))
+
+    # Prove the runtime exception opens one exact path rather than the surrounding docs tree. (TOOL-003)
+    def test_whats_new_catalog_is_the_only_allowlisted_docs_path(self):
+        # Enumerate near-miss and unrelated documentation paths that must remain excluded.
+        excluded = {
+            "docs/releases/whats_new.json.bak",
+            "docs/releases/private.json",
+            "docs/README.md",
+            "Docs/releases/whats_new.json",
+        }
+        # Evaluate the complete fixture inventory plus every excluded documentation path.
+        selected = package_app.select_release_files(self.root, [*self.files, *excluded])
+        # Require the exact runtime catalog and no other documentation path.
+        self.assertEqual(set(selected) & ({"docs/releases/whats_new.json"} | excluded), {"docs/releases/whats_new.json"})
+        # Bind the reviewed path-policy classification independently of filesystem selection.
+        self.assertIsNone(package_app.forbidden_reason("docs/releases/whats_new.json"))
+        # Preserve the blanket documentation exclusion for every near miss.
+        self.assertTrue(all(package_app.forbidden_reason(path) == "forbidden runtime, test, or evidence directory" for path in excluded))
+
+    # Prove every immutable archive requires the exact tracked catalog. (TOOL-003)
+    def test_whats_new_catalog_is_required(self):
+        # Remove only the catalog identity from the authoritative tracked fixture list.
+        without_catalog = [path for path in self.files if path != "docs/releases/whats_new.json"]
+        # Refuse an otherwise valid release rather than silently producing an inert deployment.
+        with self.assertRaisesRegex(ValueError, "docs/releases/whats_new.json"):
+            package_app.select_release_files(self.root, without_catalog)
+
+    # Prove the exact-path exception retains structural and regular-file refusal. (TOOL-003)
+    def test_whats_new_catalog_rejects_unsafe_symlink_and_special_inputs(self):
+        # Reject traversal before any candidate filesystem path is resolved.
+        with self.assertRaisesRegex(ValueError, "unsafe repository path"):
+            package_app.select_release_files(self.root, [*self.files, "casino/../docs/releases/whats_new.json"])
+        # Resolve the disposable exact catalog used for targeted filesystem classification seams.
+        catalog_path = self.root / "docs" / "releases" / "whats_new.json"
+        # Patch only the concrete portable path class used by the fixture.
+        path_type = type(catalog_path)
+        # Preserve real behavior for every path other than the reviewed catalog.
+        original_is_symlink = path_type.is_symlink
+        # Model a linked catalog without requiring host symlink privileges.
+        with mock.patch.object(path_type, "is_symlink", lambda candidate: candidate == catalog_path or original_is_symlink(candidate)):
+            # Refuse the link before reading or archiving its target.
+            with self.assertRaisesRegex(ValueError, "must not be a symlink"):
+                package_app.select_release_files(self.root, self.files)
+        # Preserve real regular-file behavior outside the exact catalog seam.
+        original_is_file = path_type.is_file
+        # Model a tracked special node independently of platform-specific device creation.
+        with mock.patch.object(path_type, "is_file", lambda candidate: False if candidate == catalog_path else original_is_file(candidate)):
+            # Refuse non-regular catalog entries fail closed.
+            with self.assertRaisesRegex(ValueError, "not a regular file"):
+                package_app.select_release_files(self.root, self.files)
+
+    # Prove #1098 source facts gain only the exact catalog from this policy change. (TOOL-008)
+    def test_whats_new_catalog_adds_exactly_one_deployable_source_fact(self):
+        # Resolve the immutable branch identity before entering the strict source-fact seam.
+        source_sha = package_app.git_output(package_app.ROOT, "rev-parse", "HEAD")
+        # Read the immutable current branch tree through the production source-fact seam.
+        entries = release_publication.tree_entries(package_app.ROOT, source_sha)
+        # Project deployable files with the inactive catalog policy enabled.
+        with_catalog = release_publication.deployable_tree_paths(entries)
+        # Reconstruct the predecessor policy by removing only this exact reviewed exception.
+        with mock.patch.object(package_app, "RUNTIME_METADATA_FILES", frozenset()), mock.patch.object(
+            package_app, "ALLOWED_FILES", package_app.ALLOWED_FILES - {"docs/releases/whats_new.json"}
+        ), mock.patch.object(
+            package_app, "REQUIRED_FILES", package_app.REQUIRED_FILES - {"docs/releases/whats_new.json"}
+        ):
+            # Project the identical Git tree under the predecessor packaging policy.
+            without_catalog = release_publication.deployable_tree_paths(entries)
+        # Require one and only one new deployable path in the closed source-facts inventory.
+        self.assertEqual(set(with_catalog) - set(without_catalog), {"docs/releases/whats_new.json"})
+        self.assertEqual(len(with_catalog), len(without_catalog) + 1)
 
     # Prove the immutable application archive carries the deployment provenance writer required by its service unit.
     def test_deployment_provenance_writer_is_packaged(self):

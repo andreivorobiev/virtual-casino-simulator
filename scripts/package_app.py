@@ -41,9 +41,11 @@ ARCHIVE_ROOT = "virtual_casino_simulator"
 ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 # Accept only full lowercase or uppercase Git object identifiers in provenance.
 COMMIT_RE = re.compile(r"^[0-9a-fA-F]{40}$")
+# Name the sole repository-document path required by the running application.
+RUNTIME_METADATA_FILES = frozenset({"docs/releases/whats_new.json"})
 # Allow only the runtime and audit roots required by the application artifact.
 ALLOWED_PREFIXES = ("casino/", "contracts/", "deploy/", "migrations/", "modules/", "web/")
-# Allow only deployable top-level files rather than repository governance content.
+# Allow only reviewed deployable files outside the shared runtime roots.
 ALLOWED_FILES = {
     "ARCHITECTURE.md",
     "LICENSE",
@@ -67,7 +69,7 @@ ALLOWED_FILES = {
     # Package the non-shell monitor runner invoked after production restart.
     "scripts/run_edge_monitor.py",
     "scripts/write_release_env.py",
-}
+} | RUNTIME_METADATA_FILES
 # Reject runtime, private, generated, test, and local-evidence directories anywhere.
 FORBIDDEN_PARTS = {
     ".git",
@@ -138,7 +140,7 @@ REQUIRED_FILES = {
     "casino/core/recovery.py",
     "web/app.js",
     "web/index.html",
-}
+} | RUNTIME_METADATA_FILES
 
 
 # Return a lowercase SHA-256 digest for deterministic bytes.
@@ -203,6 +205,10 @@ def forbidden_reason(relative_path):
     if not parts or relative_path.startswith("/") or ".." in parts:
         # Explain the structural path violation without inspecting file contents.
         return "unsafe repository path"
+    # Admit only the exact runtime-owned catalog without opening the surrounding docs tree.
+    if relative_path in RUNTIME_METADATA_FILES:
+        # Regular-file and symlink checks still run after this path-policy decision.
+        return None
     # Reject runtime and evidence directory names at any nesting level.
     if any(part.lower() in FORBIDDEN_PARTS for part in parts):
         # Identify the policy class rather than a host-specific path.
