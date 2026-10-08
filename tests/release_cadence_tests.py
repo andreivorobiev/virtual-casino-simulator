@@ -160,10 +160,18 @@ class ReleaseCadenceTests(unittest.TestCase):
         self.assertEqual(policy.validate_predecessor(self.candidate, encoded(self.previous), "d" * 40), "v0.9.5.86")
     def test_inactive_whats_new_catalog_sync_is_exact_required_and_source_bound(self):
         change = self.changes[policy.INACTIVE_WHATS_NEW_CATALOG]
+        predecessor = (Path(__file__).resolve().parent / "fixtures" / "whats_new_0_9_5_86.json").read_bytes()
+        projected = predecessor.replace(b'"version": "0.9.5.86"', b'"version": "0.9.5.87"')
         tracked = (Path(__file__).resolve().parents[1] / policy.INACTIVE_WHATS_NEW_CATALOG).read_bytes()
         tracked_catalog = json.loads(tracked)
-        tracked_after = tracked.replace(b'"version": "0.9.5.86"', b'"version": "0.9.5.87"')
-        policy._inactive_whats_new_catalog(policy.Change(tracked, tracked_after), "0.9.5.86", "0.9.5.87")
+        tracked_versions = [entry["version"] for entry in tracked_catalog["entries"]]
+        # Bind both checkout stages to one immutable predecessor fixture without treating projected bytes as before.
+        self.assertTrue(tracked_versions)
+        self.assertEqual(len(set(tracked_versions)), 1)
+        self.assertIn(tracked_versions[0], ("0.9.5.86", "0.9.5.87"))
+        self.assertEqual(tracked, predecessor if tracked_versions[0] == "0.9.5.86" else projected)
+        policy._inactive_whats_new_catalog(
+            policy.Change(predecessor, projected), "0.9.5.86", "0.9.5.87")
         self.assertEqual(policy.INACTIVE_WHATS_NEW_CATALOG, "docs/releases/whats_new.json")
         self.assertTrue(tracked_catalog["entries"])
         self.assertTrue(all(entry["show_in_whats_new"] is False for entry in tracked_catalog["entries"]))
